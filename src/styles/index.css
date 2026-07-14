@@ -2067,7 +2067,7 @@ img {
   }
 }
 
-/* —— Huella de Carbono (módulo ejecutivo) —— */
+/* -- Huella de Carbono (módulo ejecutivo) -- */
 .carbon-page {
   display: flex;
   flex-direction: column;
@@ -2610,7 +2610,7 @@ img {
   }
 }
 
-/* —— Entrada de datos Huella de Carbono —— */
+/* -- Entrada de datos Huella de Carbono -- */
 .entry-page {
   display: flex;
   flex-direction: column;

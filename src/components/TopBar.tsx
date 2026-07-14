@@ -13,11 +13,9 @@ function initials(name: string) {
 }
 
 export function TopBar({
-  showMenuButton = false,
   onToggleSidebar,
   sidebarOpen = false,
 }: {
-  showMenuButton?: boolean
   onToggleSidebar?: () => void
   sidebarOpen?: boolean
 }) {
@@ -44,17 +42,15 @@ export function TopBar({
   return (
     <header className="topbar">
       <div className="topbar-left">
-        {showMenuButton && (
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={onToggleSidebar}
-            aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
-            aria-expanded={sidebarOpen}
-          >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        )}
+        <button
+          type="button"
+          className="icon-btn menu-toggle-btn"
+          onClick={onToggleSidebar}
+          aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
+          aria-expanded={sidebarOpen}
+        >
+          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
         <span className="topbar-title">
           <span className="topbar-title-full">Cementos Progreso Ambiente</span>
           <span className="topbar-title-short">CEMPRO Ambiente</span>

@@ -4,15 +4,15 @@ import { EnvironmentalChatbot } from './EnvironmentalChatbot'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
+const MOBILE_MQ = '(max-width: 960px)'
+
 function useIsMobileNav() {
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined'
-      ? window.matchMedia('(max-width: 900px)').matches
-      : false,
+    typeof window !== 'undefined' ? window.matchMedia(MOBILE_MQ).matches : false,
   )
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 900px)')
+    const mq = window.matchMedia(MOBILE_MQ)
     const update = () => setIsMobile(mq.matches)
     update()
     mq.addEventListener('change', update)
@@ -81,14 +81,13 @@ export function AppLayout() {
     <div
       className={`app-shell${sidebarOpen ? ' sidebar-open' : ''}${isMobile ? ' is-mobile' : ''}`}
     >
-      {isMobile && sidebarOpen && (
-        <button
-          type="button"
-          className="sidebar-backdrop"
-          aria-label="Cerrar menú"
-          onClick={closeSidebar}
-        />
-      )}
+      <button
+        type="button"
+        className="sidebar-backdrop"
+        aria-label="Cerrar menú"
+        tabIndex={sidebarOpen ? 0 : -1}
+        onClick={closeSidebar}
+      />
 
       <Sidebar
         onMouseEnter={isMobile ? undefined : openSidebar}
@@ -96,11 +95,7 @@ export function AppLayout() {
         onNavigate={isMobile ? closeSidebar : undefined}
       />
 
-      <TopBar
-        showMenuButton={isMobile}
-        onToggleSidebar={toggleSidebar}
-        sidebarOpen={sidebarOpen}
-      />
+      <TopBar onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
 
       <main className="main-content">
         <div className="main-content-body">

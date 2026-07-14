@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom'
-import { Database, Leaf, Sparkles } from 'lucide-react'
+import { Database, Sparkles } from 'lucide-react'
+import { CarbonDataEntryPage } from './CarbonDataEntryPage'
 
 const TITLES: Record<string, string> = {
   db1: 'DB1',
@@ -11,9 +12,12 @@ const TITLES: Record<string, string> = {
 
 export function DataEntryPage() {
   const { entryId = 'db1' } = useParams()
+
+  if (entryId === 'huella-de-carbono') {
+    return <CarbonDataEntryPage />
+  }
+
   const title = TITLES[entryId] ?? 'Entrada de Datos'
-  const isCarbon = entryId === 'huella-de-carbono'
-  const Icon = isCarbon ? Leaf : Database
 
   return (
     <div className="coming-soon-page">
@@ -25,7 +29,7 @@ export function DataEntryPage() {
       <div className="coming-soon-card">
         <div className="coming-soon-glow" aria-hidden />
         <div className="coming-soon-icon-wrap">
-          <Icon size={36} strokeWidth={1.6} />
+          <Database size={36} strokeWidth={1.6} />
           <span className="coming-soon-badge">
             <Sparkles size={14} />
             Pronto

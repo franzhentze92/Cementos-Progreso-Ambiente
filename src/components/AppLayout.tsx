@@ -25,12 +25,18 @@ function useIsMobileNav() {
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const closeTimer = useRef<number | null>(null)
+  const mainRef = useRef<HTMLElement>(null)
   const isMobile = useIsMobileNav()
   const location = useLocation()
 
   useEffect(() => {
     if (isMobile) setSidebarOpen(false)
   }, [location.pathname, isMobile])
+
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [location.pathname])
 
   useEffect(() => {
     if (!isMobile) return
@@ -97,7 +103,7 @@ export function AppLayout() {
 
       <TopBar onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
 
-      <main className="main-content">
+      <main className="main-content" ref={mainRef}>
         <div className="main-content-body">
           <Outlet />
         </div>

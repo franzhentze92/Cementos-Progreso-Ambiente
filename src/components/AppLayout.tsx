@@ -1,0 +1,110 @@
+import { useEffect, useRef, useState } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
+import { EnvironmentalChatbot } from './EnvironmentalChatbot'
+import { Sidebar } from './Sidebar'
+import { TopBar } from './TopBar'
+
+function useIsMobileNav() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia('(max-width: 768px), (hover: none)').matches
+      : false,
+  )
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px), (hover: none)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  return isMobile
+}
+
+export function AppLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const closeTimer = useRef<number | null>(null)
+  const isMobile = useIsMobileNav()
+  const location = useLocation()
+
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false)
+  }, [location.pathname, isMobile])
+
+  useEffect(() => {
+    return () => {
+      if (closeTimer.current) window.clearTimeout(closeTimer.current)
+    }
+  }, [])
+
+  function clearCloseTimer() {
+    if (closeTimer.current) {
+      window.clearTimeout(closeTimer.current)
+      closeTimer.current = null
+    }
+  }
+
+  function openSidebar() {
+    clearCloseTimer()
+    setSidebarOpen(true)
+  }
+
+  function closeSidebar() {
+    clearCloseTimer()
+    setSidebarOpen(false)
+  }
+
+  function toggleSidebar() {
+    clearCloseTimer()
+    setSidebarOpen((v) => !v)
+  }
+
+  function scheduleCloseSidebar() {
+    if (isMobile) return
+    clearCloseTimer()
+    closeTimer.current = window.setTimeout(() => {
+      setSidebarOpen(false)
+      closeTimer.current = null
+    }, 180)
+  }
+
+  return (
+    <div
+      className={`app-shell${sidebarOpen ? ' sidebar-open' : ''}${isMobile ? ' is-mobile' : ''}`}
+    >
+      {isMobile && sidebarOpen && (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          aria-label="Cerrar menú"
+          onClick={closeSidebar}
+        />
+      )}
+
+      <Sidebar
+        onMouseEnter={isMobile ? undefined : openSidebar}
+        onMouseLeave={isMobile ? undefined : scheduleCloseSidebar}
+        onNavigate={isMobile ? closeSidebar : undefined}
+      />
+
+      <TopBar
+        showMenuButton={isMobile}
+        onToggleSidebar={toggleSidebar}
+        sidebarOpen={sidebarOpen}
+      />
+
+      <main className="main-content">
+        <div className="main-content-body">
+          <Outlet />
+        </div>
+        <footer className="app-footer">
+          <img src="/logo-mark.svg" alt="" aria-hidden />
+          <span>Powered by Cementos Progreso</span>
+        </footer>
+      </main>
+
+      <EnvironmentalChatbot />
+    </div>
+  )
+}

@@ -55,7 +55,10 @@ export function TopBar({
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         )}
-        <span className="topbar-title">Cementos Progreso Ambiente</span>
+        <span className="topbar-title">
+          <span className="topbar-title-full">Cementos Progreso Ambiente</span>
+          <span className="topbar-title-short">CEMPRO Ambiente</span>
+        </span>
       </div>
 
       <div className="profile-menu" ref={menuRef}>

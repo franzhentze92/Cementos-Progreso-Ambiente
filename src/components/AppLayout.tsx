@@ -7,12 +7,12 @@ import { TopBar } from './TopBar'
 function useIsMobileNav() {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined'
-      ? window.matchMedia('(max-width: 768px), (hover: none)').matches
+      ? window.matchMedia('(max-width: 900px)').matches
       : false,
   )
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px), (hover: none)')
+    const mq = window.matchMedia('(max-width: 900px)')
     const update = () => setIsMobile(mq.matches)
     update()
     mq.addEventListener('change', update)
@@ -31,6 +31,14 @@ export function AppLayout() {
   useEffect(() => {
     if (isMobile) setSidebarOpen(false)
   }, [location.pathname, isMobile])
+
+  useEffect(() => {
+    if (!isMobile) return
+    document.body.style.overflow = sidebarOpen ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isMobile, sidebarOpen])
 
   useEffect(() => {
     return () => {

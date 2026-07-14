@@ -4,7 +4,7 @@ import { EnvironmentalChatbot } from './EnvironmentalChatbot'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
-const MOBILE_MQ = '(max-width: 960px)'
+const MOBILE_MQ = '(max-width: 1100px), (hover: none) and (pointer: coarse)'
 
 function useIsMobileNav() {
   const [isMobile, setIsMobile] = useState(() =>

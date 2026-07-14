@@ -2846,23 +2846,31 @@ img {
 }
 
 
-/* ===== MOBILE / TABLET (CSS-only, no JS class required) ===== */
-@media (max-width: 960px) {
+/* ===== MOBILE / TABLET =====
+   Also target touch phones that request "Desktop Website"
+   (viewport can be >960px on iPhone). */
+@media (max-width: 1100px), (hover: none) and (pointer: coarse) {
   .menu-toggle-btn {
     display: inline-flex !important;
   }
 
   .app-shell,
   .app-shell.is-mobile {
-    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
     --sidebar-w: 0px;
   }
 
   .topbar {
-    grid-column: 1 !important;
-    grid-row: 1;
+    position: relative;
+    grid-column: unset !important;
+    grid-row: unset !important;
+    width: 100%;
+    flex: 0 0 var(--topbar-h);
     padding: 0 12px 0 8px;
     gap: 8px;
+    z-index: 30;
   }
 
   .topbar-left {
@@ -2894,7 +2902,9 @@ img {
     display: none !important;
   }
 
+  /* Fully remove rail from layout while closed */
   .sidebar {
+    display: none !important;
     position: fixed !important;
     top: 0;
     left: 0;
@@ -2904,22 +2914,18 @@ img {
     width: min(86vw, 300px) !important;
     height: 100dvh !important;
     max-height: 100dvh;
-    transform: translateX(-105%);
-    transition: transform 0.24s ease;
     z-index: 60;
-    box-shadow: none;
+    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35);
   }
 
   .app-shell.sidebar-open .sidebar {
-    transform: translateX(0);
-    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35);
+    display: flex !important;
   }
 
   .app-shell.sidebar-open .sidebar-backdrop {
     display: block !important;
   }
 
-  /* Expanded nav labels inside drawer */
   .sidebar-header {
     justify-content: flex-start !important;
     padding: 0 16px !important;
@@ -2957,8 +2963,11 @@ img {
   }
 
   .main-content {
-    grid-column: 1 !important;
-    grid-row: 2;
+    grid-column: unset !important;
+    grid-row: unset !important;
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
     padding: 14px 12px 96px !important;
   }
 
@@ -2996,7 +3005,6 @@ img {
   .carbon-alerts,
   .carbon-country-chips,
   .carbon-scope-wrap,
-  .carbon-header-meta,
   .entry-summary,
   .entry-grid-2,
   .entry-grid-4,
@@ -3010,9 +3018,10 @@ img {
   }
 
   .carbon-header-meta {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
     gap: 8px;
+    width: 100%;
   }
 
   .carbon-header-meta > div {

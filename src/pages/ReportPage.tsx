@@ -7,26 +7,40 @@ const TITLES: Record<string, string> = {
   'reporte-2': 'Reporte 2',
   'reporte-3': 'Reporte 3',
   'reporte-4': 'Reporte 4',
+  'desempeno-ambiental': 'Desempeño Ambiental',
   'huella-de-carbono': 'Huella de Carbono',
 }
 
-const POWER_BI_EMBED_URL =
-  'https://app.powerbi.com/singleSignOn?bookmarkGuid=326ef15e-776c-4d0b-9b94-6e703353a785&Context=share-report&ctid=411bbe47-fbe5-4025-a6ae-27963dadb346&pbi_source=mobile_ios&disablecdnExpiration=1784083726'
-
-const EMBEDDED_REPORTS = new Set([
-  'reporte-1',
-  'reporte-2',
-  'reporte-3',
-  'reporte-4',
-])
+const DESEMPENO_AMBIENTAL_EMBED_URL =
+  'https://app.powerbi.com/view?r=eyJrIjoiMDIzMTZmODktOGI1NC00YjI4LWI4MTYtMTRmZjAxZTgzZDRiIiwidCI6IjlmMmQzMzdhLTQ5Y2QtNDczZi1iZDI4LTI5NGNkNWYzMThhYiIsImMiOjR9'
 
 export function ReportPage() {
   const { reportId = 'reporte-1' } = useParams()
   const title = TITLES[reportId] ?? 'Reporte'
-  const showEmbed = EMBEDDED_REPORTS.has(reportId)
+  const isDesempeno = reportId === 'desempeno-ambiental'
 
   if (reportId === 'huella-de-carbono') {
     return <CarbonFootprintPage />
+  }
+
+  if (isDesempeno) {
+    return (
+      <div className="report-page report-page--desempeno">
+        <div className="page-header page-header--compact">
+          <h1>{title}</h1>
+        </div>
+        <div className="report-embed-panel report-embed-panel--wide">
+          <iframe
+            className="report-embed-frame report-embed-frame--wide"
+            src={DESEMPENO_AMBIENTAL_EMBED_URL}
+            title="Reporte Desempeño Ambiental CEMPRO"
+            width={1024}
+            height={1060}
+            allowFullScreen
+          />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -36,28 +50,17 @@ export function ReportPage() {
         <p>Visualización y análisis del reporte ambiental seleccionado.</p>
       </div>
 
-      {showEmbed ? (
-        <div className="report-embed-panel">
-          <iframe
-            className="report-embed-frame"
-            src={POWER_BI_EMBED_URL}
-            title={`Power BI — ${title}`}
-            allowFullScreen
-          />
-        </div>
-      ) : (
-        <div className="content-panel">
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <FileBarChart2 size={22} color="#047935" />
-            {title}
-          </h2>
-          <p>
-            Esta sección está lista para conectar la visualización de datos del{' '}
-            {title.toLowerCase()}. Por ahora muestra un placeholder para la
-            navegación del módulo de Reportes.
-          </p>
-        </div>
-      )}
+      <div className="content-panel">
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <FileBarChart2 size={22} color="#047935" />
+          {title}
+        </h2>
+        <p>
+          Esta sección está lista para conectar la visualización de datos del{' '}
+          {title.toLowerCase()}. Por ahora muestra un placeholder para la
+          navegación del módulo de Reportes.
+        </p>
+      </div>
     </div>
   )
 }

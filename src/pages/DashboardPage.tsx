@@ -1,13 +1,10 @@
-import { Link } from 'react-router-dom'
 import {
   ArrowUpRight,
   Bird,
   Bolt,
   Factory,
   Flame,
-  Leaf,
   Lightbulb,
-  MapPinned,
   Sparkles,
 } from 'lucide-react'
 import {
@@ -55,16 +52,6 @@ export function DashboardPage() {
             Bienvenido, {user?.name}. Panorama ambiental 2026 de Cementos
             Progreso.
           </p>
-        </div>
-        <div className="dash-header-actions">
-          <Link to="/mapa" className="btn-secondary-link">
-            <MapPinned size={16} />
-            Mapa de operaciones
-          </Link>
-          <Link to="/reportes/huella-de-carbono" className="btn-primary-link">
-            <Leaf size={16} />
-            Huella de carbono
-          </Link>
         </div>
       </div>
 

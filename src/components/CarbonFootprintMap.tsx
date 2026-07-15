@@ -1,51 +1,70 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { Link } from 'react-router-dom'
-import { PLANT_EMISSIONS } from '../data/carbonFootprint'
+import type { CarbonReport } from '../data/carbonReport'
+import { ALICON_SITE } from '../data/carbonReport'
 import 'leaflet/dist/leaflet.css'
 
-function FitPlants() {
+function FitPlant({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap()
-  const plants = useMemo(() => PLANT_EMISSIONS, [])
 
   useEffect(() => {
-    if (plants.length === 0) return
-    const bounds = L.latLngBounds(plants.map((p) => [p.lat, p.lng]))
-    map.fitBounds(bounds.pad(0.25))
-  }, [map, plants])
+    map.setView([lat, lng], 12)
+  }, [map, lat, lng])
 
   return null
 }
 
-function emissionIcon(intensity: number, status: string) {
-  const color =
-    status === 'Crítico'
-      ? '#b45309'
-      : status === 'Atención'
-        ? '#ca8a04'
-        : '#047935'
-  const size = Math.max(14, Math.min(28, Math.round(intensity / 28)))
-
+function plantIcon() {
   return L.divIcon({
     className: 'carbon-marker',
     html: `<div style="
-      width:${size}px;height:${size}px;border-radius:50%;
-      background:${color};border:2px solid #fff;
-      box-shadow:0 2px 8px rgba(0,0,0,.45);
-      opacity:.92;
+      width:22px;height:22px;border-radius:50%;
+      background:#047935;border:3px solid #fff;
+      box-shadow:0 2px 10px rgba(0,0,0,.45);
     "></div>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
   })
 }
 
-export function CarbonFootprintMap() {
+const fmt = (n: number | null | undefined, d = 0) =>
+  n == null
+    ? '—'
+    : n.toLocaleString('es-GT', { maximumFractionDigits: d })
+
+type PlantSummary = CarbonReport['plantSummary']
+
+export function CarbonFootprintMap({
+  plantSummary,
+}: {
+  plantSummary?: PlantSummary
+}) {
+  const plant = plantSummary ?? {
+    ...ALICON_SITE,
+    plant: ALICON_SITE.name,
+    year: '2026',
+    periodLabel: '—',
+    totalCement: 0,
+    avgFactorPlanta: null,
+    avgKwhPerTon: null,
+    totalElec: 0,
+    totalDiesel: 0,
+    totalWater: 0,
+    diversionRate: null,
+    waterConfig: {
+      disposicionResidual: '',
+      puntosDescarga: '',
+      metodosTratamiento: '',
+    },
+  }
+
   return (
     <div className="carbon-map-wrap">
       <MapContainer
-        center={[14, -86]}
-        zoom={5}
+        center={[plant.lat, plant.lng]}
+        zoom={12}
         className="carbon-map"
         scrollWheelZoom={false}
         dragging
@@ -55,32 +74,30 @@ export function CarbonFootprintMap() {
           attribution="Esri"
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         />
-        <FitPlants />
-        {PLANT_EMISSIONS.map((plant) => (
-          <Marker
-            key={plant.id}
-            position={[plant.lat, plant.lng]}
-            icon={emissionIcon(plant.intensity, plant.status)}
-          >
-            <Popup>
-              <strong>{plant.name}</strong>
-              <br />
-              {plant.country} · {plant.tco2e.toLocaleString('es-GT')} ktCO₂e
-              <br />
-              Intensidad: {plant.intensity} kgCO₂/t
-            </Popup>
-          </Marker>
-        ))}
+        <FitPlant lat={plant.lat} lng={plant.lng} />
+        <Marker position={[plant.lat, plant.lng]} icon={plantIcon()}>
+          <Popup>
+            <strong>{plant.name}</strong>
+            <br />
+            {plant.country} · {plant.type}
+            <br />
+            Periodo: {plant.periodLabel}
+            <br />
+            Cemento: {fmt(plant.totalCement)} t
+            <br />
+            Factor clinker: {fmt(plant.avgFactorPlanta, 1)}%
+            <br />
+            Intensidad eléctrica: {fmt(plant.avgKwhPerTon, 0)} kWh/t
+            <br />
+            <em style={{ fontSize: 11, opacity: 0.8 }}>
+              Coordenada {plant.coordinatesPrecision}
+            </em>
+          </Popup>
+        </Marker>
       </MapContainer>
       <div className="carbon-map-legend">
         <span>
-          <i className="dot ok" /> En meta
-        </span>
-        <span>
-          <i className="dot warn" /> Atención
-        </span>
-        <span>
-          <i className="dot crit" /> Crítico
+          <i className="dot ok" /> Planta Alicon · monitoreo operativo
         </span>
         <Link to="/mapa">Mapa operativo →</Link>
       </div>

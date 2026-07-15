@@ -15,6 +15,7 @@ const REPORTES = [
   { to: '/reportes/reporte-2', label: 'Reporte 2' },
   { to: '/reportes/reporte-3', label: 'Reporte 3' },
   { to: '/reportes/reporte-4', label: 'Reporte 4' },
+  { to: '/reportes/desempeno-ambiental', label: 'Desempeño Ambiental' },
   { to: '/reportes/huella-de-carbono', label: 'Huella de Carbono' },
 ]
 

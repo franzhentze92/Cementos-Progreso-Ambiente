@@ -60,6 +60,22 @@ function localAnswer(question: string, domains: ChatDomainSnapshot[]): string {
     return `Combustible (diésel móvil):\n${lines.join('\n') || 'Sin datos de diésel en el periodo.'}`
   }
 
+  if (/clinker/.test(q)) {
+    const ranking = ctx
+      .split('\n')
+      .filter((l) => /Mayor (producción cemento|consumo de clinker|ingreso de clinker|factor clinker)/i.test(l))
+      .join('\n')
+    const serie = ctx
+      .split('\n')
+      .filter((l) => /clinker consumo|SERIE PRODUCCIÓN Y CLINKER|cemento .+ \| clinker/i.test(l))
+      .slice(0, 14)
+      .join('\n')
+    return (
+      `Clinker (no confundir con producción de cemento):\n` +
+      `${ranking || ''}\n${serie || 'Sin serie de clinker en el contexto.'}`
+    )
+  }
+
   if (/agua|pipa|m³|m3/.test(q)) {
     const lines = ctx
       .split('\n')

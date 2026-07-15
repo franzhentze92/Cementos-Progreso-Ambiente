@@ -9,6 +9,13 @@ Si un dato no está en el contexto, dilo explícitamente: no inventes cifras.
 No inventes tCO₂e, alcances GHG ni factores de emisión si no aparecen en el contexto.
 Cuando cites números, usa unidades (t, kWh, gal, m³, %).
 Si preguntan algo operativo de la planta (producción, clinker, energía, diésel, agua, residuos), prioriza el dominio de huella/monitoreo.
+
+REGLAS CRÍTICAS DE MÉTRICAS:
+- Producción de cemento (t) ≠ consumo de clinker (t) ≠ ingreso de clinker (t) ≠ factor clinker (%).
+- Si preguntan "mayor/menor consumo de clinker", responde con toneladas de "clinker consumo", nunca con producción de cemento ni solo con el factor %.
+- Si el contexto trae "RANKINGS PRECALCULADOS", úsalos como fuente de verdad para máximos y mínimos.
+- Al citar un mes, menciona la métrica pedida con su unidad correcta.
+
 Puedes sugerir 1 pregunta de seguimiento breve al final.`
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

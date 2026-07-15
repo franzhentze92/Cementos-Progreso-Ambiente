@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { MessageCircle, Send, X } from 'lucide-react'
-import { SITES } from '../data/locations'
+import { askCopilot } from '../lib/chat/askCopilot'
+import { loadChatDomains } from '../lib/chat/domains'
+import type { ChatDomainSnapshot, ChatMessagePayload } from '../lib/chat/types'
 
 type ChatRole = 'bot' | 'user'
 
@@ -11,56 +13,29 @@ interface ChatMessage {
 }
 
 const QUICK_PROMPTS = [
-  '¿Cuánta energía renovable usamos?',
-  '¿Dónde están las plantas?',
-  'Háblame de biodiversidad',
-  '¿Qué es la sustitución térmica?',
+  '¿Cuánto cemento produjo Alicon?',
+  '¿Cuál es el factor clinker?',
+  '¿Cuánta electricidad se consumió?',
+  '¿Cuánto diésel móvil usamos?',
 ]
-
-function fakeReply(input: string): string {
-  const q = input.toLowerCase()
-  const plants = SITES.filter((s) => s.type.includes('Planta') && s.status === 'Operativa')
-  const countries = new Set(SITES.map((s) => s.country)).size
-
-  if (q.includes('renov') || q.includes('eléctric') || q.includes('electric')) {
-    return 'En 2026, el 62.1% de la energía eléctrica proviene de fuentes renovables, sobre un consumo regional de 555.8 GWh.'
-  }
-  if (q.includes('térmic') || q.includes('termic') || q.includes('combustible') || q.includes('altern')) {
-    return 'La tasa de sustitución térmica actual es 9.8%, gracias al coprocesamiento de residuos de otras industrias. El consumo térmico reportado es de 14,318 TJ.'
-  }
-  if (q.includes('biodivers') || q.includes('especie') || q.includes('fauna') || q.includes('flora')) {
-    return 'Desde 2007 se han identificado 265 especies de animales (240 aves y 25 mamíferos), 155 de mariposas, 22 de herpetofauna y 514 de flora en monitoreo biológico.'
-  }
-  if (q.includes('mapa') || q.includes('planta') || q.includes('ubic') || q.includes('dónde') || q.includes('donde')) {
-    return `Tenemos ${plants.length} plantas operativas georreferenciadas en el mapa, además de centros y oficinas en ${countries} países de la región. Puedes filtrar por país y tipo en la página Mapa.`
-  }
-  if (q.includes('huella') || q.includes('carbono') || q.includes('co2') || q.includes('emision') || q.includes('emisión')) {
-    return 'En el dashboard verás la tendencia de intensidad de CO₂ (Alcance 1 y 2). El módulo Huella de Carbono y las entradas DB estarán disponibles pronto para captura detallada.'
-  }
-  if (q.includes('reporte') || q.includes('dashboard') || q.includes('indicador')) {
-    return 'La plataforma resume energía, sustitución térmica, biodiversidad, presencia regional y recomendaciones ambientales. Los reportes 1–4 están listos como estructura de navegación.'
-  }
-  if (q.includes('hola') || q.includes('buenas') || q.includes('ayuda')) {
-    return '¡Hola! Soy el Asistente Ambiental CEMPRO. Pregúntame por energía renovable, plantas, biodiversidad, huella de carbono o indicadores del dashboard.'
-  }
-
-  return 'Puedo orientarte sobre energía renovable (62.1%), sustitución térmica (9.8%), biodiversidad monitoreada, ubicaciones en el mapa y recomendaciones del dashboard. ¿Sobre qué tema quieres saber más?'
-}
 
 export function EnvironmentalChatbot() {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
+  const [domains, setDomains] = useState<ChatDomainSnapshot[]>([])
+  const [domainsLoading, setDomainsLoading] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       role: 'bot',
-      text: 'Hola, soy el Asistente Ambiental CEMPRO. Pregúntame sobre indicadores, plantas o biodiversidad de la plataforma.',
+      text: 'Hola, soy el Asistente Ambiental CEMPRO. Ya estoy conectado a los datos de Huella de Carbono (Alicon). Pregúntame por producción, factor clinker, energía, diésel, agua o residuos.',
     },
   ])
   const closeTimer = useRef<number | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const isTouch = useRef(false)
+  const domainsRef = useRef<ChatDomainSnapshot[]>([])
 
   useEffect(() => {
     isTouch.current =
@@ -69,7 +44,10 @@ export function EnvironmentalChatbot() {
   }, [])
 
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
+    listRef.current?.scrollTo({
+      top: listRef.current.scrollHeight,
+      behavior: 'smooth',
+    })
   }, [messages, typing])
 
   useEffect(() => {
@@ -77,6 +55,28 @@ export function EnvironmentalChatbot() {
       if (closeTimer.current) window.clearTimeout(closeTimer.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!open || domainsRef.current.length > 0 || domainsLoading) return
+    let cancelled = false
+    setDomainsLoading(true)
+    loadChatDomains()
+      .then((loaded) => {
+        if (cancelled) return
+        domainsRef.current = loaded
+        setDomains(loaded)
+      })
+      .catch(() => {
+        if (cancelled) return
+        domainsRef.current = []
+      })
+      .finally(() => {
+        if (!cancelled) setDomainsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, domainsLoading])
 
   function clearClose() {
     if (closeTimer.current) {
@@ -101,36 +101,76 @@ export function EnvironmentalChatbot() {
     setOpen((v) => !v)
   }
 
-  function pushBotReply(question: string) {
+  function historyFromMessages(list: ChatMessage[]): ChatMessagePayload[] {
+    return list
+      .filter((m) => m.id !== 'welcome')
+      .map((m) => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.text,
+      }))
+  }
+
+  async function pushBotReply(question: string, prior: ChatMessage[]) {
     setTyping(true)
-    window.setTimeout(() => {
+    try {
+      const result = await askCopilot({
+        question,
+        history: historyFromMessages(prior),
+        cachedDomains: domainsRef.current,
+      })
+      if (result.domains.length) {
+        domainsRef.current = result.domains
+        setDomains(result.domains)
+      }
       setMessages((prev) => [
         ...prev,
         {
           id: `bot-${Date.now()}`,
           role: 'bot',
-          text: fakeReply(question),
+          text: result.reply,
         },
       ])
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `bot-${Date.now()}`,
+          role: 'bot',
+          text: 'No pude consultar los datos ahora. Intenta de nuevo en un momento.',
+        },
+      ])
+    } finally {
       setTyping(false)
-    }, 650 + Math.random() * 500)
+    }
   }
 
   function sendMessage(text: string) {
     const trimmed = text.trim()
     if (!trimmed || typing) return
-    setMessages((prev) => [
-      ...prev,
-      { id: `user-${Date.now()}`, role: 'user', text: trimmed },
-    ])
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      text: trimmed,
+    }
+    setMessages((prev) => {
+      const next = [...prev, userMsg]
+      void pushBotReply(trimmed, next)
+      return next
+    })
     setInput('')
-    pushBotReply(trimmed)
   }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     sendMessage(input)
   }
+
+  const domainLabel =
+    domains.length > 0
+      ? domains.map((d) => d.label).join(' · ')
+      : domainsLoading
+        ? 'Cargando datos…'
+        : 'Datos de la plataforma'
 
   return (
     <div
@@ -139,13 +179,16 @@ export function EnvironmentalChatbot() {
       onMouseLeave={scheduleClose}
     >
       {open && (
-        <section className="env-chat-panel" aria-label="Asistente Ambiental CEMPRO">
+        <section
+          className="env-chat-panel"
+          aria-label="Asistente Ambiental CEMPRO"
+        >
           <header className="env-chat-header">
             <div className="env-chat-header-main">
               <img src="/logo-mark.svg" alt="" />
               <div>
                 <strong>Asistente Ambiental CEMPRO</strong>
-                <span>En línea · datos de la plataforma</span>
+                <span>Copiloto · {domainLabel}</span>
               </div>
             </div>
             <button
@@ -165,14 +208,22 @@ export function EnvironmentalChatbot() {
                 className={`env-chat-bubble ${msg.role === 'user' ? 'is-user' : 'is-bot'}`}
               >
                 {msg.role === 'bot' && (
-                  <img src="/logo-mark.svg" alt="" className="env-chat-mini-logo" />
+                  <img
+                    src="/logo-mark.svg"
+                    alt=""
+                    className="env-chat-mini-logo"
+                  />
                 )}
-                <p>{msg.text}</p>
+                <p style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</p>
               </div>
             ))}
             {typing && (
               <div className="env-chat-bubble is-bot is-typing">
-                <img src="/logo-mark.svg" alt="" className="env-chat-mini-logo" />
+                <img
+                  src="/logo-mark.svg"
+                  alt=""
+                  className="env-chat-mini-logo"
+                />
                 <p>
                   <span />
                   <span />
@@ -199,10 +250,14 @@ export function EnvironmentalChatbot() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Escribe tu pregunta ambiental…"
+              placeholder="Pregunta sobre huella Alicon…"
               aria-label="Mensaje al asistente"
             />
-            <button type="submit" aria-label="Enviar" disabled={typing || !input.trim()}>
+            <button
+              type="submit"
+              aria-label="Enviar"
+              disabled={typing || !input.trim()}
+            >
               <Send size={16} />
             </button>
           </form>

@@ -110,17 +110,17 @@ export function selectDomainsForQuestion(
   return [...picked]
 }
 
-function withQuestionAwareKnowledge(
+async function withQuestionAwareKnowledge(
   domains: ChatDomainSnapshot[],
   question: string,
-): ChatDomainSnapshot[] {
+): Promise<ChatDomainSnapshot[]> {
   const next = domains.filter((d) => d.id !== 'knowledge')
   const needsKnowledge =
     /ley|reglamento|acuerdo|gubernativo|legislaci|descarga|pcb|marn|137-?2016|164-?2021|236-?2006|instrumento|expediente/.test(
       question.toLowerCase(),
     ) || domains.some((d) => d.id === 'knowledge')
   if (needsKnowledge) {
-    next.push(knowledgeDomainForQuestion(question))
+    next.push(await knowledgeDomainForQuestion(question))
   }
   return next
 }
@@ -238,7 +238,7 @@ export async function askCopilot(options: {
     baseDomains = await loadChatDomains(domainIds)
   }
 
-  const domains = withQuestionAwareKnowledge(baseDomains, options.question)
+  const domains = await withQuestionAwareKnowledge(baseDomains, options.question)
   const context = mergeDomainContext(domains)
 
   try {

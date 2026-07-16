@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Eye,
   Factory,
+  FileDown,
   ImageIcon,
   Loader2,
   MapPin,
@@ -22,6 +23,7 @@ import {
   type InspeccionHallazgoRecord,
 } from '../data/inspeccionesCampo'
 import { loadInspeccionCampoDetail } from '../lib/inspeccionesCampoApi'
+import { downloadInspeccionCampoPdf } from '../lib/inspeccionCampoPdf'
 
 const CLASS_META: Record<
   InspeccionClasificacion,
@@ -131,6 +133,8 @@ export function InspeccionCampoDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [pdfError, setPdfError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -171,10 +175,27 @@ export function InspeccionCampoDetailPage() {
     }
   }, [detail])
 
+  async function handleExportPdf() {
+    if (!detail || exportingPdf) return
+    setExportingPdf(true)
+    setPdfError(null)
+    try {
+      await downloadInspeccionCampoPdf(detail)
+    } catch (err) {
+      setPdfError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo generar el PDF. Intenta de nuevo.',
+      )
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="insp-detail-page is-loading">
-        <Loader2 className="spin" size={28} />
+        <Loader2 className="hc-spin" size={28} />
         <p>Cargando informe de inspección…</p>
       </div>
     )
@@ -211,10 +232,26 @@ export function InspeccionCampoDetailPage() {
           <ArrowLeft size={16} />
           Volver a entrada de datos
         </Link>
-        <Link to={ops} className="btn-secondary-link">
-          Ver en operaciones
-        </Link>
+        <div className="insp-detail-topbar-actions">
+          <button
+            type="button"
+            className="btn-primary-link"
+            disabled={exportingPdf}
+            onClick={() => void handleExportPdf()}
+          >
+            {exportingPdf ? (
+              <Loader2 size={15} className="hc-spin" />
+            ) : (
+              <FileDown size={15} />
+            )}
+            {exportingPdf ? 'Generando PDF…' : 'Generar PDF'}
+          </button>
+          <Link to={ops} className="btn-secondary-link">
+            Ver en operaciones
+          </Link>
+        </div>
       </div>
+      {pdfError && <p className="insp-detail-pdf-error">{pdfError}</p>}
 
       <header className="insp-detail-hero">
         <div className="insp-detail-hero-copy">

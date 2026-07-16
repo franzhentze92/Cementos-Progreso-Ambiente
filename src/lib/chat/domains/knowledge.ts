@@ -1,4 +1,7 @@
-import catalog from '../knowledge/catalog.json'
+import {
+  loadKnowledgeDocsForCopilot,
+  invalidateBibliotecaCache,
+} from '../../bibliotecaApi'
 import type { ChatDomainLoader, ChatDomainSnapshot } from '../types'
 
 type KnowledgeDoc = {
@@ -28,7 +31,6 @@ function scoreDoc(doc: KnowledgeDoc, question: string): number {
   if (/legislaci/i.test(doc.category)) score += 30
   if (doc.sizeMb > 20 && doc.charCount < 200) score -= 40
 
-  // Tokens de la pregunta vs título
   const tokens = q
     .split(/[^a-z0-9áéíóúñü]+/i)
     .map((t) => t.trim())
@@ -41,7 +43,6 @@ function scoreDoc(doc: KnowledgeDoc, question: string): number {
     if (doc.text?.toLowerCase().includes(t)) score += 2
   }
 
-  // Acuerdos / reglamentos frecuentes
   if (/164-?2021|gesti[oó]n de residuos/.test(q) && /164-?2021|residuos/i.test(title + ' ' + (doc.summary || ''))) {
     score += 200
   }
@@ -51,7 +52,6 @@ function scoreDoc(doc: KnowledgeDoc, question: string): number {
   if (/194-?2018|pcb/.test(q) && /194-?2018|pcb/i.test(title + ' ' + (doc.summary || ''))) {
     score += 200
   }
-  // 137-2016 vive en "Reglamento Control y Seguimiento"; la reforma 317-2019 suele ser PDF escaneado vacío
   if (/137-?2016/.test(q)) {
     if (/137-?2016/i.test(doc.summary || '') || /137-?2016/i.test(doc.text || '')) {
       score += 280
@@ -101,13 +101,20 @@ function pickDocs(
   return { included, omitted }
 }
 
-function buildContext(question = ''): {
+async function buildContext(question = ''): Promise<{
   summary: string
   context: string
   docCount: number
   withText: number
-} {
-  const docs = (catalog.documents ?? []) as KnowledgeDoc[]
+}> {
+  let docs: KnowledgeDoc[] = []
+  try {
+    docs = await loadKnowledgeDocsForCopilot()
+  } catch (err) {
+    console.warn('[knowledge] No se pudo cargar biblioteca', err)
+    invalidateBibliotecaCache()
+  }
+
   const { included, omitted } = pickDocs(docs, question)
   const withText = docs.filter((d) => d.charCount > 80).length
 
@@ -136,17 +143,16 @@ function buildContext(question = ''): {
 
   const context = `
 DOMINIO: Documentos de contexto del departamento de ambiente
-Fuente: carpeta "Contexto Chatbot" (texto extraído y versionado en el repo)
-Generado: ${catalog.generatedAt ?? '—'}
-Documentos en catálogo: ${docs.length} (${withText} con texto útil)
+Fuente: Biblioteca (catálogo Contexto Chatbot + documentos subidos)
+Documentos activos en copiloto: ${docs.length} (${withText} con texto útil)
 Incluidos en este prompt: ${included.map((d) => d.title).join('; ') || 'ninguno'}
 ${omitted.length ? `Omitidos por límite de tamaño: ${omitted.join('; ')}` : ''}
 
 ÍNDICE COMPLETO
-${index || '- Sin documentos. Corre: npm run chat:extract-knowledge'}
+${index || '- Sin documentos activos. Sube PDFs en Biblioteca o ejecuta npm run chat:extract-knowledge'}
 
 CONTENIDO DOCUMENTAL (priorizado según la pregunta)
-${bodies || '- Sin contenido. Coloca PDFs en "Contexto Chatbot/" y ejecuta npm run chat:extract-knowledge'}
+${bodies || '- Sin contenido. Sube PDFs con texto seleccionable en Biblioteca.'}
 
 REGLAS
 - Usa estos documentos para preguntas de legislación, permisos, reglamentos, expedientes e instrumentos.
@@ -155,7 +161,7 @@ REGLAS
 `.trim()
 
   return {
-    summary: `${docs.length} docs · ${withText} con texto · actualizado ${String(catalog.generatedAt ?? '').slice(0, 10) || '—'}`,
+    summary: `${docs.length} docs · ${withText} con texto`,
     context,
     docCount: docs.length,
     withText,
@@ -165,7 +171,7 @@ REGLAS
 /** Contexto documental. Si hay pregunta, prioriza el PDF más relevante. */
 export const loadKnowledgeDomain: ChatDomainLoader =
   async (): Promise<ChatDomainSnapshot> => {
-    const built = buildContext('')
+    const built = await buildContext('')
     return {
       id: 'knowledge',
       label: 'Documentos / legislación',
@@ -175,10 +181,10 @@ export const loadKnowledgeDomain: ChatDomainLoader =
   }
 
 /** Reconstruye el dominio documental priorizando la pregunta del usuario. */
-export function knowledgeDomainForQuestion(
+export async function knowledgeDomainForQuestion(
   question: string,
-): ChatDomainSnapshot {
-  const built = buildContext(question)
+): Promise<ChatDomainSnapshot> {
+  const built = await buildContext(question)
   return {
     id: 'knowledge',
     label: 'Documentos / legislación',

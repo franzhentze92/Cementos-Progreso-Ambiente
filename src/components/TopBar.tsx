@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { LogOut, Menu, KeyRound, UserRound, Users, X } from 'lucide-react'
+import { LogOut, Menu, KeyRound, Library, UserRound, Users, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 function initials(name: string) {
@@ -84,6 +84,10 @@ export function TopBar({
                 <Link to="/accesos" onClick={() => setOpen(false)} role="menuitem">
                   <KeyRound size={16} />
                   Accesos
+                </Link>
+                <Link to="/biblioteca" onClick={() => setOpen(false)} role="menuitem">
+                  <Library size={16} />
+                  Biblioteca
                 </Link>
               </>
             )}

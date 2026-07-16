@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
   KeyRound,
+  Library,
   Loader2,
   Pencil,
   Plus,
@@ -368,6 +369,10 @@ export function UsersPage() {
           <Link to="/accesos" className="btn-secondary-link">
             <Shield size={16} />
             Accesos por rol
+          </Link>
+          <Link to="/biblioteca" className="btn-secondary-link">
+            <Library size={16} />
+            Biblioteca
           </Link>
           {tab === 'users' ? (
             <button type="button" className="btn-primary-link" onClick={openCreateUser}>

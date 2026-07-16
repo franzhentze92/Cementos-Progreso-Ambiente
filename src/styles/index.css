@@ -1223,7 +1223,7 @@ img {
   border: 0;
 }
 
-/* Desempeño Ambiental: llena el área visible (evita alto enorme con franja blanca). */
+/* Desempe?o Ambiental: llena el ?rea visible (evita alto enorme con franja blanca). */
 .report-page--desempeno {
   display: flex;
   flex-direction: column;
@@ -1717,6 +1717,251 @@ img {
   width: 100%;
 }
 
+.biblioteca-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.biblioteca-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.biblioteca-stat {
+  background: var(--progreso-white);
+  border: 1px solid var(--progreso-border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--shadow-sm);
+}
+
+.biblioteca-stat span {
+  font-size: 0.78rem;
+  color: var(--progreso-gray);
+}
+
+.biblioteca-stat strong {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--progreso-green-dark);
+}
+
+.biblioteca-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.biblioteca-search {
+  flex: 1 1 240px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--progreso-border);
+  border-radius: 8px;
+  background: #fafcfa;
+  color: var(--progreso-gray);
+}
+
+.biblioteca-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--progreso-dark);
+}
+
+.biblioteca-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--progreso-gray);
+}
+
+.biblioteca-filter select {
+  padding: 8px 10px;
+  border: 1px solid var(--progreso-border);
+  border-radius: 8px;
+  background: var(--progreso-white);
+  color: var(--progreso-dark);
+}
+
+.biblioteca-table td strong {
+  display: block;
+}
+
+.biblioteca-note {
+  display: block;
+  margin-top: 4px;
+  color: #9a6b1f;
+}
+
+.biblioteca-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.biblioteca-chip.ok {
+  background: #eef6ec;
+  color: var(--progreso-green-dark);
+}
+
+.biblioteca-chip.warn {
+  background: #fff6e8;
+  color: #9a6b1f;
+}
+
+.biblioteca-chip.muted {
+  background: #f0f2f1;
+  color: var(--progreso-gray);
+}
+
+.biblioteca-form {
+  padding: 16px 18px 18px;
+}
+
+.biblioteca-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.biblioteca-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--progreso-gray);
+}
+
+.biblioteca-form-grid input[type='text'],
+.biblioteca-form-grid input:not([type]),
+.biblioteca-form-grid input[type='search'],
+.biblioteca-form-file input {
+  padding: 9px 12px;
+  border: 1px solid var(--progreso-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--progreso-dark);
+}
+
+.biblioteca-form-file {
+  grid-column: 1 / -1;
+}
+
+.biblioteca-form-check {
+  grid-column: 1 / -1;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px !important;
+  color: var(--progreso-dark) !important;
+}
+
+.biblioteca-form-check input {
+  width: auto;
+}
+
+.biblioteca-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.biblioteca-row-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.biblioteca-row-actions .icon-btn.danger {
+  color: #a33;
+}
+
+.biblioteca-row-actions .icon-btn.danger:hover {
+  background: #fff5f5;
+}
+
+.biblioteca-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  color: var(--progreso-gray);
+}
+
+.biblioteca-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.biblioteca-toggle-track {
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: #cfd5d1;
+  position: relative;
+  transition: background 0.18s ease;
+}
+
+.biblioteca-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s ease;
+}
+
+.biblioteca-toggle.on {
+  color: var(--progreso-green-dark);
+}
+
+.biblioteca-toggle.on .biblioteca-toggle-track {
+  background: var(--progreso-green);
+}
+
+.biblioteca-toggle.on .biblioteca-toggle-thumb {
+  transform: translateX(18px);
+}
+
+.biblioteca-toggle-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  min-width: 1.5rem;
+}
+
+.biblioteca-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 16px;
+  color: var(--progreso-gray);
+  text-align: center;
+}
+
 .access-layout {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
@@ -1855,6 +2100,14 @@ img {
 
 @media (max-width: 900px) {
   .access-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .biblioteca-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .biblioteca-form-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -2558,6 +2811,9 @@ img {
   font-family: var(--font-display);
   font-size: 1.05rem;
   color: var(--progreso-green-dark);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .dash-panel-head p {
@@ -4025,7 +4281,7 @@ img {
   }
 }
 
-/* —— Huella captura (Excel Alicon) —— */
+/* ?? Huella captura (Excel Alicon) ?? */
 .hc-entry {
   gap: 14px;
   padding-bottom: 24px;
@@ -4460,7 +4716,7 @@ img {
   font-weight: 600;
 }
 
-/* —— Entrada Planta Alicón (Desempeño Ambiental tabs) —— */
+/* ?? Entrada Planta Alic?n (Desempe?o Ambiental tabs) ?? */
 
 .alicon-entry-page {
   display: flex;
@@ -4654,7 +4910,7 @@ img {
   display: none;
 }
 
-/* —— Agroprogreso · Consumo de agua —— */
+/* ?? Agroprogreso ? Consumo de agua ?? */
 
 .agro-agua-page .agro-agua-period {
   display: flex;
@@ -4858,7 +5114,7 @@ img {
   color: #1d4ed8;
 }
 
-/* —— Reporte Monitoreo (analytics) —— */
+/* ?? Reporte Monitoreo (analytics) ?? */
 
 .agro-mon-top-grid {
   align-items: stretch;
@@ -5082,7 +5338,7 @@ img {
   }
 }
 
-/* —— Reporte Operaciones · Consumo de agua —— */
+/* ?? Reporte Operaciones ? Consumo de agua ?? */
 
 .agro-year-filter select {
   margin-top: 4px;
@@ -5223,7 +5479,7 @@ img {
   background: #c2d500;
 }
 
-/* —— Licencias ambientales (gantt vigencia) —— */
+/* ?? Licencias ambientales (gantt vigencia) ?? */
 
 .agro-lic-gantt {
   display: grid;
@@ -5297,7 +5553,7 @@ img {
   }
 }
 
-/* —— Catálogo licencias (tabla) —— */
+/* ?? Cat?logo licencias (tabla) ?? */
 
 .agro-lic-catalog-wrap {
   margin-top: 0;
@@ -5444,7 +5700,7 @@ img {
   }
 }
 
-/* —— Monitoreo en vivo (Kunak) —— */
+/* ?? Monitoreo en vivo (Kunak) ?? */
 .live-mon-page .carbon-kicker {
   display: inline-flex;
   align-items: center;
@@ -5678,7 +5934,7 @@ img {
 }
 
 
-/* �� Informe detalle inspecci�n de campo �� */
+/* ?? Informe detalle inspecci?n de campo ?? */
 
 .insp-detail-page {
   display: grid;
@@ -5704,6 +5960,29 @@ img {
   gap: 10px;
   align-items: center;
   justify-content: space-between;
+}
+
+.insp-detail-topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.insp-detail-pdf-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fdecec;
+  color: #b42318;
+  font-size: 0.86rem;
+}
+
+.btn-primary-link:disabled {
+  opacity: 0.65;
+  cursor: default;
+  filter: none;
+  box-shadow: none;
 }
 
 .insp-detail-back {

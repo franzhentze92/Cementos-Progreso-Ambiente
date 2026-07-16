@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
   CheckSquare,
+  Library,
   Loader2,
   Save,
   Shield,
@@ -171,6 +172,10 @@ export function RoleAccessPage() {
           <Link to="/usuarios" className="btn-secondary-link">
             <Users size={16} />
             Usuarios
+          </Link>
+          <Link to="/biblioteca" className="btn-secondary-link">
+            <Library size={16} />
+            Biblioteca
           </Link>
           <button
             type="button"

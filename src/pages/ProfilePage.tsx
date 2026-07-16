@@ -10,6 +10,7 @@ import {
   Shield,
   Users,
   KeyRound,
+  Library,
   UserRound,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -153,6 +154,10 @@ export function ProfilePage() {
               <Link to="/accesos" className="btn-secondary-link">
                 <KeyRound size={16} />
                 Accesos por rol
+              </Link>
+              <Link to="/biblioteca" className="btn-secondary-link">
+                <Library size={16} />
+                Biblioteca
               </Link>
             </>
           )}

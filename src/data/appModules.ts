@@ -144,6 +144,12 @@ export const APP_MODULES: AppModuleDef[] = [
     group: 'admin',
     path: '/accesos',
   },
+  {
+    id: 'biblioteca',
+    label: 'Biblioteca',
+    group: 'admin',
+    path: '/biblioteca',
+  },
 ]
 
 export const APP_MODULE_IDS = APP_MODULES.map((m) => m.id)
@@ -209,4 +215,8 @@ export function modulesByGroup(groupId: AppModuleGroupId): AppModuleDef[] {
 export const ALWAYS_ALLOWED_MODULES = new Set(['perfil'])
 
 /** Módulos exclusivos de la cuenta dueña del directorio. */
-export const DIRECTORY_ADMIN_MODULES = new Set(['usuarios', 'accesos'])
+export const DIRECTORY_ADMIN_MODULES = new Set([
+  'usuarios',
+  'accesos',
+  'biblioteca',
+])

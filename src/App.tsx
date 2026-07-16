@@ -9,6 +9,7 @@ import { DataEntryPage } from './pages/DataEntryPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { UsersPage } from './pages/UsersPage'
 import { RoleAccessPage } from './pages/RoleAccessPage'
+import { BibliotecaPage } from './pages/BibliotecaPage'
 import { MapPage } from './pages/MapPage'
 import { LiveMonitoringPage } from './pages/LiveMonitoringPage'
 import { InspeccionCampoDetailPage } from './pages/InspeccionCampoDetailPage'
@@ -59,6 +60,7 @@ export default function App() {
               <Route path="/perfil" element={<ProfilePage />} />
               <Route path="/usuarios" element={<UsersPage />} />
               <Route path="/accesos" element={<RoleAccessPage />} />
+              <Route path="/biblioteca" element={<BibliotecaPage />} />
 
               {/* Compatibilidad con rutas anteriores */}
               <Route

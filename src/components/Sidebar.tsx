@@ -23,6 +23,7 @@ import {
   Users,
   UserRound,
   KeyRound,
+  Library,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import type { LucideIcon } from 'lucide-react'
@@ -511,6 +512,15 @@ export function Sidebar({
             >
               <KeyRound />
               <span className="nav-label">Accesos</span>
+            </NavLink>
+            <NavLink
+              to="/biblioteca"
+              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+              title="Biblioteca"
+              onClick={onNavigate}
+            >
+              <Library />
+              <span className="nav-label">Biblioteca</span>
             </NavLink>
           </>
         )}

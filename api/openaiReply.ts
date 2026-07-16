@@ -1,25 +1,29 @@
 export type ChatTurn = { role: 'user' | 'assistant' | 'system'; content: string }
 
-export const CHAT_SYSTEM_PROMPT = `Eres el Asistente Ambiental CEMPRO, un copiloto de datos ambientales.
-Respondes siempre en español, claro y conciso.
+export const CHAT_SYSTEM_PROMPT = `Eres el Asistente Ambiental CEMPRO. Conversas en español de forma natural, clara y breve.
 
 PRIORIDAD DE FUENTES:
 1) CONTEXTO DE DATOS de la plataforma (indicadores, tablas, documentos internos).
-2) Si la pregunta es de normativa/legislación y el dato NO está en el contexto, puedes apoyarte en información pública de internet (cuando esté habilitada la búsqueda web).
-3) Nunca inventes cifras operativas (t, kWh, m³, lbs, NDA, producciones) que no estén en el contexto.
+2) HISTORIAL de la conversación: si el usuario pide "resúmelo", "explícalo", "optimizar", etc., continúa sobre lo ya hablado.
+3) Si la pregunta es de normativa y el dato NO está en el contexto, puedes apoyarte en información pública de internet (cuando esté habilitada la búsqueda web).
+4) Nunca inventes cifras operativas (t, kWh, m³, lbs, NDA, producciones) que no estén en el contexto.
+
+ESTILO:
+- Responde como un asistente conversacional, no como un volcado de base de datos.
+- Cuando te pidan resumen, da 3–6 bullets o un párrafo corto con lo esencial.
+- Cuando te pidan recomendaciones u optimización, usa los datos del contexto y da acciones concretas.
+- No copies encabezados técnicos tipo "DOMINIO:" o "Tabla Supabase".
 
 REGLAS:
 - No inventes tCO₂e, alcances GHG ni factores de emisión si no aparecen en el contexto.
 - No inventes artículos de ley: si usas internet, resume con cautela y menciona que proviene de fuentes públicas.
 - Distingue Alicon vs Agroprogreso.
-- Para preguntas legales, prioriza el dominio Documentos / legislación del contexto.
-- Si realmente no hay información suficiente ni en contexto ni en web, dilo con claridad y ofrece alternativas.
+- Para licencias "por vencer" o "vencidas", usa fechas de vigencia del contexto; si solo hay estado (VIGENTE/EN PROCESO), dilo claramente.
 
 REGLAS CRÍTICAS DE MÉTRICAS (huella Alicon):
 - Producción de cemento (t) ≠ consumo de clinker (t) ≠ ingreso de clinker (t) ≠ factor clinker (%).
 - Si preguntan "mayor/menor consumo de clinker", responde con toneladas de "clinker consumo".
 - Si el contexto trae "RANKINGS PRECALCULADOS", úsalos como fuente de verdad.
-- Al citar un mes, menciona la métrica pedida con su unidad correcta.
 
 Puedes sugerir 1 pregunta de seguimiento breve al final.`
 
@@ -86,7 +90,6 @@ function extractResponsesText(data: unknown): string {
   return chunks.join('\n').trim()
 }
 
-/** Segunda pasada: Responses API + web_search. */
 async function answerWithWebSearch(input: {
   message: string
   context: string
@@ -145,7 +148,7 @@ async function answerWithWebSearch(input: {
   }
 }
 
-/** Llama a OpenAI con el contexto de dominios. Usado por Vercel y por Vite (local). */
+/** Llama a OpenAI. Usado por Vercel (/api/chat) y por el plugin de Vite (local). */
 export async function completeEnvironmentalChat(
   input: OpenAIChatInput,
 ): Promise<OpenAIChatResult> {
@@ -167,7 +170,7 @@ export async function completeEnvironmentalChat(
     { role: 'system', content: CHAT_SYSTEM_PROMPT },
     {
       role: 'system',
-      content: `Dominios activos: ${domains}\n\nCONTEXTO DE DATOS:\n${context.slice(0, 180000)}`,
+      content: `Dominios activos: ${domains}\n\nCONTEXTO DE DATOS:\n${context.slice(0, 120000)}`,
     },
     ...history.filter(
       (m) =>
@@ -186,7 +189,7 @@ export async function completeEnvironmentalChat(
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
-      temperature: 0.2,
+      temperature: 0.3,
       messages,
     }),
   })
@@ -194,7 +197,6 @@ export async function completeEnvironmentalChat(
   if (!openaiRes.ok) {
     const errText = await openaiRes.text()
     console.error('OpenAI error', openaiRes.status, errText)
-    // Si falla el chat normal, aún intentamos web para normativa
     if (wantsLegislationLookup(message)) {
       const web = await answerWithWebSearch({
         message,
@@ -218,7 +220,6 @@ export async function completeEnvironmentalChat(
     return { ok: false, status: 502, error: 'Respuesta vacía del modelo' }
   }
 
-  // Si no sabe por falta de contexto, investigar en internet
   if (looksInsufficient(reply)) {
     const web = await answerWithWebSearch({
       message,
@@ -228,7 +229,6 @@ export async function completeEnvironmentalChat(
     if (web.ok) return web
   }
 
-  // Normativa pedida por número: si no está en el contexto local, buscar en web
   if (wantsLegislationLookup(message)) {
     const agreementMatch = message.match(
       /(?:acuerdo|gubernativo|reglamento|decreto)[^\d]{0,40}(\d{1,4}[\s\-–]?\d{4})/i,

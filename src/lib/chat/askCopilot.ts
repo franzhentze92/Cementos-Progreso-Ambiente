@@ -10,8 +10,78 @@ export type AskCopilotResult = {
   reply: string
   domains: ChatDomainSnapshot[]
   source: 'openai' | 'local'
-  /** Si la IA falló, mensaje útil para el usuario */
   error?: string
+}
+
+/** Elige dominios relevantes para no saturar /api/chat ni perder la conversación. */
+export function selectDomainsForQuestion(
+  question: string,
+  history: ChatMessagePayload[] = [],
+): ChatDomainId[] {
+  const q = question.toLowerCase()
+  const hist = history.map((h) => h.content).join('\n').toLowerCase()
+  const blob = `${q}\n${hist}`
+  const picked = new Set<ChatDomainId>()
+
+  const add = (...ids: ChatDomainId[]) => ids.forEach((id) => picked.add(id))
+
+  if (/producción|cemento|ugc|cfb|clinker|huella|di[eé]sel|electric|kwh|mwh|carbono/.test(blob)) {
+    add('carbon')
+  }
+  if (/agua|m³|m3|consumo de agua|finca|tanque|bunker|pozo/.test(blob)) {
+    add('agroAgua')
+  }
+  if (/residuo|recicl|lbs|desecho|vertedero/.test(blob) && !/acuerdo|gubernativo|164-?2021/.test(q)) {
+    add('agroResiduos')
+    add('carbon')
+  }
+  if (/compost/.test(blob)) add('agroCompostaje')
+  if (/incidente/.test(blob)) {
+    add('agroIncidentes')
+    add('aliconDesempeno')
+  }
+  if (/inspecci|hallazgo|casco verde/.test(blob)) {
+    add('agroInspecciones')
+    add('aliconDesempeno')
+    add('agroNda')
+  }
+  if (/monitoreo|par[aá]metro|muestreo/.test(blob)) {
+    add('agroMonitoreos')
+    add('aliconDesempeno')
+  }
+  if (/capacitaci|taller/.test(blob)) add('agroCapacitaciones')
+  if (/licencia|vencer|vencid|vigencia|expediente/.test(blob)) add('agroLicencias')
+  if (/tr[aá]mite|prioridad/.test(blob)) add('agroTramites')
+  if (/\bnda\b|nota ida|desempeño/.test(blob)) {
+    add('agroNda')
+    add('aliconDesempeno')
+  }
+  if (
+    /ley|reglamento|acuerdo|gubernativo|legislaci|descarga|pcb|marn|137-?2016|164-?2021|236-?2006/.test(
+      blob,
+    )
+  ) {
+    add('knowledge')
+  }
+
+  // Seguimientos cortos ("resúmelo", "optimizar", "y eso?") → heredar del historial
+  if (
+    picked.size === 0 ||
+    /resum|optimiz|explica|detalle|eso|eso mismo|y eso|contin[uú]a|basado en|recomend/.test(q)
+  ) {
+    if (/agua|m³|finca san miguel|el pilar|tanque|bunker/.test(hist)) add('agroAgua')
+    if (/licencia|vigencia|vencer/.test(hist)) add('agroLicencias')
+    if (/cemento|clinker|huella|alicon/.test(hist)) add('carbon')
+    if (/nda|casco/.test(hist)) add('agroNda')
+    if (/residuo/.test(hist)) add('agroResiduos')
+    if (/acuerdo|reglamento|legislaci/.test(hist)) add('knowledge')
+  }
+
+  if (picked.size === 0) {
+    return DEFAULT_CHAT_DOMAINS
+  }
+
+  return [...picked]
 }
 
 function withQuestionAwareKnowledge(
@@ -19,128 +89,86 @@ function withQuestionAwareKnowledge(
   question: string,
 ): ChatDomainSnapshot[] {
   const next = domains.filter((d) => d.id !== 'knowledge')
-  next.push(knowledgeDomainForQuestion(question))
+  const needsKnowledge =
+    /ley|reglamento|acuerdo|gubernativo|legislaci|descarga|pcb|marn|137-?2016|164-?2021|236-?2006|instrumento|expediente/.test(
+      question.toLowerCase(),
+    ) || domains.some((d) => d.id === 'knowledge')
+  if (needsKnowledge) {
+    next.push(knowledgeDomainForQuestion(question))
+  }
   return next
 }
 
-/** Extrae la sección ### más relevante del dominio knowledge. */
-function extractKnowledgeSection(
-  knowledge: ChatDomainSnapshot | undefined,
+function conversationalFallback(
   question: string,
-): string | null {
-  if (!knowledge?.context) return null
-  const parts = knowledge.context.split(/\n### /)
-  if (parts.length < 2) return null
-
+  domains: ChatDomainSnapshot[],
+  history: ChatMessagePayload[],
+): string {
   const q = question.toLowerCase()
-  const tokens = q
-    .split(/[^a-z0-9áéíóúñü-]+/i)
-    .filter((t) => t.length >= 3)
+  const lastAssistant = [...history]
+    .reverse()
+    .find((h) => h.role === 'assistant')?.content
 
-  let best = ''
-  let bestScore = 0
-  for (const part of parts.slice(1)) {
-    const title = (part.split('\n')[0] || '').toLowerCase()
-    let score = 0
-    for (const t of tokens) {
-      if (title.includes(t)) score += 5
-      if (part.toLowerCase().includes(t)) score += 1
-    }
-    if (/164-?2021/.test(q) && /164-?2021/.test(title)) score += 50
-    if (score > bestScore) {
-      bestScore = score
-      best = part
+  if (/resum|breve|corto|damelo|dámelo/.test(q) && lastAssistant) {
+    const lines = lastAssistant
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l && !/^DOMINIO:|^Tabla |^=====|^RESUMEN$/i.test(l))
+      .slice(0, 8)
+    if (lines.length) {
+      return `Resumen rápido:\n${lines.map((l) => (l.startsWith('-') ? l : `· ${l}`)).join('\n')}`
     }
   }
 
-  if (bestScore < 3 || !best) return null
-  const clipped = best.slice(0, 3500)
-  return `Según el documento «${best.split('\n')[0]}»:\n\n${clipped}${best.length > 3500 ? '\n\n…(continúa en el documento completo).' : ''}`
-}
-
-function localAnswer(question: string, domains: ChatDomainSnapshot[]): string {
-  const q = question.toLowerCase()
-  const knowledge = domains.find((d) => d.id === 'knowledge')
-
-  if (!domains.length) {
-    return 'Aún no tengo información disponible. Intenta de nuevo en un momento.'
-  }
-
-  // Legislación / documentos ANTES que "residuos" operativos
-  if (
-    /ley|reglamento|acuerdo|legislaci|gubernativo|descarga|pcb|instrumento ambiental|expediente|folio|marn|inab|164-?2021|236-?2006|194-?2018/.test(
-      q,
-    )
-  ) {
-    const section = extractKnowledgeSection(knowledge, question)
-    if (section) {
-      return section
+  if (/optimiz|recomend|mejorar|reducir/.test(q)) {
+    const agua = domains.find((d) => d.id === 'agroAgua')
+    if (agua || /agua/.test(history.map((h) => h.content).join(' ').toLowerCase())) {
+      const ctx = agua?.context ?? ''
+      const top = ctx
+        .split('\n')
+        .filter((l) => /Finca San Miguel|Finca El Pilar|Tanque|Bunker|total/i.test(l))
+        .slice(0, 6)
+      return (
+        `Con los datos de agua disponibles, priorizaría:\n` +
+        `1. Auditar el mayor consumidor (en los datos suele destacar San Miguel / Tanque Casa Patronal).\n` +
+        `2. Medir fugas y pérdidas en tanques y bunkers.\n` +
+        `3. Separar consumo doméstico vs operativo y fijar metas mensuales por sede.\n` +
+        (top.length ? `\nReferencia:\n${top.join('\n')}` : '')
+      )
     }
-    return 'No encontré ese documento en la información disponible. ¿Puedes indicar el nombre o número del acuerdo o reglamento?'
   }
 
-  if (q.includes('hola') || q.includes('buenas') || q.includes('ayuda')) {
-    return (
-      'Puedo ayudarte con indicadores ambientales, desempeño de Alicon y Agroprogreso, y normativa. ' +
-      'Pregúntame por producción, agua, residuos, licencias, NDA o un acuerdo gubernativo concreto.'
-    )
-  }
-
-  if (/producción|cemento|ugc|cfb|clinker|huella|di[eé]sel|electric|kwh|mwh/.test(q)) {
-    const carbon = domains.find((d) => d.id === 'carbon')
-    const totals = (carbon?.context ?? '')
+  const catalog = domains.map((d) => `· ${d.label}: ${d.summary}`).join('\n')
+  if (/agua/.test(q)) {
+    const agua = domains.find((d) => d.id === 'agroAgua')
+    const lines = (agua?.context ?? '')
       .split('\n')
-      .filter((l) => /TOTALES|RANKINGS|Producción cemento:|Factor clinker/i.test(l))
-      .slice(0, 12)
-    return (
-      `Resumen huella Alicon:\n${totals.join('\n') || carbon?.summary || 'Sin datos'}`
-    )
+      .filter((l) => /RESUMEN|Consumo total|POR SEDE|San Miguel|El Pilar/i.test(l))
+      .slice(0, 10)
+    return lines.length
+      ? `Según el consumo de agua Agro:\n${lines.join('\n')}`
+      : agua?.summary || 'No tengo el detalle de agua a la mano.'
   }
 
-  if (/agua|pipa|m³|m3|consumo de agua/.test(q) && !/reglamento|acuerdo|descargas/.test(q)) {
-    const agro = domains.find((d) => d.id === 'agroAgua')
-    const lines = (agro?.context ?? '')
-      .split('\n')
-      .filter((l) => /RESUMEN|Consumo total|POR SEDE|m³/i.test(l))
-      .slice(0, 12)
-    return `Agua Agro:\n${lines.join('\n') || agro?.summary || 'Sin datos'}`
-  }
-
-  if (
-    /residuo|recicl|vertedero|desecho|lbs/.test(q) &&
-    !/acuerdo|gubernativo|reglamento|164-?2021|legislaci/.test(q)
-  ) {
-    const agro = domains.find((d) => d.id === 'agroResiduos')
-    const lines = (agro?.context ?? '')
-      .split('\n')
-      .filter((l) => /RESUMEN|Cantidad total|POR SEDE|POR TIPO|POR RUTA/i.test(l))
-      .slice(0, 14)
-    return `Residuos Agro:\n${lines.join('\n') || agro?.summary || 'Sin datos'}`
-  }
-
-  if (/\bnda\b|nota ida|casco verde/.test(q)) {
-    const nda = domains.find((d) => d.id === 'agroNda')
-    const lines = (nda?.context ?? '')
-      .split('\n')
-      .filter((l) => /NDA|promedio|Casco Verde|IDA/i.test(l))
-      .slice(0, 14)
-    return `NDA:\n${lines.join('\n') || nda?.summary || 'Sin datos'}`
-  }
-
-  if (/licencia|vigencia/.test(q) && !/instrumento|expediente ambiental/.test(q)) {
+  if (/licencia|vencer|vencid/.test(q)) {
     const lic = domains.find((d) => d.id === 'agroLicencias')
-    return `Licencias:\n${lic?.context.split('\n').slice(0, 20).join('\n') || lic?.summary || 'Sin datos'}`
-  }
-
-  if (/incidente/.test(q)) {
-    const a = domains.find((d) => d.id === 'agroIncidentes')
-    const b = domains.find((d) => d.id === 'aliconDesempeno')
-    return `Incidentes:\n${a?.summary ?? ''}\n${b?.summary ?? ''}`
+    const body = lic?.context ?? ''
+    const catalogLines = body
+      .split('\n')
+      .filter((l) => /^- /.test(l) && /vigencia|VIGENTE|EN PROCESO|DESISTIDO/i.test(l))
+      .slice(0, 12)
+    if (catalogLines.length) {
+      return `Licencias en el catálogo:\n${catalogLines.join('\n')}`
+    }
+    return lic?.summary
+      ? `Tengo ${lic.summary}. ¿Quieres que detalle por sede o por estado?`
+      : 'No tengo el catálogo de licencias cargado ahora.'
   }
 
   return (
-    'Puedo ayudarte con indicadores ambientales, desempeño de Alicon y Agroprogreso, y normativa. ' +
-    'Prueba preguntar por producción, agua, residuos, NDA, licencias o un acuerdo gubernativo concreto.'
+    'Puedo ayudarte a interpretar esos indicadores o a profundizar en un punto. ' +
+    '¿Quieres un resumen, una comparación por sede o recomendaciones?\n\n' +
+    (catalog ? `Tengo a mano:\n${catalog}` : '')
   )
 }
 
@@ -150,15 +178,26 @@ export async function askCopilot(options: {
   domainIds?: ChatDomainId[]
   cachedDomains?: ChatDomainSnapshot[]
 }): Promise<AskCopilotResult> {
-  const domainIds = options.domainIds ?? DEFAULT_CHAT_DOMAINS
-  const baseDomains =
+  const history = (options.history ?? []).slice(-8)
+  const domainIds =
+    options.domainIds ?? selectDomainsForQuestion(options.question, history)
+
+  let baseDomains =
     options.cachedDomains && options.cachedDomains.length > 0
-      ? options.cachedDomains
-      : await loadChatDomains(domainIds)
+      ? options.cachedDomains.filter((d) => domainIds.includes(d.id))
+      : []
+
+  const missing = domainIds.filter((id) => !baseDomains.some((d) => d.id === id))
+  if (missing.length) {
+    const loaded = await loadChatDomains(missing)
+    baseDomains = [...baseDomains, ...loaded]
+  }
+  if (!baseDomains.length) {
+    baseDomains = await loadChatDomains(domainIds)
+  }
 
   const domains = withQuestionAwareKnowledge(baseDomains, options.question)
   const context = mergeDomainContext(domains)
-  const history = (options.history ?? []).slice(-8)
 
   try {
     const res = await fetch('/api/chat', {
@@ -177,35 +216,21 @@ export async function askCopilot(options: {
       if (data.reply?.trim()) {
         return { reply: data.reply.trim(), domains: baseDomains, source: 'openai' }
       }
-      return {
-        reply: localAnswer(options.question, domains),
-        domains: baseDomains,
-        source: 'local',
-        error: data.error || 'El modelo no devolvió texto.',
-      }
-    }
-
-    const errBody = (await res.json().catch(() => null)) as {
-      error?: string
-    } | null
-    const error =
-      errBody?.error ||
-      `El servicio de IA respondió ${res.status}. Uso resumen local.`
-
-    return {
-      reply: localAnswer(options.question, domains),
-      domains: baseDomains,
-      source: 'local',
-      error,
+    } else {
+      const errBody = (await res.json().catch(() => null)) as {
+        error?: string
+      } | null
+      console.warn('[chat] API', res.status, errBody?.error)
     }
   } catch (err) {
     console.error('askCopilot fetch failed', err)
-    return {
-      reply: localAnswer(options.question, domains),
-      domains: baseDomains,
-      source: 'local',
-      error:
-        'No pude contactar al asistente. Intenta de nuevo en un momento.',
-    }
+  }
+
+  // Fallback conversacional (sin volcar tablas crudas)
+  return {
+    reply: conversationalFallback(options.question, domains, history),
+    domains: baseDomains,
+    source: 'local',
+    error: 'Asistente en modo reducido',
   }
 }

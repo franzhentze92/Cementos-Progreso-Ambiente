@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { completeEnvironmentalChat } from '../src/lib/chat/openaiReply'
+import { completeEnvironmentalChat } from './openaiReply'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
@@ -43,6 +43,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ reply: result.reply })
   } catch (err) {
     console.error(err)
-    return res.status(500).json({ error: 'Error interno del chat' })
+    return res.status(500).json({
+      error: err instanceof Error ? err.message : 'Error interno del chat',
+    })
   }
 }

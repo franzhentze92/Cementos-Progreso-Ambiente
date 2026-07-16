@@ -1,5 +1,5 @@
 import type { Plugin } from 'vite'
-import { completeEnvironmentalChat } from './src/lib/chat/openaiReply'
+import { completeEnvironmentalChat } from './api/openaiReply'
 
 type Body = {
   message?: string

@@ -61,7 +61,7 @@ const EMPTY_USER: UserFormState = {
   password: '',
   name: '',
   email: '',
-  role: 'Consulta',
+  role: 'Gerencia',
   department: '',
   active: true,
 }
@@ -161,7 +161,7 @@ export function UsersPage() {
     setEditingUserId(null)
     setUserForm({
       ...EMPTY_USER,
-      role: roleOptions.find((r) => r.code === 'Consulta')?.code ?? roleOptions[0]?.code ?? 'Consulta',
+      role: roleOptions.find((r) => r.code === 'Gerencia')?.code ?? roleOptions[0]?.code ?? 'Gerencia',
     })
     setShowUserForm(true)
     setShowRoleForm(false)

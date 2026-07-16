@@ -160,16 +160,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const can = useCallback(
     (permission: AppPermission) => {
       if (!user) return false
-      if (user.role === 'Administrador' || isDirectoryAdmin) return true
+      if (user.role === 'Admin' || user.role === 'Administrador' || isDirectoryAdmin)
+        return true
       const fallback: Record<string, AppPermission[]> = {
-        Administrador: ['*'],
-        Operador: [
+        Admin: ['*'],
+        Gerencia: [
           'dashboard:read',
           'reportes:read',
-          'entrada:write',
           'mapa:read',
+          'chatbot:use',
         ],
-        Consulta: ['dashboard:read', 'reportes:read', 'mapa:read'],
+        Gestor_Datos_Alicon: ['entrada:write'],
+        Gestor_Datos_Agroprogreso: ['entrada:write'],
       }
       return hasPermission(fallback[user.role] ?? [], permission)
     },

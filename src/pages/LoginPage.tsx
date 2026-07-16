@@ -2,14 +2,17 @@
 import { Navigate, useNavigate } from 'react-router-dom'
 import { Loader2, LogIn } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { firstAllowedPath } from '../data/appModules'
 
 export function LoginPage() {
-  const { user, loading, login } = useAuth()
+  const { user, loading, login, canAccessModule } = useAuth()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  const home = firstAllowedPath(canAccessModule)
 
   if (loading) {
     return (
@@ -20,7 +23,7 @@ export function LoginPage() {
     )
   }
 
-  if (user) return <Navigate to="/dashboard" replace />
+  if (user) return <Navigate to={home} replace />
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -32,7 +35,8 @@ export function LoginPage() {
         setError('Usuario o contraseña incorrectos, o la cuenta está inactiva.')
         return
       }
-      navigate('/dashboard', { replace: true })
+      // Deja que ModuleGuard / home resuelvan la primera página del rol
+      navigate('/', { replace: true })
     } catch (err) {
       setError(
         err instanceof Error

@@ -6,13 +6,14 @@
  * Solo la cuenta DIRECTORY_ADMIN_USERNAME puede gestionar el directorio.
  */
 
-/** Única cuenta con acceso a /usuarios (crear/editar/eliminar usuarios y roles). */
+/** Única cuenta con acceso a /usuarios y /accesos. */
 export const DIRECTORY_ADMIN_USERNAME = 'lpaniagua@cempro.com'
 
 export const APP_ROLE_CODES = [
-  'Administrador',
-  'Operador',
-  'Consulta',
+  'Admin',
+  'Gerencia',
+  'Gestor_Datos_Alicon',
+  'Gestor_Datos_Agroprogreso',
 ] as const
 
 export type AppRoleCode = (typeof APP_ROLE_CODES)[number] | string
@@ -23,6 +24,7 @@ export type AppPermission =
   | 'reportes:read'
   | 'entrada:write'
   | 'mapa:read'
+  | 'chatbot:use'
   | 'usuarios:manage'
   | (string & {})
 
@@ -71,7 +73,9 @@ export type AppRoleInput = {
   permissions: AppPermission[]
 }
 
-export function isKnownRoleCode(value: string): value is (typeof APP_ROLE_CODES)[number] {
+export function isKnownRoleCode(
+  value: string,
+): value is (typeof APP_ROLE_CODES)[number] {
   return (APP_ROLE_CODES as readonly string[]).includes(value)
 }
 
@@ -100,36 +104,43 @@ export function canManageDirectory(
   )
 }
 
-/** Rol Administrador (permisos amplios en la app; no abre /usuarios solo). */
+/** Rol Admin (acceso amplio en la app; /usuarios sigue siendo solo la cuenta dueña). */
 export function canManageUsers(role: string): boolean {
-  return role === 'Administrador'
+  return role === 'Admin' || role === 'Administrador'
 }
 
 export const ROLE_FALLBACK: Record<
   string,
   Pick<AppRole, 'label' | 'description' | 'permissions'>
 > = {
-  Administrador: {
-    label: 'Administrador',
+  Admin: {
+    label: 'Admin',
     description:
-      'Acceso completo: reportes, captura, mapa. La gestión de usuarios es solo para la cuenta dueña del directorio.',
+      'Acceso total a dashboard, reportes, entrada de datos, mapa y chatbot.',
     permissions: ['*'],
   },
-  Operador: {
-    label: 'Operador',
+  Gerencia: {
+    label: 'Gerencia',
     description:
-      'Consulta reportes y captura datos operativos. Sin gestión de usuarios.',
+      'Solo dashboard, reportes (operaciones), mapa, perfil y chatbot. Sin entrada de datos.',
     permissions: [
       'dashboard:read',
       'reportes:read',
-      'entrada:write',
       'mapa:read',
+      'chatbot:use',
     ],
   },
-  Consulta: {
-    label: 'Consulta',
-    description: 'Solo lectura de dashboard, reportes y mapa.',
-    permissions: ['dashboard:read', 'reportes:read', 'mapa:read'],
+  Gestor_Datos_Alicon: {
+    label: 'Gestor de Datos Alicón',
+    description:
+      'Solo entrada de datos de Planta Alicón y perfil. Sin reportes, dashboard, mapa ni chatbot.',
+    permissions: ['entrada:write'],
+  },
+  Gestor_Datos_Agroprogreso: {
+    label: 'Gestor de Datos Agroprogreso',
+    description:
+      'Solo entrada de datos de Agroprogreso y perfil. Sin reportes, dashboard, mapa ni chatbot.',
+    permissions: ['entrada:write'],
   },
 }
 
@@ -139,6 +150,7 @@ export const ALL_PERMISSIONS: AppPermission[] = [
   'reportes:read',
   'entrada:write',
   'mapa:read',
+  'chatbot:use',
   'usuarios:manage',
 ]
 
@@ -148,6 +160,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   'reportes:read': 'Ver reportes',
   'entrada:write': 'Capturar datos',
   'mapa:read': 'Ver mapa',
+  'chatbot:use': 'Usar chatbot',
   'usuarios:manage': 'Gestionar usuarios',
 }
 

@@ -2,11 +2,12 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { Loader2, ShieldOff } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getModuleByPath } from '../data/appModules'
+import { firstAllowedPath, getModuleByPath } from '../data/appModules'
 
 export function ModuleGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading, canAccessPath } = useAuth()
+  const { user, loading, canAccessPath, canAccessModule } = useAuth()
   const location = useLocation()
+  const home = firstAllowedPath(canAccessModule)
 
   if (loading) {
     return (
@@ -20,6 +21,13 @@ export function ModuleGuard({ children }: { children: React.ReactNode }) {
   if (!user) return <Navigate to="/login" replace />
 
   if (!canAccessPath(location.pathname)) {
+    if (
+      location.pathname === '/dashboard' ||
+      location.pathname === '/' ||
+      location.pathname === ''
+    ) {
+      return <Navigate to={home} replace />
+    }
     const mod = getModuleByPath(location.pathname)
     return (
       <div className="access-denied">
@@ -30,8 +38,8 @@ export function ModuleGuard({ children }: { children: React.ReactNode }) {
           {mod ? ` “${mod.label}”` : ''}. Pide al administrador que te habilite
           el acceso.
         </p>
-        <Link to="/perfil" className="btn-primary-link">
-          Ir a mi perfil
+        <Link to={home} className="btn-primary-link">
+          Ir a inicio
         </Link>
       </div>
     )

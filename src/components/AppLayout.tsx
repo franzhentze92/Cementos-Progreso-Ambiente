@@ -4,6 +4,7 @@ import { EnvironmentalChatbot } from './EnvironmentalChatbot'
 import { ModuleGuard } from './ModuleGuard'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
+import { useAuth } from '../context/AuthContext'
 
 const MOBILE_MQ = '(max-width: 1100px), (hover: none) and (pointer: coarse)'
 
@@ -29,6 +30,8 @@ export function AppLayout() {
   const mainRef = useRef<HTMLElement>(null)
   const isMobile = useIsMobileNav()
   const location = useLocation()
+  const { canAccessModule } = useAuth()
+  const showChatbot = canAccessModule('chatbot')
 
   useEffect(() => {
     if (isMobile) setSidebarOpen(false)
@@ -116,7 +119,7 @@ export function AppLayout() {
         </footer>
       </main>
 
-      <EnvironmentalChatbot />
+      {showChatbot && <EnvironmentalChatbot />}
     </div>
   )
 }

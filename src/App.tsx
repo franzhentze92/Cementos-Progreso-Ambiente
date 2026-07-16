@@ -10,6 +10,7 @@ import { ProfilePage } from './pages/ProfilePage'
 import { UsersPage } from './pages/UsersPage'
 import { RoleAccessPage } from './pages/RoleAccessPage'
 import { MapPage } from './pages/MapPage'
+import { SmartHomeRedirect } from './components/SmartHomeRedirect'
 
 function RedirectPlantaAliconLegacy() {
   const { moduleId = 'huella-de-carbono' } = useParams()
@@ -107,8 +108,8 @@ export default function App() {
               />
             </Route>
           </Route>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<SmartHomeRedirect />} />
+          <Route path="*" element={<SmartHomeRedirect />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

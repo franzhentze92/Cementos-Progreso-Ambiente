@@ -103,6 +103,12 @@ export const APP_MODULES: AppModuleDef[] = [
   { id: 'dashboard', label: 'Dashboard', group: 'core', path: '/dashboard' },
   { id: 'mapa', label: 'Mapa', group: 'core', path: '/mapa' },
   { id: 'perfil', label: 'Perfil', group: 'core', path: '/perfil' },
+  {
+    id: 'chatbot',
+    label: 'Chatbot ambiental',
+    group: 'core',
+    path: '#chatbot',
+  },
   ...AGRO_MODULES.map(([slug, label]) =>
     leaf('operaciones.agroprogreso', 'operaciones.agroprogreso', slug, label),
   ),
@@ -137,6 +143,35 @@ export const APP_MODULES: AppModuleDef[] = [
 export const APP_MODULE_IDS = APP_MODULES.map((m) => m.id)
 
 export const ASSIGNABLE_MODULES = APP_MODULES.filter((m) => m.group !== 'admin')
+
+/** Prefijos útiles para armar sets de acceso por rol. */
+export function moduleIdsByPrefix(prefix: string): string[] {
+  return ASSIGNABLE_MODULES.filter((m) => m.id.startsWith(prefix)).map(
+    (m) => m.id,
+  )
+}
+
+export function firstAllowedPath(
+  canAccessModule: (id: string) => boolean,
+): string {
+  const preferred = [
+    'dashboard',
+    'mapa',
+    ...ASSIGNABLE_MODULES.filter((m) => m.id.startsWith('operaciones.')).map(
+      (m) => m.id,
+    ),
+    ...ASSIGNABLE_MODULES.filter((m) =>
+      m.id.startsWith('entrada-datos.'),
+    ).map((m) => m.id),
+    'perfil',
+  ]
+  for (const id of preferred) {
+    if (!canAccessModule(id)) continue
+    const mod = getModuleById(id)
+    if (mod && mod.id !== 'chatbot') return mod.path
+  }
+  return '/perfil'
+}
 
 const BY_ID = new Map(APP_MODULES.map((m) => [m.id, m]))
 const BY_PATH = new Map(APP_MODULES.map((m) => [m.path, m]))

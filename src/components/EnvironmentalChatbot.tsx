@@ -14,10 +14,18 @@ interface ChatMessage {
 
 const QUICK_PROMPTS = [
   '¿Cuánto cemento produjo Alicon?',
-  '¿Cuál es el factor clinker?',
-  '¿Cuánta electricidad se consumió?',
-  '¿Cuánto diésel móvil usamos?',
+  '¿Cuánta agua consume Agro?',
+  '¿Qué dice el reglamento de descargas?',
+  '¿Cómo va el NDA Agro?',
+  '¿Hay licencias por vencer?',
+  '¿Cuántos incidentes hay?',
 ]
+
+const WELCOME_MESSAGE: ChatMessage = {
+  id: 'welcome',
+  role: 'bot',
+  text: 'Hola, soy el Asistente Ambiental CEMPRO. Puedo ayudarte con indicadores de la plataforma, desempeño ambiental de Alicon y Agroprogreso, y con consultas sobre normativa ambiental. ¿En qué te apoyo?',
+}
 
 export function EnvironmentalChatbot() {
   const [open, setOpen] = useState(false)
@@ -25,17 +33,17 @@ export function EnvironmentalChatbot() {
   const [typing, setTyping] = useState(false)
   const [domains, setDomains] = useState<ChatDomainSnapshot[]>([])
   const [domainsLoading, setDomainsLoading] = useState(false)
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'bot',
-      text: 'Hola, soy el Asistente Ambiental CEMPRO. Ya estoy conectado a los datos de Huella de Carbono (Alicon). Pregúntame por producción, factor clinker, energía, diésel, agua o residuos.',
-    },
-  ])
+  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE])
   const closeTimer = useRef<number | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const isTouch = useRef(false)
   const domainsRef = useRef<ChatDomainSnapshot[]>([])
+  const messagesRef = useRef<ChatMessage[]>([WELCOME_MESSAGE])
+  const busyRef = useRef(false)
+
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
 
   useEffect(() => {
     isTouch.current =
@@ -111,7 +119,6 @@ export function EnvironmentalChatbot() {
   }
 
   async function pushBotReply(question: string, prior: ChatMessage[]) {
-    setTyping(true)
     try {
       const result = await askCopilot({
         question,
@@ -122,42 +129,54 @@ export function EnvironmentalChatbot() {
         domainsRef.current = result.domains
         setDomains(result.domains)
       }
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `bot-${Date.now()}`,
-          role: 'bot',
-          text: result.reply,
-        },
-      ])
+      const botMsg: ChatMessage = {
+        id: `bot-${crypto.randomUUID()}`,
+        role: 'bot',
+        text: result.reply,
+      }
+      setMessages((prev) => {
+        const next = [...prev, botMsg]
+        messagesRef.current = next
+        return next
+      })
+      if (result.error) {
+        console.warn('[chat]', result.error)
+      }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `bot-${Date.now()}`,
-          role: 'bot',
-          text: 'No pude consultar los datos ahora. Intenta de nuevo en un momento.',
-        },
-      ])
+      const botMsg: ChatMessage = {
+        id: `bot-${crypto.randomUUID()}`,
+        role: 'bot',
+        text: 'No pude consultar los datos ahora. Intenta de nuevo en un momento.',
+      }
+      setMessages((prev) => {
+        const next = [...prev, botMsg]
+        messagesRef.current = next
+        return next
+      })
     } finally {
+      busyRef.current = false
       setTyping(false)
     }
   }
 
   function sendMessage(text: string) {
     const trimmed = text.trim()
-    if (!trimmed || typing) return
+    // Candado: evita doble envío (Strict Mode / doble click)
+    if (!trimmed || busyRef.current || typing) return
+    busyRef.current = true
+    setTyping(true)
+    setInput('')
+
     const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
+      id: `user-${crypto.randomUUID()}`,
       role: 'user',
       text: trimmed,
     }
-    setMessages((prev) => {
-      const next = [...prev, userMsg]
-      void pushBotReply(trimmed, next)
-      return next
-    })
-    setInput('')
+    const prior = [...messagesRef.current, userMsg]
+    messagesRef.current = prior
+    setMessages(prior)
+
+    void pushBotReply(trimmed, prior)
   }
 
   function handleSubmit(e: FormEvent) {
@@ -167,10 +186,10 @@ export function EnvironmentalChatbot() {
 
   const domainLabel =
     domains.length > 0
-      ? domains.map((d) => d.label).join(' · ')
+      ? 'Listo para ayudarte'
       : domainsLoading
-        ? 'Cargando datos…'
-        : 'Datos de la plataforma'
+        ? 'Preparando…'
+        : 'Asistente ambiental'
 
   return (
     <div
@@ -188,7 +207,7 @@ export function EnvironmentalChatbot() {
               <img src="/logo-mark.svg" alt="" />
               <div>
                 <strong>Asistente Ambiental CEMPRO</strong>
-                <span>Copiloto · {domainLabel}</span>
+                <span>{domainLabel}</span>
               </div>
             </div>
             <button
@@ -250,7 +269,7 @@ export function EnvironmentalChatbot() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Pregunta sobre huella Alicon…"
+              placeholder="Escribe tu pregunta…"
               aria-label="Mensaje al asistente"
             />
             <button

@@ -1,5 +1,7 @@
 import { buildCarbonReport } from '../../../data/carbonReport'
 import {
+  BIODIVERSITY_ROWS,
+  BIODIVERSITY_YEARS,
   MONITORING_MONTHS,
   calcElectricity,
   calcProduction,
@@ -61,6 +63,7 @@ export const loadCarbonDomain: ChatDomainLoader = async (): Promise<ChatDomainSn
       sacos: parseNum(state.supplies[m].sacosMillares) ?? 0,
       reproc: supplies.cementoReprocesado ?? 0,
       wasteOrd: parseNum(waste.ordinarios) ?? 0,
+      wasteHaz: parseNum(waste.peligrosos) ?? 0,
     }
   })
 
@@ -77,6 +80,7 @@ export const loadCarbonDomain: ChatDomainLoader = async (): Promise<ChatDomainSn
       `sacos ${fmt(r.sacos, 1)} millares`,
       `reprocesado ${fmt(r.reproc, 1)} t`,
       `residuos ordinarios ${fmt(r.wasteOrd, 2)} t`,
+      `peligrosos ${fmt(r.wasteHaz, 2)} t`,
     ].join(' | '),
   )
 
@@ -87,8 +91,18 @@ export const loadCarbonDomain: ChatDomainLoader = async (): Promise<ChatDomainSn
   const topDiesel = argMax(monthlyRows, (r) => r.diesel)
   const topElec = argMax(monthlyRows, (r) => r.elec)
 
+  const bioLines = BIODIVERSITY_ROWS.map((row) => {
+    const vals = BIODIVERSITY_YEARS.map((y) => {
+      const v = state.biodiversity[row.key]?.[y]
+      return `${y}=${v?.trim() || '—'}`
+    }).join(', ')
+    return `- [${row.group}] ${row.label}: ${vals}`
+  })
+  const wc = state.waterConfig
+
   const context = `
 DOMINIO: Huella de carbono / monitoreo operativo
+Tablas Supabase: carbon_plants, carbon_campaigns, carbon_production_monthly, carbon_fuel_monthly, carbon_electricity_monthly, carbon_supplies_monthly, carbon_water_monthly, carbon_water_config, carbon_waste_monthly, carbon_biodiversity
 Planta: ${meta.plant}
 Año campaña: ${meta.year}
 Periodo con datos: ${meta.periodLabel}
@@ -125,6 +139,14 @@ TOTALES DEL PERIODO
 - Sacos: ${fmt(totals.totalSacos, 0)} millares · cemento reprocesado ${fmt(totals.totalReproc, 1)} t
 - Desvío residuos (reciclado+reutilizado): ${fmt(totals.diversionRate, 0)} %
 - Residuos ordinarios: ${fmt(totals.totalWasteOrd, 1)} t
+
+CONFIG AGUA
+- Disposición residual: ${wc.disposicionResidual || '—'}
+- Puntos de descarga: ${wc.puntosDescarga || '—'}
+- Métodos de tratamiento: ${wc.metodosTratamiento || '—'}
+
+BIODIVERSIDAD (UICN / CITES / LEA)
+${bioLines.join('\n') || '- Sin datos de biodiversidad'}
 
 KPIs
 ${report.kpis.map((k) => `- ${k.label}: ${k.value} ${k.unit}${k.hint ? ` (${k.hint})` : ''}`).join('\n')}

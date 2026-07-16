@@ -1,4 +1,17 @@
-export type ChatDomainId = 'carbon' // agregar aquí: | 'agua' | 'energia' | ...
+export type ChatDomainId =
+  | 'carbon'
+  | 'aliconDesempeno'
+  | 'agroAgua'
+  | 'agroResiduos'
+  | 'agroCompostaje'
+  | 'agroIncidentes'
+  | 'agroInspecciones'
+  | 'agroMonitoreos'
+  | 'agroCapacitaciones'
+  | 'agroLicencias'
+  | 'agroTramites'
+  | 'agroNda'
+  | 'knowledge'
 
 export type ChatMessagePayload = {
   role: 'user' | 'assistant' | 'system'

@@ -15,6 +15,10 @@ dist-ssr
 .env.*
 !.env.example
 
+# PDFs de contexto del chatbot (pesados / a veces escaneados).
+# El texto extraído en src/lib/chat/knowledge/ SÍ se versiona.
+Contexto Chatbot/**/*.pdf
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

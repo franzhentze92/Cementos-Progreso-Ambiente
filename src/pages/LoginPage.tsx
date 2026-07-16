@@ -1,26 +1,47 @@
 ﻿import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { LogIn } from 'lucide-react'
+import { Loader2, LogIn } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 export function LoginPage() {
-  const { user, login } = useAuth()
+  const { user, loading, login } = useAuth()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  if (loading) {
+    return (
+      <div className="auth-boot">
+        <Loader2 className="hc-spin" size={28} />
+        <p>Cargando…</p>
+      </div>
+    )
+  }
 
   if (user) return <Navigate to="/dashboard" replace />
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
-    const ok = login(username, password)
-    if (!ok) {
-      setError('Usuario o contraseña incorrectos.')
-      return
+    setSubmitting(true)
+    try {
+      const ok = await login(username, password)
+      if (!ok) {
+        setError('Usuario o contraseña incorrectos, o la cuenta está inactiva.')
+        return
+      }
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo iniciar sesión. Intenta de nuevo.',
+      )
+    } finally {
+      setSubmitting(false)
     }
-    navigate('/dashboard', { replace: true })
   }
 
   return (
@@ -44,6 +65,7 @@ export function LoginPage() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Ingresa tu usuario"
               required
+              disabled={submitting}
             />
           </div>
 
@@ -57,15 +79,19 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Ingresa tu contraseña"
               required
+              disabled={submitting}
             />
           </div>
 
-          <button type="submit" className="btn-primary">
-            <LogIn size={18} />
-            Iniciar sesión
+          <button type="submit" className="btn-primary" disabled={submitting}>
+            {submitting ? (
+              <Loader2 className="hc-spin" size={18} />
+            ) : (
+              <LogIn size={18} />
+            )}
+            {submitting ? 'Ingresando…' : 'Iniciar sesión'}
           </button>
         </form>
-
       </div>
     </div>
   )

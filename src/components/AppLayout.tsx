@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { EnvironmentalChatbot } from './EnvironmentalChatbot'
+import { ModuleGuard } from './ModuleGuard'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
@@ -105,7 +106,9 @@ export function AppLayout() {
 
       <main className="main-content" ref={mainRef}>
         <div className="main-content-body">
-          <Outlet />
+          <ModuleGuard>
+            <Outlet />
+          </ModuleGuard>
         </div>
         <footer className="app-footer">
           <img src="/logo-mark.svg" alt="" aria-hidden />

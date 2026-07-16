@@ -25,11 +25,28 @@ export function selectDomainsForQuestion(
 
   const add = (...ids: ChatDomainId[]) => ids.forEach((id) => picked.add(id))
 
-  if (/producción|cemento|ugc|cfb|clinker|huella|di[eé]sel|electric|kwh|mwh|carbono/.test(blob)) {
+  if (
+    /producción|cemento|ugc|cfb|clinker|huella|di[eé]sel|electric|energ[ií]a|kwh|mwh|carbono|intensidad/.test(
+      blob,
+    )
+  ) {
     add('carbon')
   }
   if (/agua|m³|m3|consumo de agua|finca|tanque|bunker|pozo/.test(blob)) {
     add('agroAgua')
+  }
+  if (/agro|agroprogreso/.test(blob)) {
+    add('agroAgua')
+    add('agroResiduos')
+    add('agroCompostaje')
+    add('agroMonitoreos')
+    add('agroLicencias')
+    add('agroNda')
+    add('agroIncidentes')
+  }
+  if (/alicon|planta/.test(blob)) {
+    add('carbon')
+    add('aliconDesempeno')
   }
   if (/residuo|recicl|lbs|desecho|vertedero/.test(blob) && !/acuerdo|gubernativo|164-?2021/.test(q)) {
     add('agroResiduos')
@@ -71,10 +88,19 @@ export function selectDomainsForQuestion(
   ) {
     if (/agua|m³|finca san miguel|el pilar|tanque|bunker/.test(hist)) add('agroAgua')
     if (/licencia|vigencia|vencer/.test(hist)) add('agroLicencias')
-    if (/cemento|clinker|huella|alicon/.test(hist)) add('carbon')
+    if (/cemento|clinker|huella|alicon|energ|electric|kwh|mwh/.test(hist)) add('carbon')
     if (/nda|casco/.test(hist)) add('agroNda')
     if (/residuo/.test(hist)) add('agroResiduos')
+    if (/monitoreo/.test(hist)) {
+      add('agroMonitoreos')
+      add('aliconDesempeno')
+    }
     if (/acuerdo|reglamento|legislaci/.test(hist)) add('knowledge')
+    if (/agro/.test(hist)) {
+      add('agroAgua')
+      add('agroResiduos')
+      add('agroMonitoreos')
+    }
   }
 
   if (picked.size === 0) {
@@ -148,6 +174,22 @@ function conversationalFallback(
     return lines.length
       ? `Según el consumo de agua Agro:\n${lines.join('\n')}`
       : agua?.summary || 'No tengo el detalle de agua a la mano.'
+  }
+
+  if (/energ[ií]a|electric|kwh|mwh/.test(q)) {
+    const carbon = domains.find((d) => d.id === 'carbon')
+    const lines = (carbon?.context ?? '')
+      .split('\n')
+      .filter((l) => /electric|energ|kWh|MWh|intensidad/i.test(l))
+      .slice(0, 10)
+    if (lines.length) {
+      return `Según datos de la empresa (Alicon):\n${lines.join('\n')}\n\n¿Quieres el detalle de un mes o de Agroprogreso?`
+    }
+    return (
+      'En los datos cargados no veo consumo de energía para esa consulta. ' +
+      'En Alicon suele estar en el monitoreo de huella (MWh / kWh/t). ' +
+      '¿Quieres que busque información pública en internet?'
+    )
   }
 
   if (/licencia|vencer|vencid/.test(q)) {

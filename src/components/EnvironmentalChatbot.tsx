@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { MessageCircle, Send, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { MessageCircle, Mic, MicOff, Send, Volume2, X } from 'lucide-react'
 import { askCopilot } from '../lib/chat/askCopilot'
 import { loadChatDomains } from '../lib/chat/domains'
 import type { ChatDomainSnapshot, ChatMessagePayload } from '../lib/chat/types'
+import { useVoiceConversation } from '../lib/chat/useVoiceConversation'
 
 type ChatRole = 'bot' | 'user'
 
@@ -24,7 +25,7 @@ const QUICK_PROMPTS = [
 const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'bot',
-  text: 'Hola, soy el Asistente Ambiental CEMPRO. Puedo ayudarte con indicadores de la plataforma, desempeño ambiental de Alicon y Agroprogreso, y con consultas sobre normativa ambiental. ¿En qué te apoyo?',
+  text: 'Hola, soy Javi Paniagua, tu Asistente Ambiental CEMPRO. ¿Cómo te puedo apoyar hoy?',
 }
 
 export function EnvironmentalChatbot() {
@@ -34,22 +35,16 @@ export function EnvironmentalChatbot() {
   const [domains, setDomains] = useState<ChatDomainSnapshot[]>([])
   const [domainsLoading, setDomainsLoading] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE])
-  const closeTimer = useRef<number | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const isTouch = useRef(false)
   const domainsRef = useRef<ChatDomainSnapshot[]>([])
   const messagesRef = useRef<ChatMessage[]>([WELCOME_MESSAGE])
   const busyRef = useRef(false)
+  const welcomedVoiceRef = useRef(false)
+  const sendMessageRef = useRef<(text: string) => void>(() => {})
 
   useEffect(() => {
     messagesRef.current = messages
   }, [messages])
-
-  useEffect(() => {
-    isTouch.current =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(hover: none), (max-width: 768px)').matches
-  }, [])
 
   useEffect(() => {
     listRef.current?.scrollTo({
@@ -57,12 +52,6 @@ export function EnvironmentalChatbot() {
       behavior: 'smooth',
     })
   }, [messages, typing])
-
-  useEffect(() => {
-    return () => {
-      if (closeTimer.current) window.clearTimeout(closeTimer.current)
-    }
-  }, [])
 
   useEffect(() => {
     if (!open || domainsRef.current.length > 0 || domainsLoading) return
@@ -86,27 +75,41 @@ export function EnvironmentalChatbot() {
     }
   }, [open, domainsLoading])
 
-  function clearClose() {
-    if (closeTimer.current) {
-      window.clearTimeout(closeTimer.current)
-      closeTimer.current = null
+  const onVoiceUtterance = useCallback((text: string) => {
+    sendMessageRef.current(text)
+  }, [])
+
+  const { status: voiceStatus, interim, voiceName, speak, stopSpeaking, supported } =
+    useVoiceConversation({
+      enabled: open,
+      onUtterance: onVoiceUtterance,
+      holdListening: typing,
+    })
+
+  // Saludo hablado al abrir el chat (una vez por apertura)
+  useEffect(() => {
+    if (!open) {
+      welcomedVoiceRef.current = false
+      stopSpeaking()
+      return
     }
-  }
+    if (welcomedVoiceRef.current) return
+    welcomedVoiceRef.current = true
+    void speak(WELCOME_MESSAGE.text)
+  }, [open, speak, stopSpeaking])
 
   function openChat() {
-    clearClose()
     setOpen(true)
   }
 
-  function scheduleClose() {
-    if (isTouch.current) return
-    clearClose()
-    closeTimer.current = window.setTimeout(() => setOpen(false), 220)
+  function closeChat() {
+    stopSpeaking()
+    setOpen(false)
   }
 
   function toggleChat() {
-    clearClose()
-    setOpen((v) => !v)
+    if (open) closeChat()
+    else openChat()
   }
 
   function historyFromMessages(list: ChatMessage[]): ChatMessagePayload[] {
@@ -142,17 +145,23 @@ export function EnvironmentalChatbot() {
       if (result.error) {
         console.warn('[chat]', result.error)
       }
+      if (open) {
+        await speak(result.reply)
+      }
     } catch {
+      const fallback =
+        'No pude consultar los datos ahora. Intenta de nuevo en un momento.'
       const botMsg: ChatMessage = {
         id: `bot-${crypto.randomUUID()}`,
         role: 'bot',
-        text: 'No pude consultar los datos ahora. Intenta de nuevo en un momento.',
+        text: fallback,
       }
       setMessages((prev) => {
         const next = [...prev, botMsg]
         messagesRef.current = next
         return next
       })
+      if (open) await speak(fallback)
     } finally {
       busyRef.current = false
       setTyping(false)
@@ -161,11 +170,11 @@ export function EnvironmentalChatbot() {
 
   function sendMessage(text: string) {
     const trimmed = text.trim()
-    // Candado: evita doble envío (Strict Mode / doble click)
     if (!trimmed || busyRef.current || typing) return
     busyRef.current = true
     setTyping(true)
     setInput('')
+    stopSpeaking()
 
     const userMsg: ChatMessage = {
       id: `user-${crypto.randomUUID()}`,
@@ -179,24 +188,32 @@ export function EnvironmentalChatbot() {
     void pushBotReply(trimmed, prior)
   }
 
+  sendMessageRef.current = sendMessage
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     sendMessage(input)
   }
 
   const domainLabel =
-    domains.length > 0
-      ? 'Listo para ayudarte'
-      : domainsLoading
-        ? 'Preparando…'
-        : 'Asistente ambiental'
+    voiceStatus === 'denied'
+      ? 'Micrófono bloqueado — puedes escribir'
+      : voiceStatus === 'unsupported'
+        ? 'Voz no disponible en este navegador'
+        : voiceStatus === 'speaking'
+          ? 'Hablando…'
+          : voiceStatus === 'listening'
+            ? interim
+              ? `Te escucho: “${interim}”`
+              : 'Escuchando… habla cuando quieras'
+            : domains.length > 0
+              ? 'Listo para ayudarte'
+              : domainsLoading
+                ? 'Preparando…'
+                : 'Asistente ambiental'
 
   return (
-    <div
-      className={`env-chat${open ? ' is-open' : ''}`}
-      onMouseEnter={openChat}
-      onMouseLeave={scheduleClose}
-    >
+    <div className={`env-chat${open ? ' is-open' : ''}`}>
       {open && (
         <section
           className="env-chat-panel"
@@ -210,14 +227,29 @@ export function EnvironmentalChatbot() {
                 <span>{domainLabel}</span>
               </div>
             </div>
-            <button
-              type="button"
-              className="env-chat-close"
-              onClick={() => setOpen(false)}
-              aria-label="Cerrar chat"
-            >
-              <X size={16} />
-            </button>
+            <div className="env-chat-header-actions">
+              <span
+                className={`env-chat-voice-pill is-${voiceStatus}`}
+                title={voiceName ? `Voz: ${voiceName}` : 'Voz en español'}
+                aria-live="polite"
+              >
+                {voiceStatus === 'speaking' ? (
+                  <Volume2 size={14} />
+                ) : voiceStatus === 'denied' || voiceStatus === 'unsupported' ? (
+                  <MicOff size={14} />
+                ) : (
+                  <Mic size={14} />
+                )}
+              </span>
+              <button
+                type="button"
+                className="env-chat-close"
+                onClick={closeChat}
+                aria-label="Cerrar chat"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </header>
 
           <div className="env-chat-messages" ref={listRef}>
@@ -269,7 +301,11 @@ export function EnvironmentalChatbot() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Escribe tu pregunta…"
+              placeholder={
+                supported && voiceStatus === 'listening'
+                  ? 'Habla o escribe tu pregunta…'
+                  : 'Escribe tu pregunta…'
+              }
               aria-label="Mensaje al asistente"
             />
             <button
@@ -292,7 +328,11 @@ export function EnvironmentalChatbot() {
       >
         <img src="/logo-mark.svg" alt="" />
         <span className="env-chat-fab-badge">
-          <MessageCircle size={12} />
+          {open && voiceStatus === 'listening' ? (
+            <Mic size={12} />
+          ) : (
+            <MessageCircle size={12} />
+          )}
         </span>
       </button>
     </div>

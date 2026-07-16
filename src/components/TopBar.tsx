@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { LogOut, Menu, UserRound, X } from 'lucide-react'
+import { LogOut, Menu, KeyRound, UserRound, Users, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 function initials(name: string) {
@@ -19,7 +19,7 @@ export function TopBar({
   onToggleSidebar?: () => void
   sidebarOpen?: boolean
 }) {
-  const { user, logout } = useAuth()
+  const { user, logout, isDirectoryAdmin } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -75,6 +75,18 @@ export function TopBar({
               <UserRound size={16} />
               Perfil
             </Link>
+            {isDirectoryAdmin && (
+              <>
+                <Link to="/usuarios" onClick={() => setOpen(false)} role="menuitem">
+                  <Users size={16} />
+                  Usuarios
+                </Link>
+                <Link to="/accesos" onClick={() => setOpen(false)} role="menuitem">
+                  <KeyRound size={16} />
+                  Accesos
+                </Link>
+              </>
+            )}
             <button type="button" className="danger" onClick={handleLogout} role="menuitem">
               <LogOut size={16} />
               Cerrar sesión

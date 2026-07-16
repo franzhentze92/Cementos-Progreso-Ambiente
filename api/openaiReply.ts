@@ -1,38 +1,23 @@
+/**
+ * Lógica compartida para el plugin de Vite (local).
+ * Producción usa api/chat.ts (misma política CEMPRO-first).
+ */
 export type ChatTurn = { role: 'user' | 'assistant' | 'system'; content: string }
 
-export const CHAT_SYSTEM_PROMPT = `Eres el Asistente Ambiental CEMPRO. Conversas en español de forma natural, clara y breve.
+export const CHAT_SYSTEM_PROMPT = `Eres el Asistente Ambiental / copiloto de Cementos Progreso (CEMPRO).
+Tu mundo es la empresa: Planta Alicón, Agroprogreso (fincas) y los datos/documentos de esta plataforma.
+TODO gira alrededor de Cementos Progreso. No eres un asistente genérico de Guatemala.
 
-PRIORIDAD DE FUENTES:
-1) CONTEXTO DE DATOS de la plataforma (indicadores, tablas, documentos internos).
-2) HISTORIAL de la conversación: si el usuario pide "resúmelo", "explícalo", "optimizar", etc., continúa sobre lo ya hablado.
-3) Si la pregunta es de normativa y el dato NO está en el contexto, puedes apoyarte en información pública de internet (cuando esté habilitada la búsqueda web).
-4) Nunca inventes cifras operativas (t, kWh, m³, lbs, NDA, producciones) que no estén en el contexto.
-
-ESTILO:
-- Responde como un asistente conversacional, no como un volcado de base de datos.
-- Cuando te pidan resumen, da 3–6 bullets o un párrafo corto con lo esencial.
-- Cuando te pidan recomendaciones u optimización, usa los datos del contexto y da acciones concretas.
-- No copies encabezados técnicos tipo "DOMINIO:" o "Tabla Supabase".
+PRIORIDAD OBLIGATORIA:
+1) CONTEXTO DE DATOS de la plataforma (Alicon, Agroprogreso, licencias, NDA, documentos).
+2) HISTORIAL de la conversación.
+3) Internet SOLO si el usuario lo autorizó (ej. "sí, busca en internet").
 
 REGLAS:
-- No inventes tCO₂e, alcances GHG ni factores de emisión si no aparecen en el contexto.
-- No inventes artículos de ley: si usas internet, resume con cautela y menciona que proviene de fuentes públicas.
-- Distingue Alicon vs Agroprogreso.
-- Para licencias "por vencer" o "vencidas", usa fechas de vigencia del contexto; si solo hay estado (VIGENTE/EN PROCESO), dilo claramente.
-
-REGLAS CRÍTICAS DE MÉTRICAS (huella Alicon):
-- Producción de cemento (t) ≠ consumo de clinker (t) ≠ ingreso de clinker (t) ≠ factor clinker (%).
-- Si preguntan "mayor/menor consumo de clinker", responde con toneladas de "clinker consumo".
-- Si el contexto trae "RANKINGS PRECALCULADOS", úsalos como fuente de verdad.
-
-Puedes sugerir 1 pregunta de seguimiento breve al final.`
-
-const WEB_FALLBACK_PROMPT = `Eres el Asistente Ambiental CEMPRO.
-El usuario preguntó algo que no estaba (o no estaba completo) en los documentos internos.
-Investiga con búsqueda web fuentes oficiales o confiables de Guatemala (MARN, Diario de Centro América, etc.) cuando aplique.
-Responde en español, claro y útil.
-Si usas internet, indica brevemente que es información de fuentes públicas.
-No inventes cifras operativas de la empresa.`
+- Consumo de energía/electricidad/agua/producción/residuos = LA EMPRESA, no Guatemala (salvo que digan "Guatemala" o "nacional").
+- Si no hay dato: dilo, indica qué sí tienes (Alicon vs Agro) y pregunta: "¿Quieres que busque información pública en internet?"
+- No inventes cifras. Distingue Alicon vs Agroprogreso.
+- Conversacional y breve. Sin encabezados técnicos "DOMINIO:" / "Tabla Supabase".`
 
 export type OpenAIChatInput = {
   message: string
@@ -46,26 +31,24 @@ export type OpenAIChatResult =
   | { ok: true; reply: string; usedWebSearch?: boolean }
   | { ok: false; status: number; error: string }
 
-function looksInsufficient(reply: string): boolean {
-  const r = reply.toLowerCase()
-  return (
-    /no (tengo|encuentro|encontré|dispongo).{0,40}(información|dato|contexto|documento)/i.test(
-      r,
-    ) ||
-    /no aparece en el contexto/i.test(r) ||
-    /no (est[aá]|se encuentra) en (el |los )?(contexto|documentos|fuentes)/i.test(
-      r,
-    ) ||
-    /fuera de (mi|el) (contexto|alcance|conocimiento)/i.test(r) ||
-    /no (puedo|pude) (responder|ayudar).{0,30}(falta|sin).{0,20}(información|contexto)/i.test(
-      r,
-    )
+function userAuthorizedWebSearch(message: string, history: ChatTurn[]): boolean {
+  const msg = message.toLowerCase().trim()
+  if (
+    /busca(r|me|lo|la)?\s+(en\s+)?(internet|la\s+web|google)/i.test(msg) ||
+    /investiga(r|lo|la)?\s+(en\s+)?(internet|la\s+web)/i.test(msg)
+  ) {
+    return true
+  }
+  const lastAssistant = [...history]
+    .reverse()
+    .find((h) => h.role === 'assistant')?.content
+  if (!lastAssistant) return false
+  const offered = /busca(r)?\s+(información\s+)?(pública\s+)?en\s+internet|quieres que busque/i.test(
+    lastAssistant,
   )
-}
-
-function wantsLegislationLookup(message: string): boolean {
-  return /acuerdo|gubernativo|reglamento|ley|decreto|legislaci|marn|norma|instrumento ambiental/i.test(
-    message,
+  if (!offered) return false
+  return /^(sí|si|dale|ok|claro|por favor|de acuerdo|adelante|busca|búscala|búscalo|hazlo)([.!?\s]|$)/i.test(
+    msg,
   )
 }
 
@@ -78,28 +61,37 @@ function extractResponsesText(data: unknown): string {
     }>
   }
   if (root.output_text?.trim()) return root.output_text.trim()
-
   const chunks: string[] = []
   for (const item of root.output ?? []) {
     if (item.type !== 'message') continue
     for (const part of item.content ?? []) {
-      if (part.type === 'output_text' && part.text) chunks.push(part.text)
-      if (part.type === 'text' && part.text) chunks.push(part.text)
+      if ((part.type === 'output_text' || part.type === 'text') && part.text) {
+        chunks.push(part.text)
+      }
     }
   }
   return chunks.join('\n').trim()
 }
 
-async function answerWithWebSearch(input: {
-  message: string
-  context: string
-  apiKey: string
-}): Promise<OpenAIChatResult> {
-  const models = ['gpt-4o-mini', 'gpt-4o']
-  let lastError = 'No se pudo usar búsqueda web'
+export async function completeEnvironmentalChat(
+  input: OpenAIChatInput,
+): Promise<OpenAIChatResult> {
+  const message = input.message.trim()
+  if (!message) return { ok: false, status: 400, error: 'Mensaje vacío' }
 
-  for (const model of models) {
+  const context =
+    input.context?.trim() || 'No se recibió contexto de datos.'
+  const history = Array.isArray(input.history) ? input.history.slice(-8) : []
+  const domains = Array.isArray(input.domainIds)
+    ? input.domainIds.join(', ')
+    : 'empresa'
+
+  if (userAuthorizedWebSearch(message, history)) {
     try {
+      const prior = history
+        .slice(-4)
+        .map((h) => `${h.role}: ${h.content}`)
+        .join('\n')
       const res = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
@@ -107,70 +99,42 @@ async function answerWithWebSearch(input: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model,
+          model: 'gpt-4o-mini',
           tools: [{ type: 'web_search' }],
           tool_choice: 'auto',
           temperature: 0.2,
           input: [
-            { role: 'system', content: WEB_FALLBACK_PROMPT },
+            {
+              role: 'system',
+              content:
+                'Asistente CEMPRO. El usuario autorizó internet. Sé breve, cita que es fuente pública. No inventes datos operativos de la empresa.',
+            },
             {
               role: 'user',
-              content:
-                `Pregunta del usuario:\n${input.message}\n\n` +
-                `Contexto interno disponible (puede estar incompleto; úsalo si aporta):\n` +
-                `${input.context.slice(0, 40000)}`,
+              content: `${prior}\n\nPedido: ${message}\n\nContexto interno:\n${context.slice(0, 30000)}`,
             },
           ],
         }),
       })
-
-      if (!res.ok) {
-        lastError = await res.text()
-        console.error('Web search Responses error', model, res.status, lastError)
-        continue
-      }
-
-      const data = await res.json()
-      const reply = extractResponsesText(data)
-      if (reply) {
-        return { ok: true, reply, usedWebSearch: true }
+      if (res.ok) {
+        const reply = extractResponsesText(await res.json())
+        if (reply) return { ok: true, reply, usedWebSearch: true }
       }
     } catch (err) {
-      console.error('Web search failed', model, err)
-      lastError = err instanceof Error ? err.message : String(err)
+      console.error(err)
+    }
+    return {
+      ok: true,
+      reply:
+        'Intenté buscar en internet, pero no obtuve un resultado útil. ¿Quieres reformular la pregunta?',
     }
   }
-
-  return {
-    ok: false,
-    status: 502,
-    error: `Búsqueda web no disponible: ${lastError.slice(0, 180)}`,
-  }
-}
-
-/** Llama a OpenAI. Usado por Vercel (/api/chat) y por el plugin de Vite (local). */
-export async function completeEnvironmentalChat(
-  input: OpenAIChatInput,
-): Promise<OpenAIChatResult> {
-  const message = input.message.trim()
-  if (!message) {
-    return { ok: false, status: 400, error: 'Mensaje vacío' }
-  }
-
-  const context =
-    input.context?.trim() ||
-    'No se recibió contexto de datos. Indica que no hay información cargada.'
-
-  const history = Array.isArray(input.history) ? input.history.slice(-8) : []
-  const domains = Array.isArray(input.domainIds)
-    ? input.domainIds.join(', ')
-    : 'todos'
 
   const messages: ChatTurn[] = [
     { role: 'system', content: CHAT_SYSTEM_PROMPT },
     {
       role: 'system',
-      content: `Dominios activos: ${domains}\n\nCONTEXTO DE DATOS:\n${context.slice(0, 120000)}`,
+      content: `Dominios: ${domains}\n\nCONTEXTO DE LA EMPRESA:\n${context.slice(0, 120000)}`,
     },
     ...history.filter(
       (m) =>
@@ -189,27 +153,14 @@ export async function completeEnvironmentalChat(
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',
-      temperature: 0.3,
+      temperature: 0.25,
       messages,
     }),
   })
 
   if (!openaiRes.ok) {
-    const errText = await openaiRes.text()
-    console.error('OpenAI error', openaiRes.status, errText)
-    if (wantsLegislationLookup(message)) {
-      const web = await answerWithWebSearch({
-        message,
-        context,
-        apiKey: input.apiKey,
-      })
-      if (web.ok) return web
-    }
-    return {
-      ok: false,
-      status: 502,
-      error: 'Error al consultar el modelo de IA',
-    }
+    console.error('OpenAI error', openaiRes.status, await openaiRes.text())
+    return { ok: false, status: 502, error: 'Error al consultar el modelo de IA' }
   }
 
   const data = (await openaiRes.json()) as {
@@ -219,35 +170,5 @@ export async function completeEnvironmentalChat(
   if (!reply) {
     return { ok: false, status: 502, error: 'Respuesta vacía del modelo' }
   }
-
-  if (looksInsufficient(reply)) {
-    const web = await answerWithWebSearch({
-      message,
-      context,
-      apiKey: input.apiKey,
-    })
-    if (web.ok) return web
-  }
-
-  if (wantsLegislationLookup(message)) {
-    const agreementMatch = message.match(
-      /(?:acuerdo|gubernativo|reglamento|decreto)[^\d]{0,40}(\d{1,4}[\s\-–]?\d{4})/i,
-    )
-    const code = agreementMatch?.[1]?.replace(/\s+/g, '-')
-    if (code) {
-      const inContext = new RegExp(code.replace('-', '[-\\s]?'), 'i').test(
-        context,
-      )
-      if (!inContext) {
-        const web = await answerWithWebSearch({
-          message,
-          context,
-          apiKey: input.apiKey,
-        })
-        if (web.ok) return web
-      }
-    }
-  }
-
   return { ok: true, reply }
 }

@@ -1,14 +1,25 @@
-﻿import { useNavigate } from 'react-router-dom'
+﻿import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   BadgeCheck,
   Building2,
   Leaf,
+  Loader2,
   LogOut,
   Mail,
   Shield,
+  Users,
+  KeyRound,
   UserRound,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import {
+  PERMISSION_LABELS,
+  ROLE_FALLBACK,
+  type AppPermission,
+  type AppRole,
+} from '../data/users'
+import { loadAppRoles } from '../lib/usersApi'
 
 function initials(name: string) {
   return name
@@ -20,8 +31,50 @@ function initials(name: string) {
 }
 
 export function ProfilePage() {
-  const { user, logout } = useAuth()
+  const { user, logout, isDirectoryAdmin, refreshUser } = useAuth()
   const navigate = useNavigate()
+  const [roleMeta, setRoleMeta] = useState<AppRole | null>(null)
+  const [loadingRole, setLoadingRole] = useState(true)
+
+  useEffect(() => {
+    if (!user) return
+    const roleCode = user.role
+    let cancelled = false
+    ;(async () => {
+      setLoadingRole(true)
+      try {
+        await refreshUser()
+        const roles = await loadAppRoles()
+        if (cancelled) return
+        const found = roles.find((r) => r.code === roleCode) ?? null
+        setRoleMeta(
+          found ?? {
+            code: roleCode,
+            label: ROLE_FALLBACK[roleCode]?.label ?? roleCode,
+            description: ROLE_FALLBACK[roleCode]?.description ?? '',
+            sortOrder: 0,
+            permissions: ROLE_FALLBACK[roleCode]?.permissions ?? [],
+          },
+        )
+      } catch {
+        if (!cancelled) {
+          const fb = ROLE_FALLBACK[roleCode]
+          setRoleMeta({
+            code: roleCode,
+            label: fb?.label ?? roleCode,
+            description: fb?.description ?? '',
+            sortOrder: 0,
+            permissions: fb?.permissions ?? [],
+          })
+        }
+      } finally {
+        if (!cancelled) setLoadingRole(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, user?.role, refreshUser])
 
   if (!user) return null
 
@@ -29,6 +82,9 @@ export function ProfilePage() {
     logout()
     navigate('/login', { replace: true })
   }
+
+  const permissions: AppPermission[] =
+    roleMeta?.permissions ?? ROLE_FALLBACK[user.role]?.permissions ?? []
 
   const fields = [
     {
@@ -45,13 +101,13 @@ export function ProfilePage() {
     },
     {
       label: 'Rol',
-      value: user.role,
+      value: roleMeta?.label ?? user.role,
       icon: Shield,
-      hint: 'Nivel de permisos',
+      hint: roleMeta?.description ?? 'Nivel de permisos',
     },
     {
       label: 'Departamento',
-      value: user.department,
+      value: user.department || '—',
       icon: Building2,
       hint: 'Área responsable',
     },
@@ -78,7 +134,7 @@ export function ProfilePage() {
             </div>
             <h2>{user.name}</h2>
             <p>
-              {user.role} · {user.department}
+              {roleMeta?.label ?? user.role} · {user.department || 'Sin área'}
             </p>
           </div>
         </div>
@@ -88,6 +144,18 @@ export function ProfilePage() {
             <Leaf size={14} />
             Cementos Progreso Ambiente
           </div>
+          {isDirectoryAdmin && (
+            <>
+              <Link to="/usuarios" className="btn-secondary-link">
+                <Users size={16} />
+                Gestionar usuarios
+              </Link>
+              <Link to="/accesos" className="btn-secondary-link">
+                <KeyRound size={16} />
+                Accesos por rol
+              </Link>
+            </>
+          )}
           <button type="button" className="btn-ghost-danger" onClick={handleLogout}>
             <LogOut size={16} />
             Cerrar sesión
@@ -106,7 +174,7 @@ export function ProfilePage() {
         </div>
         <div className="profile-stat">
           <span className="profile-stat-label">Acceso</span>
-          <strong>Administrador</strong>
+          <strong>{roleMeta?.label ?? user.role}</strong>
         </div>
       </div>
 
@@ -126,12 +194,25 @@ export function ProfilePage() {
       </section>
 
       <section className="profile-note content-panel">
-        <h3>Gestión ambiental</h3>
-        <p>
-          Esta cuenta da acceso a reportes, entrada de datos y el mapa de
-          operaciones de Cementos Progreso. Los cambios de perfil se gestionan
-          con el administrador del sistema.
-        </p>
+        <h3>Permisos del rol</h3>
+        {loadingRole ? (
+          <p className="profile-perms-loading">
+            <Loader2 className="hc-spin" size={16} /> Cargando desde catálogo…
+          </p>
+        ) : (
+          <>
+            <p>
+              {roleMeta?.description ??
+                ROLE_FALLBACK[user.role]?.description ??
+                'Sin descripción de rol.'}
+            </p>
+            <ul className="profile-perms">
+              {permissions.map((p) => (
+                <li key={p}>{PERMISSION_LABELS[p] ?? p}</li>
+              ))}
+            </ul>
+          </>
+        )}
       </section>
     </div>
   )

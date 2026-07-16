@@ -19,8 +19,11 @@ import {
   Sprout,
   Thermometer,
   Trash2,
+  Users,
   UserRound,
+  KeyRound,
 } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 import type { LucideIcon } from 'lucide-react'
 
 type NavLeaf = {
@@ -231,16 +234,23 @@ function NestedBranchNav({
   onToggle,
   path,
   onNavigate,
+  canAccessPath,
 }: {
   branches: NavBranch[]
   openMap: Record<string, boolean>
   onToggle: (id: string) => void
   path: string
   onNavigate?: () => void
+  canAccessPath: (pathname: string) => boolean
 }) {
   return (
     <>
       {branches.map((branch) => {
+        const visibleChildren = branch.children.filter((item) =>
+          canAccessPath(item.to),
+        )
+        if (visibleChildren.length === 0) return null
+
         const routeActive = path.startsWith(branch.match)
         const expanded = openMap[branch.id] ?? false
         return (
@@ -262,7 +272,7 @@ function NestedBranchNav({
             <div
               className={`nav-sub nav-sub--nested${expanded ? ' open' : ''}`}
             >
-              {branch.children.map((item) => (
+              {visibleChildren.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -302,6 +312,22 @@ export function Sidebar({
 }) {
   const location = useLocation()
   const path = location.pathname
+  const { isDirectoryAdmin, canAccessPath } = useAuth()
+
+  const visibleOperaciones = OPERACIONES_BRANCHES.map((b) => ({
+    ...b,
+    children: b.children.filter((c) => canAccessPath(c.to)),
+  })).filter((b) => b.children.length > 0)
+
+  const visibleEntrada = ENTRADA_BRANCHES.map((b) => ({
+    ...b,
+    children: b.children.filter((c) => canAccessPath(c.to)),
+  })).filter((b) => b.children.length > 0)
+
+  const showDashboard = canAccessPath('/dashboard')
+  const showMapa = canAccessPath('/mapa')
+  const showOperaciones = visibleOperaciones.length > 0
+  const showEntrada = visibleEntrada.length > 0
 
   const [operacionesOpen, setOperacionesOpen] = useState(
     path.startsWith('/operaciones'),
@@ -360,83 +386,120 @@ export function Sidebar({
       </div>
 
       <nav className="sidebar-nav">
-        <NavLink
-          to="/dashboard"
-          className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-          title="Dashboard"
-          onClick={onNavigate}
-        >
-          <LayoutDashboard />
-          <span className="nav-label">Dashboard</span>
-        </NavLink>
+        {showDashboard && (
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            title="Dashboard"
+            onClick={onNavigate}
+          >
+            <LayoutDashboard />
+            <span className="nav-label">Dashboard</span>
+          </NavLink>
+        )}
 
-        <NavLink
-          to="/mapa"
-          className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-          title="Mapa"
-          onClick={onNavigate}
-        >
-          <MapPinned />
-          <span className="nav-label">Mapa</span>
-        </NavLink>
+        {showMapa && (
+          <NavLink
+            to="/mapa"
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            title="Mapa"
+            onClick={onNavigate}
+          >
+            <MapPinned />
+            <span className="nav-label">Mapa</span>
+          </NavLink>
+        )}
 
-        <button
-          type="button"
-          className={`nav-group-btn${operacionesRouteActive ? ' active' : ''}${operacionesOpen ? ' expanded' : ''}`}
-          onClick={() => setOperacionesOpen((v) => !v)}
-          title="Operaciones"
-          aria-expanded={operacionesOpen}
-        >
-          <Sprout />
-          <span className="nav-label">Operaciones</span>
-          <ChevronRight
-            className={`nav-chevron${operacionesOpen ? ' open' : ''}`}
-            size={16}
-          />
-        </button>
-        <div className={`nav-sub${operacionesOpen ? ' open' : ''}`}>
-          <NestedBranchNav
-            branches={OPERACIONES_BRANCHES}
-            openMap={operacionesBranchOpen}
-            onToggle={(id) =>
-              setOperacionesBranchOpen((prev) => ({
-                ...prev,
-                [id]: !prev[id],
-              }))
-            }
-            path={path}
-            onNavigate={onNavigate}
-          />
-        </div>
+        {showOperaciones && (
+          <>
+            <button
+              type="button"
+              className={`nav-group-btn${operacionesRouteActive ? ' active' : ''}${operacionesOpen ? ' expanded' : ''}`}
+              onClick={() => setOperacionesOpen((v) => !v)}
+              title="Operaciones"
+              aria-expanded={operacionesOpen}
+            >
+              <Sprout />
+              <span className="nav-label">Operaciones</span>
+              <ChevronRight
+                className={`nav-chevron${operacionesOpen ? ' open' : ''}`}
+                size={16}
+              />
+            </button>
+            <div className={`nav-sub${operacionesOpen ? ' open' : ''}`}>
+              <NestedBranchNav
+                branches={visibleOperaciones}
+                openMap={operacionesBranchOpen}
+                onToggle={(id) =>
+                  setOperacionesBranchOpen((prev) => ({
+                    ...prev,
+                    [id]: !prev[id],
+                  }))
+                }
+                path={path}
+                onNavigate={onNavigate}
+                canAccessPath={canAccessPath}
+              />
+            </div>
+          </>
+        )}
 
-        <button
-          type="button"
-          className={`nav-group-btn${entradaRouteActive ? ' active' : ''}${entradasOpen ? ' expanded' : ''}`}
-          onClick={() => setEntradasOpen((v) => !v)}
-          title="Entrada de Datos"
-          aria-expanded={entradasOpen}
-        >
-          <Database />
-          <span className="nav-label">Entrada de Datos</span>
-          <ChevronRight
-            className={`nav-chevron${entradasOpen ? ' open' : ''}`}
-            size={16}
-          />
-        </button>
-        <div className={`nav-sub${entradasOpen ? ' open' : ''}`}>
-          <NestedBranchNav
-            branches={ENTRADA_BRANCHES}
-            openMap={entradaBranchOpen}
-            onToggle={(id) =>
-              setEntradaBranchOpen((prev) => ({
-                ...prev,
-                [id]: !prev[id],
-              }))
-            }
-            path={path}
-            onNavigate={onNavigate}
-          />
-        </div>
+        {showEntrada && (
+          <>
+            <button
+              type="button"
+              className={`nav-group-btn${entradaRouteActive ? ' active' : ''}${entradasOpen ? ' expanded' : ''}`}
+              onClick={() => setEntradasOpen((v) => !v)}
+              title="Entrada de Datos"
+              aria-expanded={entradasOpen}
+            >
+              <Database />
+              <span className="nav-label">Entrada de Datos</span>
+              <ChevronRight
+                className={`nav-chevron${entradasOpen ? ' open' : ''}`}
+                size={16}
+              />
+            </button>
+            <div className={`nav-sub${entradasOpen ? ' open' : ''}`}>
+              <NestedBranchNav
+                branches={visibleEntrada}
+                openMap={entradaBranchOpen}
+                onToggle={(id) =>
+                  setEntradaBranchOpen((prev) => ({
+                    ...prev,
+                    [id]: !prev[id],
+                  }))
+                }
+                path={path}
+                onNavigate={onNavigate}
+                canAccessPath={canAccessPath}
+              />
+            </div>
+          </>
+        )}
+
+        {isDirectoryAdmin && (
+          <>
+            <NavLink
+              to="/usuarios"
+              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+              title="Usuarios"
+              onClick={onNavigate}
+            >
+              <Users />
+              <span className="nav-label">Usuarios</span>
+            </NavLink>
+            <NavLink
+              to="/accesos"
+              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+              title="Accesos"
+              onClick={onNavigate}
+            >
+              <KeyRound />
+              <span className="nav-label">Accesos</span>
+            </NavLink>
+          </>
+        )}
 
         <NavLink
           to="/perfil"

@@ -7,6 +7,8 @@ import { DashboardPage } from './pages/DashboardPage'
 import { OperacionesPage } from './pages/OperationsPages'
 import { DataEntryPage } from './pages/DataEntryPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { UsersPage } from './pages/UsersPage'
+import { RoleAccessPage } from './pages/RoleAccessPage'
 import { MapPage } from './pages/MapPage'
 
 function RedirectPlantaAliconLegacy() {
@@ -44,6 +46,8 @@ export default function App() {
                 element={<DataEntryPage />}
               />
               <Route path="/perfil" element={<ProfilePage />} />
+              <Route path="/usuarios" element={<UsersPage />} />
+              <Route path="/accesos" element={<RoleAccessPage />} />
 
               {/* Compatibilidad con rutas anteriores */}
               <Route

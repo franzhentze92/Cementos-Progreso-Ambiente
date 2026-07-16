@@ -152,20 +152,12 @@ export function DashboardPage() {
     },
   ].filter((x) => x.has)
 
-  const periodText =
-    summary.periodHints.length > 0
-      ? summary.periodHints.slice(0, 2).join(' · ')
-      : 'Datos operativos en vivo'
-
   return (
     <div className="dash-page">
       <div className="page-header dash-header">
         <div>
           <h1>Dashboard</h1>
-          <p>
-            Bienvenido, {user?.name}. Resumen ambiental en vivo
-            {periodText ? ` · ${periodText}` : ''}.
-          </p>
+          <p>Bienvenido, {user?.name}.</p>
         </div>
         <div className="dash-header-actions">
           <span className="dash-live-badge">

@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   Leaf,
   MapPinned,
+  Radio,
   Recycle,
   ShieldAlert,
   Sprout,
@@ -326,6 +327,7 @@ export function Sidebar({
 
   const showDashboard = canAccessPath('/dashboard')
   const showMapa = canAccessPath('/mapa')
+  const showMonitoreoEnVivo = canAccessPath('/monitoreo-en-vivo')
   const showOperaciones = visibleOperaciones.length > 0
   const showEntrada = visibleEntrada.length > 0
 
@@ -407,6 +409,18 @@ export function Sidebar({
           >
             <MapPinned />
             <span className="nav-label">Mapa</span>
+          </NavLink>
+        )}
+
+        {showMonitoreoEnVivo && (
+          <NavLink
+            to="/monitoreo-en-vivo"
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            title="Monitoreo En Vivo"
+            onClick={onNavigate}
+          >
+            <Radio />
+            <span className="nav-label">Monitoreo En Vivo</span>
           </NavLink>
         )}
 

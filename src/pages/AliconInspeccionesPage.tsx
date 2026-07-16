@@ -34,6 +34,7 @@ import {
   loadAliconInspecciones,
   saveAliconInspeccionesMonth,
 } from '../lib/aliconInspeccionesApi'
+import { InspeccionAbrirLink } from '../components/InspeccionAbrirLink'
 
 function MonthRail({
   month,
@@ -598,18 +599,12 @@ export function AliconInspeccionesPage() {
                       {row.observaciones || '—'}
                     </td>
                     <td>
-                      {row.link ? (
-                        <a
-                          href={row.link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn-secondary-link"
-                        >
-                          Abrir
-                        </a>
-                      ) : (
-                        '—'
-                      )}
+                      <InspeccionAbrirLink
+                        link={row.link}
+                        fecha={row.fecha}
+                        plantaSede={row.plantaSede}
+                        unidadNegocio={row.unidadNegocio}
+                      />
                     </td>
                   </tr>
                 ))

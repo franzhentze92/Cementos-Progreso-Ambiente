@@ -22,7 +22,13 @@ type SpeechRecognitionEventLike = {
   }>
 }
 
-export type VoiceStatus = 'idle' | 'listening' | 'speaking' | 'unsupported' | 'denied'
+export type VoiceStatus =
+  | 'idle'
+  | 'listening'
+  | 'speaking'
+  | 'unsupported'
+  | 'denied'
+  | 'needs-permission'
 
 const FEMALE_NAME =
   /sabina|helena|monica|mónica|paulina|maria|maría|lucia|lucía|laura|carmen|isabel|sofia|sofía|camila|valentina|dalia|esperanza|francisca|juana|karina|catalina|paloma|elsa|zira|jenny|susan|google español|microsoft sabina|microsoft helena|microsoft sabrina/i
@@ -37,6 +43,13 @@ function getRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
     webkitSpeechRecognition?: new () => SpeechRecognitionLike
   }
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
+}
+
+function isMobileClient(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent,
+  )
 }
 
 /** Prefiere voces femeninas en español latino / nativo (no inglés). */
@@ -61,7 +74,6 @@ export function pickSpanishFemaleVoice(
   )
   if (femaleAny) return femaleAny
 
-  // Preferencias por locale si el SO no expone género en el nombre
   const preferredLangs = ['es-MX', 'es-GT', 'es-CR', 'es-CO', 'es-US', 'es-ES']
   for (const lang of preferredLangs) {
     const hit = es.find(
@@ -81,7 +93,6 @@ export function textForSpeech(raw: string): string {
     .replace(/https?:\/\/\S+/gi, ' ')
     .replace(/[*_#>`]/g, ' ')
     .replace(/^\s*[-•]\s+/gm, '')
-    // Siglas en mayúsculas: el TTS las deletrea; forzar lectura como palabra
     .replace(/\bCEMPRO\b/gi, 'Cémpro')
     .replace(/\bNDA\b/g, 'ene de a')
     .replace(/\bMARN\b/gi, 'Marn')
@@ -94,6 +105,44 @@ export function textForSpeech(raw: string): string {
     .slice(0, 1200)
 }
 
+/**
+ * En móvil hay que pedir el mic con getUserMedia (gesto del usuario)
+ * antes de que SpeechRecognition funcione de forma fiable.
+ */
+async function ensureMicPermission(): Promise<'granted' | 'denied' | 'unavailable'> {
+  if (typeof navigator === 'undefined') return 'unavailable'
+  if (!navigator.mediaDevices?.getUserMedia) {
+    // Algunos navegadores solo usan SpeechRecognition sin getUserMedia
+    return 'granted'
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+      },
+      video: false,
+    })
+    // Liberar pistas: solo necesitábamos el permiso
+    for (const track of stream.getTracks()) track.stop()
+    return 'granted'
+  } catch (err) {
+    const name = err instanceof DOMException ? err.name : ''
+    if (
+      name === 'NotAllowedError' ||
+      name === 'PermissionDeniedError' ||
+      name === 'SecurityError'
+    ) {
+      return 'denied'
+    }
+    // NotFoundError = sin micrófono físico
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      return 'unavailable'
+    }
+    return 'denied'
+  }
+}
+
 type Options = {
   enabled: boolean
   onUtterance: (text: string) => void
@@ -103,25 +152,31 @@ type Options = {
 
 /**
  * Conversación continua: micrófono + altavoz mientras `enabled`.
- * Pausa el mic mientras habla el asistente para no autoescucharse.
+ * En móvil: pide permiso explícito y usa continuous=false (más estable).
  */
 export function useVoiceConversation({
   enabled,
   onUtterance,
   holdListening = false,
 }: Options) {
-  const [status, setStatus] = useState<VoiceStatus>('idle')
+  const mobile = isMobileClient()
+  const [status, setStatus] = useState<VoiceStatus>(() =>
+    getRecognitionCtor() ? 'idle' : 'unsupported',
+  )
   const [interim, setInterim] = useState('')
   const [voiceName, setVoiceName] = useState<string | null>(null)
+  const [micReady, setMicReady] = useState(!mobile)
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null)
   const enabledRef = useRef(enabled)
   const holdRef = useRef(holdListening)
   const speakingRef = useRef(false)
+  const micReadyRef = useRef(!mobile)
   const restartTimer = useRef<number | null>(null)
   const onUtteranceRef = useRef(onUtterance)
   const finalBuffer = useRef('')
+  const startingRef = useRef(false)
 
   useEffect(() => {
     enabledRef.current = enabled
@@ -132,6 +187,9 @@ export function useVoiceConversation({
   useEffect(() => {
     onUtteranceRef.current = onUtterance
   }, [onUtterance])
+  useEffect(() => {
+    micReadyRef.current = micReady
+  }, [micReady])
 
   const clearRestart = () => {
     if (restartTimer.current != null) {
@@ -181,43 +239,92 @@ export function useVoiceConversation({
           /* ignore */
         }
 
+        // iOS a veces deja speechSynthesis “pausado”
+        try {
+          window.speechSynthesis.resume()
+        } catch {
+          /* ignore */
+        }
+
         const utter = new SpeechSynthesisUtterance(clean)
         utter.lang = voiceRef.current?.lang || 'es-MX'
-        utter.rate = 1.28
+        utter.rate = mobile ? 1.15 : 1.28
         utter.pitch = 1.05
         utter.volume = 1
         if (voiceRef.current) utter.voice = voiceRef.current
 
         const done = () => {
           speakingRef.current = false
-          if (enabledRef.current) setStatus('listening')
+          if (enabledRef.current && micReadyRef.current) setStatus('listening')
+          else if (enabledRef.current) setStatus('needs-permission')
           else setStatus('idle')
           resolve()
         }
         utter.onend = done
         utter.onerror = done
         window.speechSynthesis.speak(utter)
+
+        // Fallback si onend no dispara (bugs iOS)
+        window.setTimeout(() => {
+          if (speakingRef.current) done()
+        }, Math.min(20000, Math.max(4000, clean.length * 80)))
       }),
-    [stopSpeaking],
+    [mobile, stopSpeaking],
   )
 
   const startListening = useCallback(() => {
     const rec = recognitionRef.current
-    if (!rec || !enabledRef.current) return
+    if (!rec || !enabledRef.current || !micReadyRef.current) return
     if (holdRef.current || speakingRef.current) return
+    if (startingRef.current) return
+    startingRef.current = true
     try {
       rec.start()
     } catch {
       // Already started
+    } finally {
+      window.setTimeout(() => {
+        startingRef.current = false
+      }, 400)
     }
   }, [])
 
-  const scheduleListen = useCallback(() => {
-    clearRestart()
-    restartTimer.current = window.setTimeout(() => {
-      if (!enabledRef.current || holdRef.current || speakingRef.current) return
-      startListening()
-    }, 280)
+  const scheduleListen = useCallback(
+    (delay = 350) => {
+      clearRestart()
+      restartTimer.current = window.setTimeout(() => {
+        if (!enabledRef.current || !micReadyRef.current) return
+        if (holdRef.current || speakingRef.current) return
+        startListening()
+      }, delay)
+    },
+    [startListening],
+  )
+
+  /** Llamar desde un click/tap del usuario (abre chat o botón “Activar mic”). */
+  const requestMicAccess = useCallback(async () => {
+    if (!getRecognitionCtor()) {
+      setStatus('unsupported')
+      return false
+    }
+    const result = await ensureMicPermission()
+    if (result === 'denied') {
+      setStatus('denied')
+      setMicReady(false)
+      micReadyRef.current = false
+      return false
+    }
+    if (result === 'unavailable') {
+      setStatus('unsupported')
+      setMicReady(false)
+      micReadyRef.current = false
+      return false
+    }
+    setMicReady(true)
+    micReadyRef.current = true
+    setStatus('listening')
+    startListening()
+    return true
   }, [startListening])
 
   useEffect(() => {
@@ -229,31 +336,36 @@ export function useVoiceConversation({
     }
 
     const rec = new Ctor()
-    rec.lang = 'es-MX'
-    rec.continuous = true
+    // es-GT / es-MX; algunos móviles solo aceptan es-ES o es
+    rec.lang = mobile ? 'es-MX' : 'es-MX'
+    // continuous=true es inestable en iOS/Android
+    rec.continuous = !mobile
     rec.interimResults = true
     rec.maxAlternatives = 1
     recognitionRef.current = rec
 
     rec.onstart = () => {
+      startingRef.current = false
       if (!speakingRef.current) setStatus('listening')
     }
 
     rec.onresult = (event) => {
       if (speakingRef.current || holdRef.current) return
       let interimText = ''
+      let gotFinal = false
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i]
         const piece = result[0]?.transcript ?? ''
         if (result.isFinal) {
           finalBuffer.current = `${finalBuffer.current} ${piece}`.trim()
+          gotFinal = true
         } else {
           interimText += piece
         }
       }
       setInterim(interimText.trim())
 
-      if (finalBuffer.current) {
+      if (gotFinal && finalBuffer.current) {
         const said = finalBuffer.current.trim()
         finalBuffer.current = ''
         setInterim('')
@@ -262,21 +374,36 @@ export function useVoiceConversation({
     }
 
     rec.onerror = (ev) => {
+      startingRef.current = false
       const err = ev.error || ''
       if (err === 'not-allowed' || err === 'service-not-allowed') {
         setStatus('denied')
+        setMicReady(false)
+        micReadyRef.current = false
         enabledRef.current = false
         return
       }
-      // no-speech / aborted → reiniciar
-      if (enabledRef.current && !speakingRef.current && !holdRef.current) {
-        scheduleListen()
+      // En móvil "no-speech" / "aborted" / "network" → reintentar
+      if (
+        enabledRef.current &&
+        micReadyRef.current &&
+        !speakingRef.current &&
+        !holdRef.current
+      ) {
+        scheduleListen(mobile ? 500 : 280)
       }
     }
 
     rec.onend = () => {
-      if (enabledRef.current && !speakingRef.current && !holdRef.current) {
-        scheduleListen()
+      startingRef.current = false
+      if (
+        enabledRef.current &&
+        micReadyRef.current &&
+        !speakingRef.current &&
+        !holdRef.current
+      ) {
+        // En móvil (continuous=false) hay que reiniciar tras cada frase
+        scheduleListen(mobile ? 450 : 280)
       }
     }
 
@@ -294,7 +421,7 @@ export function useVoiceConversation({
       recognitionRef.current = null
       stopSpeaking()
     }
-  }, [loadVoice, scheduleListen, stopSpeaking])
+  }, [loadVoice, mobile, scheduleListen, stopSpeaking])
 
   useEffect(() => {
     if (!enabled) {
@@ -307,21 +434,43 @@ export function useVoiceConversation({
         /* ignore */
       }
       stopSpeaking()
-      setStatus((s) => (s === 'unsupported' || s === 'denied' ? s : 'idle'))
+      // En móvil, al cerrar el chat pedimos permiso de nuevo la próxima vez
+      if (mobile) {
+        setMicReady(false)
+        micReadyRef.current = false
+      }
+      setStatus((s) =>
+        s === 'unsupported' || s === 'denied' ? s : 'idle',
+      )
       return
     }
 
     if (status === 'unsupported' || status === 'denied') return
 
     loadVoice()
-    if (!holdListening && !speakingRef.current) {
+
+    if (mobile && !micReady) {
+      setStatus('needs-permission')
+      return
+    }
+
+    if (!holdListening && !speakingRef.current && micReady) {
       startListening()
       setStatus('listening')
     }
-  }, [enabled, holdListening, loadVoice, startListening, status, stopSpeaking])
+  }, [
+    enabled,
+    holdListening,
+    loadVoice,
+    micReady,
+    mobile,
+    startListening,
+    status,
+    stopSpeaking,
+  ])
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled || !micReady) return
     if (holdListening || speakingRef.current) {
       try {
         recognitionRef.current?.stop()
@@ -331,7 +480,7 @@ export function useVoiceConversation({
       return
     }
     scheduleListen()
-  }, [enabled, holdListening, scheduleListen])
+  }, [enabled, holdListening, micReady, scheduleListen])
 
   return {
     status,
@@ -339,6 +488,8 @@ export function useVoiceConversation({
     voiceName,
     speak,
     stopSpeaking,
+    requestMicAccess,
+    isMobile: mobile,
     supported: status !== 'unsupported',
   }
 }

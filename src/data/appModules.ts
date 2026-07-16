@@ -102,6 +102,12 @@ function leaf(
 export const APP_MODULES: AppModuleDef[] = [
   { id: 'dashboard', label: 'Dashboard', group: 'core', path: '/dashboard' },
   { id: 'mapa', label: 'Mapa', group: 'core', path: '/mapa' },
+  {
+    id: 'monitoreo-en-vivo',
+    label: 'Monitoreo en vivo',
+    group: 'core',
+    path: '/monitoreo-en-vivo',
+  },
   { id: 'perfil', label: 'Perfil', group: 'core', path: '/perfil' },
   {
     id: 'chatbot',
@@ -157,6 +163,7 @@ export function firstAllowedPath(
   const preferred = [
     'dashboard',
     'mapa',
+    'monitoreo-en-vivo',
     ...ASSIGNABLE_MODULES.filter((m) => m.id.startsWith('operaciones.')).map(
       (m) => m.id,
     ),

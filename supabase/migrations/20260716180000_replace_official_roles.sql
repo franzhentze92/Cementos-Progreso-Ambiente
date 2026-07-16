@@ -18,7 +18,7 @@ DELETE FROM app_role_modules;
 
 INSERT INTO app_role_modules (role_code, module_id)
 SELECT 'Admin', m FROM unnest(ARRAY[
-  'dashboard','mapa','perfil','chatbot',
+  'dashboard','mapa','monitoreo-en-vivo','perfil','chatbot',
   'operaciones.agroprogreso.gestion-de-residuos',
   'operaciones.agroprogreso.consumo-de-agua',
   'operaciones.agroprogreso.inspeccion-ambiental',
@@ -54,7 +54,7 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO app_role_modules (role_code, module_id)
 SELECT 'Gerencia', m FROM unnest(ARRAY[
-  'dashboard','mapa','perfil','chatbot',
+  'dashboard','mapa','monitoreo-en-vivo','perfil','chatbot',
   'operaciones.agroprogreso.gestion-de-residuos',
   'operaciones.agroprogreso.consumo-de-agua',
   'operaciones.agroprogreso.inspeccion-ambiental',

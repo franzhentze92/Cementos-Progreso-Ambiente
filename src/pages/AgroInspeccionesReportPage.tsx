@@ -28,6 +28,7 @@ import {
 } from '../data/agroInspeccionesReport'
 import { formatNum } from '../data/agroInspecciones'
 import { loadAgroInspecciones } from '../lib/agroInspeccionesApi'
+import { InspeccionAbrirLink } from '../components/InspeccionAbrirLink'
 
 const ALERT_CLASS: Record<string, string> = {
   Crítico: 'alert-crit',
@@ -369,13 +370,12 @@ export function AgroInspeccionesReportPage() {
                     <td>{row.accion}</td>
                     <td>{row.observaciones}</td>
                     <td>
-                      {row.link ? (
-                        <a href={row.link} target="_blank" rel="noreferrer">
-                          Abrir
-                        </a>
-                      ) : (
-                        '—'
-                      )}
+                      <InspeccionAbrirLink
+                        link={row.link}
+                        fecha={row.fecha}
+                        plantaSede={row.sede}
+                        unidadNegocio="Agroprogreso"
+                      />
                     </td>
                   </tr>
                 ))

@@ -2,30 +2,294 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   ChevronRight,
+  ClipboardList,
   Database,
-  FileBarChart2,
+  Droplets,
+  Factory,
+  FileBadge,
+  FolderKanban,
+  Gauge,
+  GraduationCap,
+  HardHat,
   LayoutDashboard,
   Leaf,
   MapPinned,
+  Recycle,
+  ShieldAlert,
+  Sprout,
+  Thermometer,
+  Trash2,
   UserRound,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
-const REPORTES = [
-  { to: '/reportes/reporte-1', label: 'Reporte 1' },
-  { to: '/reportes/reporte-2', label: 'Reporte 2' },
-  { to: '/reportes/reporte-3', label: 'Reporte 3' },
-  { to: '/reportes/reporte-4', label: 'Reporte 4' },
-  { to: '/reportes/desempeno-ambiental', label: 'Desempeño Ambiental' },
-  { to: '/reportes/huella-de-carbono', label: 'Huella de Carbono' },
+type NavLeaf = {
+  to: string
+  label: string
+  icon: LucideIcon
+}
+
+type NavBranch = {
+  id: string
+  label: string
+  icon: LucideIcon
+  match: string
+  children: NavLeaf[]
+}
+
+const OPERACIONES_BRANCHES: NavBranch[] = [
+  {
+    id: 'agroprogreso',
+    label: 'Agroprogreso',
+    icon: Sprout,
+    match: '/operaciones/agroprogreso',
+    children: [
+      {
+        to: '/operaciones/agroprogreso/gestion-de-residuos',
+        label: 'Gestión de residuos',
+        icon: Trash2,
+      },
+      {
+        to: '/operaciones/agroprogreso/consumo-de-agua',
+        label: 'Consumo de agua',
+        icon: Droplets,
+      },
+      {
+        to: '/operaciones/agroprogreso/inspeccion-ambiental',
+        label: 'Inspección ambiental',
+        icon: ClipboardList,
+      },
+      {
+        to: '/operaciones/agroprogreso/incidentes-ambientales',
+        label: 'Incidentes ambientales',
+        icon: ShieldAlert,
+      },
+      {
+        to: '/operaciones/agroprogreso/monitoreo-ambiental',
+        label: 'Monitoreo ambiental',
+        icon: Thermometer,
+      },
+      {
+        to: '/operaciones/agroprogreso/capacitaciones',
+        label: 'Capacitaciones',
+        icon: GraduationCap,
+      },
+      {
+        to: '/operaciones/agroprogreso/licencias-ambientales',
+        label: 'Licencias ambientales',
+        icon: FileBadge,
+      },
+      {
+        to: '/operaciones/agroprogreso/compostaje',
+        label: 'Compostaje',
+        icon: Recycle,
+      },
+      {
+        to: '/operaciones/agroprogreso/nda-casco-verde',
+        label: 'NDA Casco Verde',
+        icon: HardHat,
+      },
+      {
+        to: '/operaciones/agroprogreso/nda-general',
+        label: 'NDA General',
+        icon: Gauge,
+      },
+      {
+        to: '/operaciones/agroprogreso/gestion-de-tramites',
+        label: 'Gestión de trámites',
+        icon: FolderKanban,
+      },
+    ],
+  },
+  {
+    id: 'planta-alicon',
+    label: 'Planta Alicón',
+    icon: Factory,
+    match: '/operaciones/planta-alicon',
+    children: [
+      {
+        to: '/operaciones/planta-alicon/inspeccion-ambiental',
+        label: 'Inspección ambiental',
+        icon: ClipboardList,
+      },
+      {
+        to: '/operaciones/planta-alicon/incidentes-ambientales',
+        label: 'Incidentes ambientales',
+        icon: ShieldAlert,
+      },
+      {
+        to: '/operaciones/planta-alicon/monitoreo-ambiental',
+        label: 'Monitoreo ambiental',
+        icon: Thermometer,
+      },
+      {
+        to: '/operaciones/planta-alicon/huella-de-carbono',
+        label: 'Huella de carbono',
+        icon: Leaf,
+      },
+    ],
+  },
 ]
 
-const ENTRADAS = [
-  { to: '/entrada-datos/db1', label: 'DB1' },
-  { to: '/entrada-datos/db2', label: 'DB2' },
-  { to: '/entrada-datos/db3', label: 'DB3' },
-  { to: '/entrada-datos/db4', label: 'DB4' },
-  { to: '/entrada-datos/huella-de-carbono', label: 'Huella de Carbono' },
+const ENTRADA_BRANCHES: NavBranch[] = [
+  {
+    id: 'agroprogreso',
+    label: 'Agroprogreso',
+    icon: Sprout,
+    match: '/entrada-datos/agroprogreso',
+    children: [
+      {
+        to: '/entrada-datos/agroprogreso/gestion-de-residuos',
+        label: 'Gestión de residuos',
+        icon: Trash2,
+      },
+      {
+        to: '/entrada-datos/agroprogreso/consumo-de-agua',
+        label: 'Consumo de agua',
+        icon: Droplets,
+      },
+      {
+        to: '/entrada-datos/agroprogreso/inspeccion-ambiental',
+        label: 'Inspección ambiental',
+        icon: ClipboardList,
+      },
+      {
+        to: '/entrada-datos/agroprogreso/incidentes-ambientales',
+        label: 'Incidentes ambientales',
+        icon: ShieldAlert,
+      },
+      {
+        to: '/entrada-datos/agroprogreso/monitoreo-ambiental',
+        label: 'Monitoreo ambiental',
+        icon: Thermometer,
+      },
+      {
+        to: '/entrada-datos/agroprogreso/capacitaciones',
+        label: 'Capacitaciones',
+        icon: GraduationCap,
+      },
+      {
+        to: '/entrada-datos/agroprogreso/licencias-ambientales',
+        label: 'Licencias ambientales',
+        icon: FileBadge,
+      },
+      {
+        to: '/entrada-datos/agroprogreso/compostaje',
+        label: 'Compostaje',
+        icon: Recycle,
+      },
+      {
+        to: '/entrada-datos/agroprogreso/nda-casco-verde',
+        label: 'NDA Casco Verde',
+        icon: HardHat,
+      },
+      {
+        to: '/entrada-datos/agroprogreso/nda-general',
+        label: 'NDA General',
+        icon: Gauge,
+      },
+      {
+        to: '/entrada-datos/agroprogreso/gestion-de-tramites',
+        label: 'Gestión de trámites',
+        icon: FolderKanban,
+      },
+    ],
+  },
+  {
+    id: 'planta-alicon-entrada',
+    label: 'Planta Alicón',
+    icon: Factory,
+    match: '/entrada-datos/planta-alicon',
+    children: [
+      {
+        to: '/entrada-datos/planta-alicon/incidentes-ambientales',
+        label: 'Incidentes ambientales',
+        icon: ShieldAlert,
+      },
+      {
+        to: '/entrada-datos/planta-alicon/inspeccion-ambiental',
+        label: 'Inspección ambiental',
+        icon: ClipboardList,
+      },
+      {
+        to: '/entrada-datos/planta-alicon/monitoreo-ambiental',
+        label: 'Monitoreo ambiental',
+        icon: Thermometer,
+      },
+      {
+        to: '/entrada-datos/planta-alicon/huella-de-carbono',
+        label: 'Huella de carbono',
+        icon: Leaf,
+      },
+    ],
+  },
 ]
+
+function NestedBranchNav({
+  branches,
+  openMap,
+  onToggle,
+  path,
+  onNavigate,
+}: {
+  branches: NavBranch[]
+  openMap: Record<string, boolean>
+  onToggle: (id: string) => void
+  path: string
+  onNavigate?: () => void
+}) {
+  return (
+    <>
+      {branches.map((branch) => {
+        const routeActive = path.startsWith(branch.match)
+        const expanded = openMap[branch.id] ?? false
+        return (
+          <div key={branch.id} className="nav-nested-group">
+            <button
+              type="button"
+              className={`nav-group-btn nav-group-btn--nested${routeActive ? ' active' : ''}${expanded ? ' expanded' : ''}`}
+              onClick={() => onToggle(branch.id)}
+              title={branch.label}
+              aria-expanded={expanded}
+            >
+              <branch.icon size={16} />
+              <span className="nav-label">{branch.label}</span>
+              <ChevronRight
+                className={`nav-chevron${expanded ? ' open' : ''}`}
+                size={14}
+              />
+            </button>
+            <div
+              className={`nav-sub nav-sub--nested${expanded ? ' open' : ''}`}
+            >
+              {branch.children.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end
+                  className={({ isActive }) =>
+                    `nav-item${isActive ? ' active' : ''}`
+                  }
+                  title={item.label}
+                  onClick={onNavigate}
+                >
+                  <item.icon size={14} />
+                  <span className="nav-label">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
+function initialBranchOpen(branches: NavBranch[], path: string) {
+  return Object.fromEntries(
+    branches.map((b) => [b.id, path.startsWith(b.match)]),
+  )
+}
 
 export function Sidebar({
   onMouseEnter,
@@ -37,17 +301,48 @@ export function Sidebar({
   onNavigate?: () => void
 }) {
   const location = useLocation()
-  const [reportesOpen, setReportesOpen] = useState(
-    location.pathname.startsWith('/reportes'),
+  const path = location.pathname
+
+  const [operacionesOpen, setOperacionesOpen] = useState(
+    path.startsWith('/operaciones'),
   )
   const [entradasOpen, setEntradasOpen] = useState(
-    location.pathname.startsWith('/entrada-datos'),
+    path.startsWith('/entrada-datos'),
+  )
+  const [operacionesBranchOpen, setOperacionesBranchOpen] = useState(() =>
+    initialBranchOpen(OPERACIONES_BRANCHES, path),
+  )
+  const [entradaBranchOpen, setEntradaBranchOpen] = useState(() =>
+    initialBranchOpen(ENTRADA_BRANCHES, path),
   )
 
   useEffect(() => {
-    if (location.pathname.startsWith('/reportes')) setReportesOpen(true)
-    if (location.pathname.startsWith('/entrada-datos')) setEntradasOpen(true)
-  }, [location.pathname])
+    if (path.startsWith('/operaciones')) {
+      setOperacionesOpen(true)
+      setEntradasOpen(false)
+      setOperacionesBranchOpen((prev) => {
+        const next = { ...prev }
+        for (const b of OPERACIONES_BRANCHES) {
+          if (path.startsWith(b.match)) next[b.id] = true
+        }
+        return next
+      })
+    }
+    if (path.startsWith('/entrada-datos')) {
+      setEntradasOpen(true)
+      setOperacionesOpen(false)
+      setEntradaBranchOpen((prev) => {
+        const next = { ...prev }
+        for (const b of ENTRADA_BRANCHES) {
+          if (path.startsWith(b.match)) next[b.id] = true
+        }
+        return next
+      })
+    }
+  }, [path])
+
+  const operacionesRouteActive = path.startsWith('/operaciones')
+  const entradaRouteActive = path.startsWith('/entrada-datos')
 
   return (
     <aside
@@ -87,52 +382,60 @@ export function Sidebar({
 
         <button
           type="button"
-          className={`nav-group-btn${reportesOpen || location.pathname.startsWith('/reportes') ? ' active' : ''}`}
-          onClick={() => setReportesOpen((v) => !v)}
-          title="Reportes"
+          className={`nav-group-btn${operacionesRouteActive ? ' active' : ''}${operacionesOpen ? ' expanded' : ''}`}
+          onClick={() => setOperacionesOpen((v) => !v)}
+          title="Operaciones"
+          aria-expanded={operacionesOpen}
         >
-          <FileBarChart2 />
-          <span className="nav-label">Reportes</span>
-          <ChevronRight className={`nav-chevron${reportesOpen ? ' open' : ''}`} size={16} />
+          <Sprout />
+          <span className="nav-label">Operaciones</span>
+          <ChevronRight
+            className={`nav-chevron${operacionesOpen ? ' open' : ''}`}
+            size={16}
+          />
         </button>
-        <div className={`nav-sub${reportesOpen ? ' open' : ''}`}>
-          {REPORTES.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-              title={item.label}
-              onClick={onNavigate}
-            >
-              <Leaf size={16} />
-              <span className="nav-label">{item.label}</span>
-            </NavLink>
-          ))}
+        <div className={`nav-sub${operacionesOpen ? ' open' : ''}`}>
+          <NestedBranchNav
+            branches={OPERACIONES_BRANCHES}
+            openMap={operacionesBranchOpen}
+            onToggle={(id) =>
+              setOperacionesBranchOpen((prev) => ({
+                ...prev,
+                [id]: !prev[id],
+              }))
+            }
+            path={path}
+            onNavigate={onNavigate}
+          />
         </div>
 
         <button
           type="button"
-          className={`nav-group-btn${entradasOpen || location.pathname.startsWith('/entrada-datos') ? ' active' : ''}`}
+          className={`nav-group-btn${entradaRouteActive ? ' active' : ''}${entradasOpen ? ' expanded' : ''}`}
           onClick={() => setEntradasOpen((v) => !v)}
           title="Entrada de Datos"
+          aria-expanded={entradasOpen}
         >
           <Database />
           <span className="nav-label">Entrada de Datos</span>
-          <ChevronRight className={`nav-chevron${entradasOpen ? ' open' : ''}`} size={16} />
+          <ChevronRight
+            className={`nav-chevron${entradasOpen ? ' open' : ''}`}
+            size={16}
+          />
         </button>
         <div className={`nav-sub${entradasOpen ? ' open' : ''}`}>
-          {ENTRADAS.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-              title={item.label}
-              onClick={onNavigate}
-            >
-              <Database size={16} />
-              <span className="nav-label">{item.label}</span>
-            </NavLink>
-          ))}
+          <NestedBranchNav
+            branches={ENTRADA_BRANCHES}
+            openMap={entradaBranchOpen}
+            onToggle={(id) =>
+              setEntradaBranchOpen((prev) => ({
+                ...prev,
+                [id]: !prev[id],
+              }))
+            }
+            path={path}
+            onNavigate={onNavigate}
+          />
         </div>
 
         <NavLink

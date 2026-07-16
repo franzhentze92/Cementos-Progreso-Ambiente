@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -97,7 +97,10 @@ export function CarbonFootprintPage() {
       <div className="carbon-page">
         <div className="hc-banner hc-banner-error" role="alert">
           <strong>Error:</strong> {error ?? 'Sin datos'}
-          <Link to="/entrada-datos/huella-de-carbono" className="btn-secondary-link">
+          <Link
+            to="/entrada-datos/planta-alicon"
+            className="btn-secondary-link"
+          >
             Ir a captura →
           </Link>
         </div>
@@ -706,7 +709,7 @@ export function CarbonFootprintPage() {
               <p>Totales del periodo con datos cargados</p>
             </div>
             <Link
-              to="/entrada-datos/huella-de-carbono"
+              to="/entrada-datos/planta-alicon"
               className="btn-secondary-link"
             >
               Ir a captura →

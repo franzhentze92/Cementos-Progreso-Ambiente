@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -233,7 +233,12 @@ function FieldGroup({
   )
 }
 
-export function CarbonDataEntryPage() {
+export function CarbonDataEntryPage({
+  embedded = false,
+}: {
+  /** Cuando va embebida en Entrada · Planta Alicón (sin cabecera duplicada). */
+  embedded?: boolean
+}) {
   const [tab, setTab] = useState<TabId>('produccion')
   const [month, setMonth] = useState<MonitoringMonth>('Junio')
   const [state, setState] = useState<MonitoringState>(() =>
@@ -393,7 +398,7 @@ export function CarbonDataEntryPage() {
 
   if (loading) {
     return (
-      <div className="entry-page hc-entry hc-loading">
+      <div className={`entry-page hc-entry hc-loading${embedded ? ' is-embedded' : ''}`}>
         <Loader2 className="hc-spin" size={28} />
         <p>Cargando monitoreo Alicon…</p>
       </div>
@@ -401,23 +406,17 @@ export function CarbonDataEntryPage() {
   }
 
   return (
-    <div className="entry-page hc-entry">
-      <div className="page-header entry-header">
-        <div>
-          <p className="carbon-kicker">
-            <Leaf size={14} />
-            Monitoreo Alicon · captura mensual
-          </p>
-          <h1>Entrada de Datos — Huella de Carbono</h1>
-          <p>
-            Completa los indicadores por mes. Los campos marcados como auto se
-            calculan solos.
-          </p>
-        </div>
-        <div className="hc-header-actions">
-          <Link to="/reportes/huella-de-carbono" className="btn-secondary-link">
-            Ver reporte →
-          </Link>
+    <div className={`entry-page hc-entry${embedded ? ' is-embedded' : ''}`}>
+      {embedded ? (
+        <div className="alicon-huella-subhead">
+          <div>
+            <h2>Huella de carbono — pestañas del Excel Alicon</h2>
+            <p>
+              Equivalente a <code>huella-carbono-alicon.xlsx</code>. Usa las
+              pestañas de abajo para Producción, Combustible, Energía, Insumos,
+              Agua, Residuos y Biodiversidad.
+            </p>
+          </div>
           <button
             type="button"
             className="btn-primary"
@@ -425,10 +424,45 @@ export function CarbonDataEntryPage() {
             onClick={() => void persist()}
           >
             {saving ? <Loader2 className="hc-spin" size={16} /> : <Save size={16} />}
-            {saving ? 'Guardando…' : 'Guardar'}
+            {saving ? 'Guardando…' : 'Guardar huella'}
           </button>
         </div>
-      </div>
+      ) : (
+        <div className="page-header entry-header">
+          <div>
+            <p className="carbon-kicker">
+              <Leaf size={14} />
+              Monitoreo Alicon · captura mensual
+            </p>
+            <h1>Entrada de Datos — Huella de Carbono</h1>
+            <p>
+              Completa los indicadores por mes. Los campos marcados como auto se
+              calculan solos.
+            </p>
+          </div>
+          <div className="hc-header-actions">
+            <Link
+              to="/operaciones/planta-alicon/huella-de-carbono"
+              className="btn-secondary-link"
+            >
+              Ver reporte →
+            </Link>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={saving || !ref}
+              onClick={() => void persist()}
+            >
+              {saving ? (
+                <Loader2 className="hc-spin" size={16} />
+              ) : (
+                <Save size={16} />
+              )}
+              {saving ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {loadError ? (
         <div className="hc-banner hc-banner-error" role="alert">

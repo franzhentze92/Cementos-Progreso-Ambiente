@@ -41,7 +41,7 @@ function localAnswer(question: string, domains: ChatDomainSnapshot[]): string {
         /producción|cemento|ugc|cfb|clinker|factor/i.test(l),
       )
       .slice(0, 12)
-    return `Según el monitoreo Alicon en Supabase:\n${lines.join('\n') || summary}`
+    return `Según el monitoreo Alicon:\n${lines.join('\n') || summary}`
   }
 
   if (/electric|kwh|mwh|energ/.test(q)) {

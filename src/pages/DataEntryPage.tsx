@@ -1,55 +1,113 @@
-import { useParams } from 'react-router-dom'
-import { Database, Sparkles } from 'lucide-react'
+﻿import { useParams } from 'react-router-dom'
+import { AgroConsumoAguaPage } from './AgroConsumoAguaPage'
+import { AgroResiduosPage } from './AgroResiduosPage'
+import { AgroInspeccionesPage } from './AgroInspeccionesPage'
+import { AgroIncidentesPage } from './AgroIncidentesPage'
+import { AgroMonitoreosPage } from './AgroMonitoreosPage'
+import { AgroCapacitacionesPage } from './AgroCapacitacionesPage'
+import { AgroLicenciasPage } from './AgroLicenciasPage'
+import { AgroCompostajePage } from './AgroCompostajePage'
+import { AgroNdaCascoVerdePage } from './AgroNdaCascoVerdePage'
+import { AgroNdaGeneralPage } from './AgroNdaGeneralPage'
+import { AgroGestionTramitesPage } from './AgroGestionTramitesPage'
+import { AliconIncidentesPage } from './AliconIncidentesPage'
+import { AliconInspeccionesPage } from './AliconInspeccionesPage'
+import { AliconMonitoreosPage } from './AliconMonitoreosPage'
 import { CarbonDataEntryPage } from './CarbonDataEntryPage'
+import { ModulePlaceholder } from '../components/ModulePlaceholder'
 
-const TITLES: Record<string, string> = {
-  db1: 'DB1',
-  db2: 'DB2',
-  db3: 'DB3',
-  db4: 'DB4',
-  'huella-de-carbono': 'Huella de Carbono',
+const SCOPE_LABELS: Record<string, string> = {
+  agroprogreso: 'Agroprogreso',
+  'planta-alicon': 'Planta Alicón',
+}
+
+const MODULE_TITLES: Record<string, string> = {
+  'gestion-de-residuos': 'Gestión de residuos',
+  'consumo-de-agua': 'Consumo de agua',
+  'inspeccion-ambiental': 'Inspección ambiental',
+  'incidentes-ambientales': 'Incidentes ambientales',
+  'monitoreo-ambiental': 'Monitoreo ambiental',
+  capacitaciones: 'Capacitaciones',
+  'licencias-ambientales': 'Licencias ambientales',
+  compostaje: 'Compostaje',
+  'nda-casco-verde': 'NDA Casco Verde',
+  'nda-general': 'NDA General',
+  'gestion-de-tramites': 'Gestión de trámites',
+  'huella-de-carbono': 'Huella de carbono',
 }
 
 export function DataEntryPage() {
-  const { entryId = 'db1' } = useParams()
+  const { scope = 'agroprogreso', moduleId = 'gestion-de-residuos' } =
+    useParams()
 
-  if (entryId === 'huella-de-carbono') {
+  if (scope === 'agroprogreso' && moduleId === 'consumo-de-agua') {
+    return <AgroConsumoAguaPage />
+  }
+
+  if (scope === 'agroprogreso' && moduleId === 'gestion-de-residuos') {
+    return <AgroResiduosPage />
+  }
+
+  if (scope === 'agroprogreso' && moduleId === 'inspeccion-ambiental') {
+    return <AgroInspeccionesPage />
+  }
+
+  if (scope === 'agroprogreso' && moduleId === 'incidentes-ambientales') {
+    return <AgroIncidentesPage />
+  }
+
+  if (scope === 'agroprogreso' && moduleId === 'monitoreo-ambiental') {
+    return <AgroMonitoreosPage />
+  }
+
+  if (scope === 'agroprogreso' && moduleId === 'capacitaciones') {
+    return <AgroCapacitacionesPage />
+  }
+
+  if (scope === 'agroprogreso' && moduleId === 'licencias-ambientales') {
+    return <AgroLicenciasPage />
+  }
+
+  if (scope === 'agroprogreso' && moduleId === 'compostaje') {
+    return <AgroCompostajePage />
+  }
+
+  if (scope === 'agroprogreso' && moduleId === 'nda-casco-verde') {
+    return <AgroNdaCascoVerdePage />
+  }
+
+  if (scope === 'agroprogreso' && moduleId === 'nda-general') {
+    return <AgroNdaGeneralPage />
+  }
+
+  if (scope === 'agroprogreso' && moduleId === 'gestion-de-tramites') {
+    return <AgroGestionTramitesPage />
+  }
+
+  if (scope === 'planta-alicon' && moduleId === 'incidentes-ambientales') {
+    return <AliconIncidentesPage />
+  }
+
+  if (scope === 'planta-alicon' && moduleId === 'inspeccion-ambiental') {
+    return <AliconInspeccionesPage />
+  }
+
+  if (scope === 'planta-alicon' && moduleId === 'monitoreo-ambiental') {
+    return <AliconMonitoreosPage />
+  }
+
+  if (scope === 'planta-alicon' && moduleId === 'huella-de-carbono') {
     return <CarbonDataEntryPage />
   }
 
-  const title = TITLES[entryId] ?? 'Entrada de Datos'
+  const scopeLabel = SCOPE_LABELS[scope] ?? 'Entrada de Datos'
+  const title = MODULE_TITLES[moduleId] ?? 'Entrada de Datos'
 
   return (
-    <div className="coming-soon-page">
-      <div className="page-header">
-        <h1>Entrada de Datos — {title}</h1>
-        <p>Módulo de captura para indicadores y reportes ambientales.</p>
-      </div>
-
-      <div className="coming-soon-card">
-        <div className="coming-soon-glow" aria-hidden />
-        <div className="coming-soon-icon-wrap">
-          <Database size={36} strokeWidth={1.6} />
-          <span className="coming-soon-badge">
-            <Sparkles size={14} />
-            Pronto
-          </span>
-        </div>
-
-        <p className="coming-soon-kicker">{title}</p>
-        <h2>Entrada de Datos para Reportes — Próximamente</h2>
-        <p className="coming-soon-copy">
-          Estamos preparando este espacio para la captura y carga de datos
-          ambientales. Muy pronto podrás registrar indicadores para tus reportes
-          desde aquí.
-        </p>
-
-        <div className="coming-soon-bars" aria-hidden>
-          <span />
-          <span />
-          <span />
-        </div>
-      </div>
-    </div>
+    <ModulePlaceholder
+      section={`Entrada de Datos · ${scopeLabel}`}
+      title={title}
+      mode="entry"
+    />
   )
 }

@@ -5,7 +5,7 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!url || !anonKey) {
   console.warn(
-    'Faltan VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY. El módulo de huella no podrá persistir.',
+    'Faltan VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY. La persistencia de datos no estará disponible.',
   )
 }
 

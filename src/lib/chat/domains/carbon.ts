@@ -150,7 +150,7 @@ SERIE DIÉSEL MÓVIL
 ${monthlyFuel.map((r) => `- ${r.month}: ${fmt(r.dieselMovil, 0)} gal, ${fmt(r.galPerTon, 3)} gal/t`).join('\n')}
 
 Notas:
-- Estos datos son actividad operativa real en Supabase (monitoreo Alicon).
+- Estos datos son actividad operativa real (monitoreo Alicon).
 - Aún NO hay factores de emisión oficiales; no inventes tCO₂e ni alcances GHG exactos.
 - Si el usuario pide un mes sin datos, dilo claramente.
 `.trim()

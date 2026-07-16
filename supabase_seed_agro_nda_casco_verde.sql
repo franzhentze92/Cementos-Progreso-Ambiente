@@ -1,0 +1,20 @@
+DELETE FROM agro_nda_casco_verde;
+INSERT INTO agro_nda_casco_verde (
+  fecha, semana, unidad_negocio, planta_sede, tipo_inspeccion,
+  no_inspeccion, inspector, nota, hallazgos_criticos, observaciones,
+  link, latitud, longitud
+) VALUES
+('2026-02-10', 7, 'Agroprogreso', 'Finca El Pilar', 'Casco Verde', 1, 'Javier Paniagua', 95.0, 0, '1 Riesgo bajo por caja de registro colapsada de agua residual.', 'https://cempro-my.sharepoint.com/:b:/p/lpaniagua/IQAmo7PMwptLSpeTDOPfQ4tnAUFLVYP2pb7Kuuyf9BXrrJA?e=3HVLOh', 14.707722, -90.713167),
+('2026-02-17', 8, 'Agroprogreso', 'Agro San Miguel', 'Casco Verde', 2, 'Javier Paniagua', 95.0, 0, '2 observaciones de campo. 1 por falta de tapaderas en recipientes y 2 por residuo metálico sobre suelo.', 'https://cempro-my.sharepoint.com/:b:/p/lpaniagua/IQA99iKvBQDWQb_jGncdU_8cAUQV57SasutdPxqBQGPLbYk?e=eh6adB', 14.813632, -90.278771),
+('2026-02-25', 9, 'Agroprogreso', 'Finca La Marina', 'Casco Verde', 3, 'Javier Paniagua', 100.0, 0, 'No se observaron incidentes.', 'https://cempro-my.sharepoint.com/:b:/p/lpaniagua/IQAwF4mBOO7uRbgQbt9JNK0yATLYhGzkz9kQB7FMAf3cOqw?e=k0aXKf', 14.55, -90.65),
+('2026-03-03', 10, 'Agroprogreso', 'Finca El Pilar', 'Casco Verde', 4, 'Eduardo Barillas', 100.0, 0, 'No se observaron incidentes.', 'https://cempro-my.sharepoint.com/:b:/p/lpaniagua/IQBMrWCRDUgWQ5sKrv8ZahLXASU0-I6ArJUDK2_kmpJ6V1k?e=c4v9n1', 14.707722, -90.713167),
+('2026-03-27', 13, 'Agroprogreso', 'Finca El Pilar', 'Casco Verde', 5, 'Alejandro Juarez', 100.0, 0, 'No se observaron incidentes.', 'https://cempro-my.sharepoint.com/:b:/p/lpaniagua/IQBFYxktsXpuQboAuD10FQgUAa4aa7qQhrYcz-Y73RZJmas?e=vavEzT', 14.707722, -90.713167),
+('2026-04-08', 15, 'Agroprogreso', 'Finca El Pilar', 'Casco Verde', 6, 'Javier Paniagua', 95.0, 0, 'No se observaron incidentes.', 'https://cempro-my.sharepoint.com/:b:/p/lpaniagua/IQBJSMADjXCcT7iu38i17xVHAau67I368ljyMSXQ73rBF2A?e=OOpjyS', 14.707722, -90.713167),
+('2026-04-21', 17, 'Agroprogreso', 'Finca El Pilar', 'Casco Verde', 7, 'Javier Paniagua', 95.0, 0, 'No se observaron incidentes.', 'https://cempro-my.sharepoint.com/:u:/p/lpaniagua/IQBmnV3dg-YIRJS5FUgmHP9SAVycIWhi-kelSU53uJUmEg4?e=E4ilZr', 14.707722, -90.713167),
+('2026-04-30', 18, 'Agroprogreso', 'Finca El Pilar', 'Casco Verde', 8, 'Javier Paniagua', 100.0, 0, 'En área de aserradero no se observaron riesgos relevantes', 'https://cempro-my.sharepoint.com/:u:/p/lpaniagua/IQAB99dx3mzlT5esqixXkTRoAdYXHGEjCdFj_riOpCiShr8?e=lE1726', 14.707722, -90.713167),
+('2026-05-08', 19, 'Agroprogreso', 'Aprov. Forestal Planta San Gabriel', 'Casco Verde', 9, 'Javier Paniagua', 95.0, 0, 'En área de aprovechamiento forestal SG no se observaron situaciones de riesgo, únicamente 2 observaciones por residuos y posibles derrames.', 'https://cempro-my.sharepoint.com/:u:/p/lpaniagua/IQBKs_MD-QFwTIpw0jUH3uTSAZ0D4bTHT33ZeWJ9qUcxj9U?e=MO2ZkF', 14.735452, -90.703316),
+('2026-06-08', 22, 'Agroprogreso', 'Finca El Pilar', 'Casco Verde', 10, 'Javier Paniagua', 100.0, 0, 'No se observaron incidentes.', '', 14.707722, -90.713167),
+('2026-06-17', 25, 'Agroprogreso', 'Finca El Pilar', 'Casco Verde', 11, 'Javier Paniagua', 90.0, 0, 'Se observaron restos de residuos en áreas donde se realizaron construcciones.', 'https://cempro-my.sharepoint.com/:u:/p/lpaniagua/IQBl-vEX2i8bS5cMeiaHspKWAQ-Q5FOGbOa_Gg6AgvurZH4?e=EUUyXG', 14.707722, -90.713167),
+('2026-06-08', 24, 'Agroprogreso', 'Finca El Pilar', 'Casco Verde', 12, 'Eduardo Barillas', 100.0, 0, 'No se observaron incidentes.', 'https://cempro-my.sharepoint.com/:b:/p/lpaniagua/IQBm8tddXUfOSoqoWRDGrPXqASYn6aGGpLLP0ikbnZoMe7E?e=w22ql3', 14.707722, -90.713167),
+('2026-06-22', 26, 'Agroprogreso', 'Finca El Pilar', 'Casco Verde', 13, 'Javier Paniagua', 95.0, 0, 'No se observaron incidentes.', 'https://cempro-my.sharepoint.com/:b:/p/lpaniagua/IQB65B9DhBgVT5GxuGCx3uf9Ae_sC2cDVkHG_CY6tzh0ZCw?e=Y5SY8G', 14.707722, -90.713167),
+('2026-06-23', 26, 'Agroprogreso', 'Agro San Miguel', 'Casco Verde', 14, 'Javier Paniagua', 95.0, 0, 'No se observaron incidentes.', 'https://cempro-my.sharepoint.com/:b:/p/lpaniagua/IQCHMN4xqaqjRLZtf62TwbaqAQ89FpYy5OFmSqQRGAxltwM?e=Uwlq1h', 14.813632, -90.278771);

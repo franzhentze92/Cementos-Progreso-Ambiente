@@ -17,6 +17,29 @@ export const MONITORING_MONTHS = [
 
 export type MonitoringMonth = (typeof MONITORING_MONTHS)[number]
 
+/** Año civil actual (p. ej. 2026). */
+export function currentMonitoringYear(now = new Date()): number {
+  return now.getFullYear()
+}
+
+/** Mes español actual alineado a MONITORING_MONTHS. */
+export function currentMonitoringMonth(now = new Date()): MonitoringMonth {
+  return MONITORING_MONTHS[now.getMonth()]
+}
+
+/**
+ * Años disponibles en captura: todos los presentes en datos,
+ * más el año actual (y el anterior) aunque aún no haya filas.
+ */
+export function selectableMonitoringYears(
+  yearsFromRecords: Iterable<number>,
+  now = new Date(),
+): number[] {
+  const current = now.getFullYear()
+  const set = new Set<number>([current - 1, current, ...yearsFromRecords])
+  return [...set].sort((a, b) => a - b)
+}
+
 export const BIODIVERSITY_YEARS = ['2020', '2021', '2022'] as const
 export type BiodiversityYear = (typeof BIODIVERSITY_YEARS)[number]
 

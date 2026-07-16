@@ -1,5 +1,4 @@
 import type { Plugin } from 'vite'
-import { completeEnvironmentalChat } from './api/openaiReply'
 
 type Body = {
   message?: string
@@ -25,8 +24,8 @@ function readJsonBody(req: import('http').IncomingMessage): Promise<Body> {
 }
 
 /**
- * En desarrollo, Vite no ejecuta las funciones de /api de Vercel.
- * Este plugin replica POST /api/chat leyendo OPENAI_API_KEY del .env.
+ * En desarrollo, Vite no ejecuta /api de Vercel.
+ * Replica POST /api/chat con la misma lógica (fetch a OpenAI).
  */
 export function localChatApiPlugin(apiKey: string | undefined): Plugin {
   return {
@@ -57,8 +56,7 @@ export function localChatApiPlugin(apiKey: string | undefined): Plugin {
           res.statusCode = 503
           res.end(
             JSON.stringify({
-              error:
-                'OPENAI_API_KEY no configurada en .env (necesaria para el asistente en local)',
+              error: 'OPENAI_API_KEY no configurada en .env',
             }),
           )
           return
@@ -66,6 +64,7 @@ export function localChatApiPlugin(apiKey: string | undefined): Plugin {
 
         try {
           const body = await readJsonBody(req)
+          const { completeEnvironmentalChat } = await import('./api/openaiReply')
           const result = await completeEnvironmentalChat({
             message: body.message ?? '',
             history: body.history,

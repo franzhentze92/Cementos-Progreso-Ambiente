@@ -89,7 +89,7 @@ export function ExportesPage() {
         <h2>Packs disponibles</h2>
         <div className="fase1-export-grid">
           {EXPORT_PACKS.map((pack) => {
-            const theme = PDF_THEMES[pack.id]
+            const theme = PDF_THEMES[pack.theme]
             return (
             <article
               key={pack.id}

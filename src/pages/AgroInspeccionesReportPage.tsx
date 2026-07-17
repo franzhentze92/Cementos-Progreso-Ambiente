@@ -27,8 +27,13 @@ import {
   type AgroInspeccionReport,
 } from '../data/agroInspeccionesReport'
 import { formatNum } from '../data/agroInspecciones'
-import { loadAgroInspecciones } from '../lib/agroInspeccionesApi'
+import { loadInspeccionesForScopes } from '../lib/operationalAggregateApi'
 import { InspeccionAbrirLink } from '../components/InspeccionAbrirLink'
+import {
+  PROJECT_SCOPE_LABELS,
+  scopesLabel,
+  type ProjectScope,
+} from '../data/operationalModules'
 
 const ALERT_CLASS: Record<string, string> = {
   Crítico: 'alert-crit',
@@ -51,7 +56,11 @@ const tooltipStyle = {
   fontSize: 13,
 }
 
-export function AgroInspeccionesReportPage() {
+export function AgroInspeccionesReportPage({
+  scopes = ['agroprogreso'],
+}: {
+  scopes?: ProjectScope[]
+}) {
   const [report, setReport] = useState<AgroInspeccionReport | null>(null)
   const [years, setYears] = useState<number[]>([])
   const [year, setYear] = useState<number | 'all'>('all')
@@ -59,13 +68,18 @@ export function AgroInspeccionesReportPage() {
   const [error, setError] = useState<string | null>(null)
   const [rawCount, setRawCount] = useState(0)
 
+  const scopeKey = scopes.join(',')
+  const projectLabel = scopesLabel(scopes)
+  const entryScope = scopes[0] ?? 'agroprogreso'
+  const entryPath = `/entrada-datos/inspeccion-ambiental?proyecto=${entryScope}`
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       setLoading(true)
       setError(null)
       try {
-        const records = await loadAgroInspecciones()
+        const records = await loadInspeccionesForScopes(scopes)
         if (cancelled) return
         setRawCount(records.length)
         const built = buildAgroInspeccionReport(records, year)
@@ -85,7 +99,7 @@ export function AgroInspeccionesReportPage() {
     return () => {
       cancelled = true
     }
-  }, [year])
+  }, [year, scopeKey])
 
   const chartMonthly = useMemo(
     () =>
@@ -102,7 +116,7 @@ export function AgroInspeccionesReportPage() {
     return (
       <div className="carbon-page hc-loading">
         <Loader2 className="hc-spin" size={28} />
-        <p>Cargando inspección ambiental Agroprogreso…</p>
+        <p>Cargando inspección ambiental ({projectLabel})…</p>
       </div>
     )
   }
@@ -112,10 +126,7 @@ export function AgroInspeccionesReportPage() {
       <div className="carbon-page">
         <div className="hc-banner hc-banner-error" role="alert">
           <strong>Error:</strong> {error ?? 'Sin datos'}
-          <Link
-            to="/entrada-datos/agroprogreso/inspeccion-ambiental"
-            className="btn-secondary-link"
-          >
+          <Link to={entryPath} className="btn-secondary-link">
             Ir a captura →
           </Link>
         </div>
@@ -131,12 +142,13 @@ export function AgroInspeccionesReportPage() {
         <div>
           <p className="carbon-kicker">
             <Sprout size={14} />
-            Operaciones · Agroprogreso
+            Operaciones · {projectLabel}
           </p>
           <h1>Inspección ambiental</h1>
           <p>
-            Datos reales · hoja Ejecuciones inspecciones
-            (Agroprogreso) · {meta.periodLabel}
+            Datos reales · Ejecuciones inspecciones
+            ({scopes.map((s) => PROJECT_SCOPE_LABELS[s]).join(', ')}) ·{' '}
+            {meta.periodLabel}
           </p>
         </div>
         <div className="carbon-header-meta">
@@ -330,7 +342,7 @@ export function AgroInspeccionesReportPage() {
             </p>
           </div>
           <Link
-            to="/entrada-datos/agroprogreso/inspeccion-ambiental"
+            to={entryPath}
             className="btn-secondary-link"
           >
             Ir a captura →
@@ -374,7 +386,7 @@ export function AgroInspeccionesReportPage() {
                         link={row.link}
                         fecha={row.fecha}
                         plantaSede={row.sede}
-                        unidadNegocio="Agroprogreso"
+                        unidadNegocio={row.unidadNegocio}
                       />
                     </td>
                   </tr>
@@ -391,7 +403,8 @@ export function AgroInspeccionesReportPage() {
         {totals.totalHallazgos
           ? ` · ${totals.totalHallazgos} hallazgo(s) acumulados`
           : ''}
-        . Solo datos reales (Agroprogreso).
+        . Solo datos reales ({projectLabel}
+        {rawCount ? ` · ${rawCount} registro(s)` : ''}).
       </p>
     </div>
   )

@@ -20,6 +20,7 @@ import {
   YAxis,
 } from 'recharts'
 import { Link } from 'react-router-dom'
+import { MarkdownBrief } from '../components/MarkdownBrief'
 import {
   ANALISTA_ESTADOS,
   CATEGORY_LABEL,
@@ -292,7 +293,7 @@ ${(live?.forecastLines ?? []).join('\n') || '- Sin forecast'}
     return (
       <div className="carbon-page hc-loading">
         <Loader2 className="hc-spin" size={28} />
-        <p>Cargando analista semanal…</p>
+        <p>Cargando Briefing Semanal…</p>
       </div>
     )
   }
@@ -305,7 +306,7 @@ ${(live?.forecastLines ?? []).join('\n') || '- Sin forecast'}
             <Brain size={14} />
             Fase 4 · Predictivo
           </p>
-          <h1>Analista semanal</h1>
+          <h1>Briefing Semanal</h1>
           <p>
             Señales proactivas de la semana ({weekLabel}): vencimientos,
             anomalías, forecast de metas y riesgo operativo.
@@ -548,18 +549,7 @@ ${(live?.forecastLines ?? []).join('\n') || '- Sin forecast'}
           <div className="fase1-section-head">
             <h2>Borrador ejecutivo</h2>
           </div>
-          <pre
-            style={{
-              whiteSpace: 'pre-wrap',
-              fontFamily: 'inherit',
-              fontSize: '0.92rem',
-              lineHeight: 1.5,
-              margin: 0,
-              color: 'var(--progreso-gray-dark, #2d3430)',
-            }}
-          >
-            {active.borradorMd}
-          </pre>
+          <MarkdownBrief markdown={active.borradorMd} />
         </section>
       )}
 

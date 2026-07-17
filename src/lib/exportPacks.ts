@@ -13,6 +13,8 @@ import { CATEGORY_LABEL, formatNum as formatAnalistaNum } from '../data/analista
 import { formatIsoDate as formatCapaDate } from '../data/capa'
 import { formatIsoDate as formatCumplDate } from '../data/cumplimiento'
 import { formatIsoDate as formatExpDate } from '../data/expedientes'
+import { riskForCompromiso } from '../data/compromisosAmbientales'
+import { buildLiveMonitoringSnapshot } from '../data/kunakLiveMonitoring'
 import type { DashboardSummary } from '../data/dashboard'
 import { loadCapas } from './capaApi'
 import { loadCumplimiento } from './cumplimientoApi'
@@ -31,6 +33,23 @@ import { loadAgroIncidentes } from './agroIncidentesApi'
 import { loadAliconIncidentes } from './aliconIncidentesApi'
 import { loadAgroResiduos } from './agroResiduosApi'
 import { loadAgroConsumoAgua } from './agroConsumoAguaApi'
+import { loadAgroCompostaje } from './agroCompostajeApi'
+import { loadAgroCapacitaciones } from './agroCapacitacionesApi'
+import { loadAgroNdaCascoVerde } from './agroNdaCascoVerdeApi'
+import { loadAgroNdaGeneral } from './agroNdaGeneralApi'
+import { loadAgroGestionTramites } from './agroGestionTramitesApi'
+import { loadAgroInspecciones } from './agroInspeccionesApi'
+import { loadAliconInspecciones } from './aliconInspeccionesApi'
+import { loadDescargaBarcosInspecciones } from './descargaBarcosInspeccionesApi'
+import { loadCompromisos } from './compromisosAmbientalesApi'
+import { loadBibliotecaDocs } from './bibliotecaApi'
+import { loadSiteRiskOverlay } from './siteRiskApi'
+import {
+  loadOperacionesSummary,
+  loadCumplimientoSectionSummary,
+  loadSostenibilidadSummary,
+  loadDocumentosSummary,
+} from './sectionSummariesApi'
 import {
   buildAgroResiduosReport,
   availableYears as residuosYears,
@@ -39,28 +58,61 @@ import {
   buildAgroAguaReport,
   availableYears as aguaYears,
 } from '../data/agroConsumoAguaReport'
+import {
+  buildAgroMonitoreosReport,
+  availableYears as monitoreoYears,
+} from '../data/agroMonitoreosReport'
+import {
+  buildAgroInspeccionReport,
+  availableYears as inspeccionYears,
+} from '../data/agroInspeccionesReport'
+import { buildAgroCompostajeReport } from '../data/agroCompostajeReport'
+import { buildAgroNdaCascoVerdeReport } from '../data/agroNdaCascoVerdeReport'
+import { buildAgroNdaGeneralReport } from '../data/agroNdaGeneralReport'
+import {
+  buildAgroCapacitacionesReport,
+  availableYears as capacitacionesYears,
+} from '../data/agroCapacitacionesReport'
+import { buildAgroGestionTramitesReport } from '../data/agroGestionTramitesReport'
 import { preferredYear } from '../data/dashboard'
 import {
   downloadCsv,
   downloadReportPdf,
   stampFilename,
+  type PdfThemeId,
 } from './exportDownload'
 
 export type ExportPackId =
   | 'dashboard'
-  | 'cumplimiento'
+  | 'mapa'
+  | 'monitoreoVivo'
+  | 'analista'
+  | 'resumenOperaciones'
+  | 'monitoreo'
+  | 'inspecciones'
+  | 'incidentes'
+  | 'residuos'
+  | 'agua'
+  | 'compostaje'
+  | 'ndaCascoVerde'
+  | 'ndaGeneral'
+  | 'capacitaciones'
+  | 'resumenCumplimiento'
+  | 'compromisos'
   | 'capa'
+  | 'licencias'
+  | 'tramites'
+  | 'cumplimiento'
+  | 'calendarioLegal'
+  | 'indicadores'
   | 'metas'
   | 'umbrales'
   | 'intensidad'
   | 'circularidad'
-  | 'expedientes'
-  | 'analista'
-  | 'licencias'
-  | 'incidentes'
-  | 'residuos'
-  | 'agua'
   | 'carbono'
+  | 'centroDocumental'
+  | 'expedientes'
+  | 'biblioteca'
 
 export type ExportPackDef = {
   id: ExportPackId
@@ -68,87 +120,75 @@ export type ExportPackDef = {
   description: string
   formats: Array<'pdf' | 'csv'>
   audience: string
+  /** Paleta PDF / acento de tarjeta (reutiliza temas existentes). */
+  theme: PdfThemeId
 }
 
 export const EXPORT_PACKS: ExportPackDef[] = [
+  // —— Inicio ——
   {
     id: 'dashboard',
-    title: 'Resumen ejecutivo',
+    title: 'Dashboard · Resumen ejecutivo',
     description:
       'KPIs, hallazgos del periodo y estado de cumplimiento cruzado Agro + Alicón.',
     formats: ['pdf', 'csv'],
     audience: 'Gerencia / Ambiente',
+    theme: 'dashboard',
   },
   {
-    id: 'cumplimiento',
-    title: 'Pack cumplimiento legal',
+    id: 'mapa',
+    title: 'Mapa · Riesgo por sitio',
     description:
-      'Obligaciones, vencimientos, criticidad y calendario de alertas (90/60/30).',
-    formats: ['pdf', 'csv'],
-    audience: 'Ambiente / Auditoría',
-  },
-  {
-    id: 'capa',
-    title: 'Pack CAPA',
-    description:
-      'Acciones correctivas/preventivas, plazos, responsables y tasa de cierre.',
-    formats: ['pdf', 'csv'],
-    audience: 'Ambiente / Operaciones',
-  },
-  {
-    id: 'metas',
-    title: 'Pack metas / KPIs',
-    description:
-      'Portafolio de metas ambientales con avance, riesgo y responsables.',
+      'Overlay de riesgo georreferenciado: obligaciones, CAPA, excedencias e incidentes.',
     formats: ['pdf', 'csv'],
     audience: 'Gerencia / Ambiente',
+    theme: 'dashboard',
   },
   {
-    id: 'umbrales',
-    title: 'Pack umbrales de monitoreo',
+    id: 'monitoreoVivo',
+    title: 'Monitoreo en vivo',
     description:
-      'Catálogo de límites y excedencias automáticas de monitoreos Agro.',
+      'Snapshot de estaciones Kunak: calidad de aire, ruido y alertas por planta.',
     formats: ['pdf', 'csv'],
-    audience: 'Ambiente / Laboratorio',
-  },
-  {
-    id: 'intensidad',
-    title: 'Pack intensidad / escenarios',
-    description:
-      'Intensidad operativa Alicón (kg CO₂e/t proxy) y escenarios qué-pasa-si.',
-    formats: ['pdf', 'csv'],
-    audience: 'Sostenibilidad / Gerencia',
-  },
-  {
-    id: 'circularidad',
-    title: 'Pack circularidad',
-    description:
-      'Flujos de valorización, manifiestos, gestores y tasa de aprovechamiento.',
-    formats: ['pdf', 'csv'],
-    audience: 'Ambiente',
-  },
-  {
-    id: 'expedientes',
-    title: 'Pack expedientes',
-    description:
-      'Repositorio documental por sitio/tema con ligue a módulos operativos.',
-    formats: ['pdf', 'csv'],
-    audience: 'Ambiente / Auditoría',
+    audience: 'Operaciones / Ambiente',
+    theme: 'umbrales',
   },
   {
     id: 'analista',
-    title: 'Pack analista semanal',
+    title: 'Briefing Semanal',
     description:
       'Briefing predictivo: señales, KPIs de riesgo y borrador ejecutivo.',
     formats: ['pdf', 'csv'],
     audience: 'Gerencia / Ambiente',
+    theme: 'analista',
+  },
+  // —— Operaciones ——
+  {
+    id: 'resumenOperaciones',
+    title: 'Resumen de operaciones',
+    description:
+      'Vista consolidada de módulos operativos: agua, residuos, inspecciones, NDA y más.',
+    formats: ['pdf', 'csv'],
+    audience: 'Operaciones / Ambiente',
+    theme: 'dashboard',
   },
   {
-    id: 'licencias',
-    title: 'Licencias ambientales Agro',
-    description: 'Catálogo de licencias con vigencia, estado y sede.',
+    id: 'monitoreo',
+    title: 'Monitoreo ambiental',
+    description:
+      'Campañas de muestreo Agro: parámetros, cumplimiento de límites y puntos.',
     formats: ['pdf', 'csv'],
-    audience: 'Ambiente',
+    audience: 'Ambiente / Laboratorio',
+    theme: 'umbrales',
+  },
+  {
+    id: 'inspecciones',
+    title: 'Inspección ambiental',
+    description:
+      'Inspecciones Agro + Alicón + Descarga de barcos: hallazgos y nivel de riesgo.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / Operaciones',
+    theme: 'capa',
   },
   {
     id: 'incidentes',
@@ -156,27 +196,202 @@ export const EXPORT_PACKS: ExportPackDef[] = [
     description: 'Incidentes Agroprogreso + Planta Alicón consolidados.',
     formats: ['pdf', 'csv'],
     audience: 'Ambiente / SSO',
+    theme: 'incidentes',
   },
   {
     id: 'residuos',
-    title: 'Gestión de residuos Agro',
+    title: 'Gestión de residuos',
     description: 'Registros de residuos por sede, clasificación y ruta.',
     formats: ['pdf', 'csv'],
     audience: 'Ambiente',
+    theme: 'residuos',
   },
   {
     id: 'agua',
-    title: 'Consumo de agua Agro',
+    title: 'Consumo de agua',
     description: 'Consumos por finca/sitio en formato tabular.',
     formats: ['pdf', 'csv'],
     audience: 'Ambiente',
+    theme: 'agua',
+  },
+  {
+    id: 'compostaje',
+    title: 'Compostaje',
+    description: 'Toneladas de desechos orgánicos compostados por finca y mes.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / Operaciones',
+    theme: 'circularidad',
+  },
+  {
+    id: 'ndaCascoVerde',
+    title: 'NDA Casco Verde',
+    description: 'Notas de inspección Casco Verde, hallazgos críticos y sedes.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / SSO',
+    theme: 'capa',
+  },
+  {
+    id: 'ndaGeneral',
+    title: 'NDA General',
+    description:
+      'Índice NDA consolidado por sede (IDA, Casco Verde, incidentes, compromisos).',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / Gerencia',
+    theme: 'dashboard',
+  },
+  {
+    id: 'capacitaciones',
+    title: 'Capacitaciones',
+    description:
+      'Programa de capacitaciones ambientales: ejecutado, programado y reprogramado.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / RRHH',
+    theme: 'metas',
+  },
+  // —— Cumplimiento ——
+  {
+    id: 'resumenCumplimiento',
+    title: 'Resumen de cumplimiento',
+    description:
+      'KPIs cruzados de obligaciones, CAPA, licencias, trámites y compromisos.',
+    formats: ['pdf', 'csv'],
+    audience: 'Gerencia / Auditoría',
+    theme: 'cumplimiento',
+  },
+  {
+    id: 'compromisos',
+    title: 'Compromisos ambientales',
+    description:
+      'Portafolio de compromisos: avance, criticidad, vencimientos y responsables.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / Operaciones',
+    theme: 'capa',
+  },
+  {
+    id: 'capa',
+    title: 'Acciones correctivas (CAPA)',
+    description:
+      'Acciones correctivas/preventivas, plazos, responsables y tasa de cierre.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / Operaciones',
+    theme: 'capa',
+  },
+  {
+    id: 'licencias',
+    title: 'Licencias ambientales',
+    description: 'Catálogo de licencias con vigencia, estado y sede.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente',
+    theme: 'licencias',
+  },
+  {
+    id: 'tramites',
+    title: 'Gestión de trámites',
+    description:
+      'Trámites administrativos: estado, prioridad, sede y responsable.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / Legal',
+    theme: 'cumplimiento',
+  },
+  {
+    id: 'cumplimiento',
+    title: 'Cumplimiento legal',
+    description:
+      'Obligaciones, vencimientos, criticidad y calendario de alertas (90/60/30).',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / Auditoría',
+    theme: 'cumplimiento',
+  },
+  {
+    id: 'calendarioLegal',
+    title: 'Calendario legal ambiental',
+    description:
+      'Próximos hitos de obligaciones y CAPA con nivel de riesgo por fecha.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / Legal',
+    theme: 'cumplimiento',
+  },
+  // —— Sostenibilidad ——
+  {
+    id: 'indicadores',
+    title: 'Indicadores ambientales',
+    description:
+      'Resumen de sostenibilidad: metas, umbrales, intensidad, circularidad y carbono.',
+    formats: ['pdf', 'csv'],
+    audience: 'Sostenibilidad / Gerencia',
+    theme: 'metas',
+  },
+  {
+    id: 'metas',
+    title: 'Metas / KPIs',
+    description:
+      'Portafolio de metas ambientales con avance, riesgo y responsables.',
+    formats: ['pdf', 'csv'],
+    audience: 'Gerencia / Ambiente',
+    theme: 'metas',
+  },
+  {
+    id: 'umbrales',
+    title: 'Umbrales de monitoreo',
+    description:
+      'Catálogo de límites y excedencias automáticas de monitoreos Agro.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / Laboratorio',
+    theme: 'umbrales',
+  },
+  {
+    id: 'intensidad',
+    title: 'Intensidad ambiental',
+    description:
+      'Intensidad operativa Alicón (kg CO₂e/t proxy) y escenarios qué-pasa-si.',
+    formats: ['pdf', 'csv'],
+    audience: 'Sostenibilidad / Gerencia',
+    theme: 'intensidad',
+  },
+  {
+    id: 'circularidad',
+    title: 'Circularidad',
+    description:
+      'Flujos de valorización, manifiestos, gestores y tasa de aprovechamiento.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente',
+    theme: 'circularidad',
   },
   {
     id: 'carbono',
-    title: 'Huella de carbono Alicón',
+    title: 'Huella de carbono',
     description: 'Resumen de producción, energía y totales de la campaña activa.',
     formats: ['pdf', 'csv'],
     audience: 'Sostenibilidad',
+    theme: 'carbono',
+  },
+  // —— Documentos ——
+  {
+    id: 'centroDocumental',
+    title: 'Centro documental',
+    description:
+      'Resumen del repositorio: expedientes por tema/tipo y packs de evidencia.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / Auditoría',
+    theme: 'expedientes',
+  },
+  {
+    id: 'expedientes',
+    title: 'Expedientes',
+    description:
+      'Repositorio documental por sitio/tema con ligue a módulos operativos.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / Auditoría',
+    theme: 'expedientes',
+  },
+  {
+    id: 'biblioteca',
+    title: 'Biblioteca',
+    description:
+      'Catálogo de documentos de conocimiento (normativa, guías, SOP) para el copiloto.',
+    formats: ['pdf', 'csv'],
+    audience: 'Ambiente / Administración',
+    theme: 'expedientes',
   },
 ]
 
@@ -195,10 +410,48 @@ export async function runExportPack(
   switch (packId) {
     case 'dashboard':
       return exportDashboard(format)
-    case 'cumplimiento':
-      return exportCumplimiento(format)
+    case 'mapa':
+      return exportMapa(format)
+    case 'monitoreoVivo':
+      return exportMonitoreoVivo(format)
+    case 'analista':
+      return exportAnalista(format)
+    case 'resumenOperaciones':
+      return exportResumenOperaciones(format)
+    case 'monitoreo':
+      return exportMonitoreo(format)
+    case 'inspecciones':
+      return exportInspecciones(format)
+    case 'incidentes':
+      return exportIncidentes(format)
+    case 'residuos':
+      return exportResiduos(format)
+    case 'agua':
+      return exportAgua(format)
+    case 'compostaje':
+      return exportCompostaje(format)
+    case 'ndaCascoVerde':
+      return exportNdaCascoVerde(format)
+    case 'ndaGeneral':
+      return exportNdaGeneral(format)
+    case 'capacitaciones':
+      return exportCapacitaciones(format)
+    case 'resumenCumplimiento':
+      return exportResumenCumplimiento(format)
+    case 'compromisos':
+      return exportCompromisos(format)
     case 'capa':
       return exportCapa(format)
+    case 'licencias':
+      return exportLicencias(format)
+    case 'tramites':
+      return exportTramites(format)
+    case 'cumplimiento':
+      return exportCumplimiento(format)
+    case 'calendarioLegal':
+      return exportCalendarioLegal(format)
+    case 'indicadores':
+      return exportIndicadores(format)
     case 'metas':
       return exportMetas(format)
     case 'umbrales':
@@ -207,20 +460,14 @@ export async function runExportPack(
       return exportIntensidad(format)
     case 'circularidad':
       return exportCircularidad(format)
-    case 'expedientes':
-      return exportExpedientes(format)
-    case 'analista':
-      return exportAnalista(format)
-    case 'licencias':
-      return exportLicencias(format)
-    case 'incidentes':
-      return exportIncidentes(format)
-    case 'residuos':
-      return exportResiduos(format)
-    case 'agua':
-      return exportAgua(format)
     case 'carbono':
       return exportCarbono(format)
+    case 'centroDocumental':
+      return exportCentroDocumental(format)
+    case 'expedientes':
+      return exportExpedientes(format)
+    case 'biblioteca':
+      return exportBiblioteca(format)
     default:
       throw new Error(`Pack desconocido: ${packId}`)
   }
@@ -800,7 +1047,7 @@ async function exportAnalista(format: 'pdf' | 'csv') {
         style: 'markdown',
         body:
           latest?.borradorMd?.trim() ||
-          'Aun no hay borrador generado. En Analista semanal use "Generar borrador" y vuelva a exportar.',
+          'Aun no hay borrador generado. En Briefing Semanal use "Generar borrador" y vuelva a exportar.',
       },
     ],
   })
@@ -1163,6 +1410,906 @@ async function exportCarbono(format: 'pdf' | 'csv') {
         lines: report.insights
           .slice(0, 8)
           .map((i) => `[${i.level}] ${i.title}: ${i.text}`),
+      },
+    ],
+  })
+}
+
+async function exportMapa(format: 'pdf' | 'csv') {
+  const cards = await loadSiteRiskOverlay()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('mapa_riesgo_sitios', 'csv'),
+      [
+        'Sitio',
+        'Nivel',
+        'Score',
+        'Oblig. críticas',
+        'CAPA vencidas',
+        'Excedencias',
+        'Incidentes abiertos',
+        'Metas en riesgo',
+        'Headline',
+      ],
+      cards.map((c) => [
+        c.name,
+        c.level,
+        c.score,
+        c.signals.obligacionesCriticas,
+        c.signals.capaVencidas,
+        c.signals.excedenciasMonitoreo,
+        c.signals.incidentesAbiertos,
+        c.signals.metasEnRiesgo,
+        c.headlines[0] ?? '',
+      ]),
+    )
+    return
+  }
+  const criticos = cards.filter((c) => c.level === 'critico').length
+  const atencion = cards.filter((c) => c.level === 'atencion').length
+  downloadReportPdf({
+    title: 'Mapa · Riesgo por sitio',
+    subtitle: `${cards.length} sitio(s) · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Mapa de riesgo',
+    filename: stampFilename('mapa_riesgo_sitios', 'pdf'),
+    theme: 'dashboard',
+    kpis: [
+      { label: 'Sitios', value: String(cards.length) },
+      { label: 'Críticos', value: String(criticos) },
+      { label: 'Atención', value: String(atencion) },
+      {
+        label: 'OK',
+        value: String(cards.filter((c) => c.level === 'ok').length),
+      },
+    ],
+    sections: [
+      {
+        heading: 'Sitios priorizados',
+        lines: [...cards]
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 35)
+          .map(
+            (c) =>
+              `[${c.level}] ${c.name} · score ${c.score} · ${c.headlines[0] ?? 'Sin hallazgo'}`,
+          ),
+      },
+    ],
+  })
+}
+
+async function exportMonitoreoVivo(format: 'pdf' | 'csv') {
+  const snap = buildLiveMonitoringSnapshot()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('monitoreo_en_vivo', 'csv'),
+      [
+        'Estación',
+        'Planta',
+        'Zona',
+        'Estado',
+        'PM2.5',
+        'PM10',
+        'Ruido dBA',
+        'CO2',
+        'Temp °C',
+        'HR %',
+      ],
+      snap.stations.map((s) => [
+        s.id,
+        s.plant,
+        s.zone,
+        s.status,
+        s.reading.pm25,
+        s.reading.pm10,
+        s.reading.noise,
+        s.reading.co2,
+        s.reading.temperature,
+        s.reading.humidity,
+      ]),
+    )
+    return
+  }
+  downloadReportPdf({
+    title: 'Monitoreo en vivo · Kunak',
+    subtitle: `Snapshot ${snap.generatedAt.toLocaleString('es-GT')} · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Monitoreo en vivo',
+    filename: stampFilename('monitoreo_en_vivo', 'pdf'),
+    theme: 'umbrales',
+    kpis: [
+      {
+        label: 'Online',
+        value: `${snap.kpis.online}/${snap.kpis.total}`,
+      },
+      { label: 'PM2.5 prom.', value: String(snap.kpis.avgPm25) },
+      { label: 'Ruido prom.', value: `${snap.kpis.avgNoise} dBA` },
+      { label: 'Excedencias', value: String(snap.kpis.exceedances) },
+    ],
+    sections: [
+      {
+        heading: 'Alertas',
+        lines: snap.alerts.length
+          ? snap.alerts
+              .slice(0, 20)
+              .map((a) => `[${a.level}] ${a.stationId}: ${a.title} — ${a.text}`)
+          : ['Sin alertas en el snapshot'],
+      },
+      {
+        heading: 'Estaciones',
+        lines: snap.stations.map(
+          (s) =>
+            `${s.id} · ${s.plant} · ${s.status} · PM2.5 ${s.reading.pm25} · ruido ${s.reading.noise}`,
+        ),
+      },
+    ],
+  })
+}
+
+async function exportResumenOperaciones(format: 'pdf' | 'csv') {
+  const summary = await loadOperacionesSummary()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('resumen_operaciones_kpis', 'csv'),
+      ['KPI', 'Valor', 'Unidad', 'Hint'],
+      summary.kpis.map((k) => [k.label, k.value, k.unit ?? '', k.hint]),
+    )
+    return
+  }
+  downloadReportPdf({
+    title: 'Resumen de operaciones',
+    subtitle: `${summary.modulesLoaded} módulos · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Operaciones',
+    filename: stampFilename('resumen_operaciones', 'pdf'),
+    theme: 'dashboard',
+    kpis: summary.kpis.slice(0, 4).map((k) => ({
+      label: k.label,
+      value: k.unit ? `${k.value} ${k.unit}` : k.value,
+    })),
+    sections: [
+      {
+        heading: 'Indicadores',
+        lines: summary.kpis.map(
+          (k) => `${k.label}: ${k.value}${k.unit ? ` ${k.unit}` : ''} — ${k.hint}`,
+        ),
+      },
+      {
+        heading: 'Periodos de referencia',
+        lines: summary.periodHints.length
+          ? summary.periodHints
+          : ['Sin periodos registrados'],
+      },
+      ...(summary.modulesFailed.length
+        ? [
+            {
+              heading: 'Módulos con error de carga',
+              lines: summary.modulesFailed,
+            },
+          ]
+        : []),
+    ],
+  })
+}
+
+async function exportMonitoreo(format: 'pdf' | 'csv') {
+  const rows = await loadAgroMonitoreos()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('monitoreo_ambiental', 'csv'),
+      [
+        'Fecha',
+        'Sede',
+        'Punto',
+        'Tipo agua',
+        'Parámetro',
+        'Resultado',
+        'Unidad',
+        'Límite',
+        'Cumple',
+      ],
+      rows.map((r) => [
+        r.fecha,
+        r.plantaSede,
+        r.puntoMuestreo,
+        r.tipoAgua,
+        r.parametro,
+        r.resultado,
+        r.unidad,
+        r.limitePermisible,
+        r.cumple,
+      ]),
+    )
+    return
+  }
+  const year = preferredYear(monitoreoYears(rows))
+  const report = buildAgroMonitoreosReport(rows, year)
+  downloadReportPdf({
+    title: 'Monitoreo ambiental',
+    subtitle: `${report.meta.periodLabel} · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Monitoreo',
+    filename: stampFilename('monitoreo_ambiental', 'pdf'),
+    theme: 'umbrales',
+    kpis: report.kpis.slice(0, 4).map((k) => ({
+      label: k.label,
+      value: k.value,
+    })),
+    sections: [
+      {
+        heading: 'Alertas',
+        lines: report.insights.length
+          ? report.insights.map((i) => `[${i.level}] ${i.title}: ${i.text}`)
+          : ['Sin alertas'],
+      },
+      {
+        heading: 'Detalle (primeras 35 filas)',
+        lines: report.detailRows.slice(0, 35).map(
+          (r) =>
+            `${r.fecha} · ${r.sede} · ${r.parametro} · ${r.resultado ?? '—'} ${r.unidad} · ${r.cumple}`,
+        ),
+      },
+    ],
+  })
+}
+
+async function exportInspecciones(format: 'pdf' | 'csv') {
+  const [agro, alicon, barcos] = await Promise.all([
+    loadAgroInspecciones(),
+    loadAliconInspecciones(),
+    loadDescargaBarcosInspecciones(),
+  ])
+  const merged = [
+    ...agro.map((r) => ({ ...r, origen: 'Agro' })),
+    ...alicon.map((r) => ({ ...r, origen: 'Alicón' })),
+    ...barcos.map((r) => ({ ...r, origen: 'Descarga barcos' })),
+  ]
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('inspecciones_ambientales', 'csv'),
+      [
+        'Origen',
+        'Fecha',
+        'Sede',
+        'Responsable',
+        'Resultado',
+        'Hallazgos',
+        'Riesgo',
+        'Acción inmediata',
+      ],
+      merged.map((r) => [
+        r.origen,
+        r.fecha,
+        r.plantaSede,
+        r.responsable,
+        r.resultadoGeneral,
+        r.numHallazgos,
+        r.nivelRiesgo,
+        r.requiereAccionInmediata,
+      ]),
+    )
+    return
+  }
+  const year = preferredYear(inspeccionYears(merged))
+  const report = buildAgroInspeccionReport(merged, year)
+  downloadReportPdf({
+    title: 'Inspección ambiental',
+    subtitle: `Agro + Alicón + Barcos · ${report.meta.periodLabel} · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Inspecciones',
+    filename: stampFilename('inspecciones_ambientales', 'pdf'),
+    theme: 'capa',
+    kpis: report.kpis.slice(0, 4).map((k) => ({
+      label: k.label,
+      value: k.value,
+    })),
+    sections: [
+      {
+        heading: 'Alertas',
+        lines: report.insights.length
+          ? report.insights.map((i) => `[${i.level}] ${i.title}: ${i.text}`)
+          : ['Sin alertas'],
+      },
+      {
+        heading: 'Ranking por sede',
+        lines: report.sedeRanking.slice(0, 15).map(
+          (s) =>
+            `${s.sede}: ${s.count} insp. · promedio ${s.avgScore == null ? '—' : s.avgScore.toFixed(1)}`,
+        ),
+      },
+      {
+        heading: 'Detalle reciente',
+        lines: report.detailRows.slice(0, 30).map(
+          (r) =>
+            `${r.fecha} · ${r.sede} · nota ${r.resultado ?? '—'} · hallazgos ${r.hallazgos ?? 0} · ${r.riesgo || '—'}`,
+        ),
+      },
+    ],
+  })
+}
+
+async function exportCompostaje(format: 'pdf' | 'csv') {
+  const rows = await loadAgroCompostaje()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('compostaje', 'csv'),
+      ['Fecha', 'Finca', 'Toneladas'],
+      rows.map((r) => [r.fecha, r.finca, r.toneladas]),
+    )
+    return
+  }
+  const years = [
+    ...new Set(rows.map((r) => Number(r.fecha.slice(0, 4))).filter(Boolean)),
+  ].sort((a, b) => b - a)
+  const year = preferredYear(years)
+  const report = buildAgroCompostajeReport(rows, year)
+  downloadReportPdf({
+    title: 'Compostaje · Agroprogreso',
+    subtitle: `${report.meta.periodLabel} · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Compostaje',
+    filename: stampFilename('compostaje', 'pdf'),
+    theme: 'circularidad',
+    kpis: report.kpis.slice(0, 4).map((k) => ({
+      label: k.label,
+      value: k.value,
+    })),
+    sections: [
+      {
+        heading: 'Alertas',
+        lines: report.insights.length
+          ? report.insights.map((i) => `[${i.level}] ${i.title}: ${i.text}`)
+          : ['Sin alertas'],
+      },
+      {
+        heading: 'Por finca',
+        lines: report.byFinca.map(
+          (f) => `${f.name}: ${f.value.toLocaleString('es-GT')} t`,
+        ),
+      },
+      {
+        heading: 'Detalle',
+        lines: report.detailRows
+          .filter((r) => r.toneladas != null)
+          .slice(0, 35)
+          .map(
+            (r) =>
+              `${r.fecha} · ${r.finca} · ${r.toneladas?.toLocaleString('es-GT') ?? '—'} t`,
+          ),
+      },
+    ],
+  })
+}
+
+async function exportNdaCascoVerde(format: 'pdf' | 'csv') {
+  const rows = await loadAgroNdaCascoVerde()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('nda_casco_verde', 'csv'),
+      [
+        'Fecha',
+        'Sede',
+        'Inspector',
+        'Nota',
+        'Hallazgos críticos',
+        'No. inspección',
+        'Observaciones',
+      ],
+      rows.map((r) => [
+        r.fecha,
+        r.plantaSede,
+        r.inspector,
+        r.nota,
+        r.hallazgosCriticos,
+        r.noInspeccion,
+        r.observaciones,
+      ]),
+    )
+    return
+  }
+  const years = [
+    ...new Set(rows.map((r) => Number(r.fecha.slice(0, 4))).filter(Boolean)),
+  ].sort((a, b) => b - a)
+  const report = buildAgroNdaCascoVerdeReport(rows, preferredYear(years))
+  downloadReportPdf({
+    title: 'NDA Casco Verde',
+    subtitle: `${report.meta.periodLabel} · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Casco Verde',
+    filename: stampFilename('nda_casco_verde', 'pdf'),
+    theme: 'capa',
+    kpis: report.kpis.slice(0, 4).map((k) => ({
+      label: k.label,
+      value: k.value,
+    })),
+    sections: [
+      {
+        heading: 'Alertas',
+        lines: report.insights.length
+          ? report.insights.map((i) => `[${i.level}] ${i.title}: ${i.text}`)
+          : ['Sin alertas'],
+      },
+      {
+        heading: 'Por sede',
+        lines: report.bySede.slice(0, 15).map(
+          (s) =>
+            `${s.sede}: nota ${s.avgNota == null ? '—' : s.avgNota.toFixed(1)} · hallazgos ${s.hallazgos}`,
+        ),
+      },
+      {
+        heading: 'Detalle reciente',
+        lines: report.detailRows.slice(0, 30).map(
+          (r) =>
+            `${r.fecha} · ${r.sede} · nota ${r.nota ?? '—'} · hallazgos ${r.hallazgos}`,
+        ),
+      },
+    ],
+  })
+}
+
+async function exportNdaGeneral(format: 'pdf' | 'csv') {
+  const rows = await loadAgroNdaGeneral()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('nda_general', 'csv'),
+      [
+        'Fecha',
+        'Sede',
+        'Proyecto',
+        'Nota IDA',
+        'Casco Verde',
+        'Incidentes',
+        'Compromisos',
+        'NDA',
+      ],
+      rows.map((r) => [
+        r.fecha,
+        r.plantaSede,
+        r.proyectoMatriz,
+        r.notaIda,
+        r.cascoVerde,
+        r.incidentes,
+        r.compromisos,
+        r.nda,
+      ]),
+    )
+    return
+  }
+  const years = [
+    ...new Set(rows.map((r) => Number(r.fecha.slice(0, 4))).filter(Boolean)),
+  ].sort((a, b) => b - a)
+  const report = buildAgroNdaGeneralReport(rows, preferredYear(years))
+  downloadReportPdf({
+    title: 'NDA General',
+    subtitle: `${report.meta.periodLabel} · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · NDA General',
+    filename: stampFilename('nda_general', 'pdf'),
+    theme: 'dashboard',
+    kpis: report.kpis.slice(0, 4).map((k) => ({
+      label: k.label,
+      value: k.value,
+    })),
+    sections: [
+      {
+        heading: 'Alertas',
+        lines: report.insights.length
+          ? report.insights.map((i) => `[${i.level}] ${i.title}: ${i.text}`)
+          : ['Sin alertas'],
+      },
+      {
+        heading: 'Detalle reciente',
+        lines: report.detailRows.slice(0, 30).map(
+          (r) =>
+            `${r.fecha} · ${r.sede} · NDA ${r.nda ?? '—'} · proyecto ${r.proyecto || '—'}`,
+        ),
+      },
+    ],
+  })
+}
+
+async function exportCapacitaciones(format: 'pdf' | 'csv') {
+  const rows = await loadAgroCapacitaciones()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('capacitaciones', 'csv'),
+      [
+        'Sede',
+        'Detalle',
+        'Público',
+        'Inicio',
+        'Fin',
+        'Estado',
+        'Comentarios',
+      ],
+      rows.map((r) => [
+        r.plantaSede,
+        r.detalle,
+        r.publicoObjetivo,
+        r.fechaInicio,
+        r.fechaFin,
+        r.estado,
+        r.comentarios,
+      ]),
+    )
+    return
+  }
+  const year = preferredYear(capacitacionesYears(rows))
+  const report = buildAgroCapacitacionesReport(rows, year)
+  downloadReportPdf({
+    title: 'Capacitaciones ambientales',
+    subtitle: `${report.meta.periodLabel} · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Capacitaciones',
+    filename: stampFilename('capacitaciones', 'pdf'),
+    theme: 'metas',
+    kpis: report.kpis.slice(0, 4).map((k) => ({
+      label: k.label,
+      value: k.value,
+    })),
+    sections: [
+      {
+        heading: 'Alertas',
+        lines: report.insights.length
+          ? report.insights.map((i) => `[${i.level}] ${i.title}: ${i.text}`)
+          : ['Sin alertas'],
+      },
+      {
+        heading: 'Detalle',
+        lines: report.detailRows.slice(0, 35).map(
+          (r) =>
+            `${r.inicio} · ${r.sede} · ${r.detalle.slice(0, 60)} · ${r.estado}`,
+        ),
+      },
+    ],
+  })
+}
+
+async function exportResumenCumplimiento(format: 'pdf' | 'csv') {
+  const summary = await loadCumplimientoSectionSummary()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('resumen_cumplimiento_kpis', 'csv'),
+      ['KPI', 'Valor', 'Hint'],
+      summary.kpis.map((k) => [k.label, k.value, k.hint]),
+    )
+    return
+  }
+  downloadReportPdf({
+    title: 'Resumen de cumplimiento',
+    subtitle: `${summary.modulesLoaded} módulos · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Cumplimiento',
+    filename: stampFilename('resumen_cumplimiento', 'pdf'),
+    theme: 'cumplimiento',
+    kpis: summary.kpis.slice(0, 4).map((k) => ({
+      label: k.label,
+      value: k.value,
+    })),
+    sections: [
+      {
+        heading: 'Indicadores',
+        lines: summary.kpis.map((k) => `${k.label}: ${k.value} — ${k.hint}`),
+      },
+      {
+        heading: 'Próximos hitos',
+        lines: summary.upcoming.length
+          ? summary.upcoming
+              .slice(0, 25)
+              .map(
+                (u) =>
+                  `${u.fecha} · [${u.riesgo}] ${u.origen}: ${u.titulo}`,
+              )
+          : ['Sin hitos próximos'],
+      },
+    ],
+  })
+}
+
+async function exportCompromisos(format: 'pdf' | 'csv') {
+  const rows = await loadCompromisos()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('compromisos_ambientales', 'csv'),
+      [
+        'Código',
+        'Título',
+        'Sitio',
+        'Responsable',
+        'Estado',
+        'Avance %',
+        'Criticidad',
+        'Vencimiento',
+        'Riesgo',
+      ],
+      rows.map((r) => [
+        r.codigo,
+        r.titulo,
+        r.sitio,
+        r.responsablePrincipal,
+        r.estado,
+        r.porcentajeAvance,
+        r.criticidad,
+        r.fechaVencimiento,
+        riskForCompromiso(r),
+      ]),
+    )
+    return
+  }
+  const vencidos = rows.filter((r) => riskForCompromiso(r) === 'vencido').length
+  const abiertos = rows.filter((r) => {
+    const risk = riskForCompromiso(r)
+    return risk !== 'cerrado' && risk !== 'suspendido'
+  }).length
+  downloadReportPdf({
+    title: 'Compromisos ambientales',
+    subtitle: `${rows.length} compromiso(s) · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Compromisos',
+    filename: stampFilename('compromisos_ambientales', 'pdf'),
+    theme: 'capa',
+    kpis: [
+      { label: 'Total', value: String(rows.length) },
+      { label: 'Abiertos', value: String(abiertos) },
+      { label: 'Vencidos', value: String(vencidos) },
+      {
+        label: 'Avance prom.',
+        value: rows.length
+          ? `${Math.round(
+              rows.reduce((s, r) => s + (r.porcentajeAvance || 0), 0) /
+                rows.length,
+            )}%`
+          : '—',
+      },
+    ],
+    sections: [
+      {
+        heading: 'Portafolio',
+        lines: rows.slice(0, 40).map(
+          (r) =>
+            `${r.codigo} · ${r.titulo.slice(0, 70)} · ${r.sitio} · ${r.estado} · ${r.porcentajeAvance}% · ${riskForCompromiso(r)}`,
+        ),
+      },
+    ],
+  })
+}
+
+async function exportTramites(format: 'pdf' | 'csv') {
+  const rows = await loadAgroGestionTramites()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('gestion_tramites', 'csv'),
+      [
+        'Fecha solicitud',
+        'Sede',
+        'Proyecto',
+        'Estado',
+        'Asignado',
+        'Prioridad',
+        'Observaciones',
+      ],
+      rows.map((r) => [
+        r.fechaSolicitud,
+        r.plantaSede,
+        r.nombreProyecto,
+        r.estado,
+        r.asignadoA,
+        r.prioridad,
+        r.observaciones,
+      ]),
+    )
+    return
+  }
+  const years = [
+    ...new Set(
+      rows.map((r) => Number(r.fechaSolicitud.slice(0, 4))).filter(Boolean),
+    ),
+  ].sort((a, b) => b - a)
+  const report = buildAgroGestionTramitesReport(rows, preferredYear(years))
+  downloadReportPdf({
+    title: 'Gestión de trámites',
+    subtitle: `${report.meta.periodLabel} · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Trámites',
+    filename: stampFilename('gestion_tramites', 'pdf'),
+    theme: 'cumplimiento',
+    kpis: report.kpis.slice(0, 4).map((k) => ({
+      label: k.label,
+      value: k.value,
+    })),
+    sections: [
+      {
+        heading: 'Por estado',
+        lines: report.byEstado.map((s) => `${s.name}: ${s.value}`),
+      },
+      {
+        heading: 'Detalle',
+        lines: report.detailRows.slice(0, 35).map(
+          (r) =>
+            `${r.fecha} · ${r.sede} · ${r.proyecto.slice(0, 50)} · ${r.estado} · ${r.prioridad}`,
+        ),
+      },
+    ],
+  })
+}
+
+async function exportCalendarioLegal(format: 'pdf' | 'csv') {
+  const summary = await loadCumplimientoSectionSummary()
+  const items = summary.upcoming
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('calendario_legal', 'csv'),
+      ['Fecha', 'Título', 'Origen', 'Riesgo'],
+      items.map((u) => [u.fecha, u.titulo, u.origen, u.riesgo]),
+    )
+    return
+  }
+  downloadReportPdf({
+    title: 'Calendario legal ambiental',
+    subtitle: `${items.length} hito(s) próximos · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Calendario legal',
+    filename: stampFilename('calendario_legal', 'pdf'),
+    theme: 'cumplimiento',
+    kpis: [
+      { label: 'Hitos', value: String(items.length) },
+      {
+        label: 'Alto riesgo',
+        value: String(items.filter((u) => u.riesgo === 'alto').length),
+      },
+      {
+        label: 'Medio',
+        value: String(items.filter((u) => u.riesgo === 'medio').length),
+      },
+      {
+        label: 'Bajo',
+        value: String(items.filter((u) => u.riesgo === 'bajo').length),
+      },
+    ],
+    sections: [
+      {
+        heading: 'Agenda',
+        lines: items.length
+          ? items
+              .slice(0, 40)
+              .map(
+                (u) =>
+                  `${u.fecha} · [${u.riesgo}] ${u.origen}: ${u.titulo}`,
+              )
+          : ['Sin hitos próximos en el calendario'],
+      },
+    ],
+  })
+}
+
+async function exportIndicadores(format: 'pdf' | 'csv') {
+  const summary = await loadSostenibilidadSummary()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('indicadores_ambientales_kpis', 'csv'),
+      ['KPI', 'Valor', 'Unidad', 'Hint'],
+      summary.kpis.map((k) => [k.label, k.value, k.unit ?? '', k.hint]),
+    )
+    return
+  }
+  downloadReportPdf({
+    title: 'Indicadores ambientales',
+    subtitle: `${summary.modulesLoaded} módulos · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Sostenibilidad',
+    filename: stampFilename('indicadores_ambientales', 'pdf'),
+    theme: 'metas',
+    kpis: summary.kpis.slice(0, 4).map((k) => ({
+      label: k.label,
+      value: k.unit ? `${k.value} ${k.unit}` : k.value,
+    })),
+    sections: [
+      {
+        heading: 'KPIs',
+        lines: summary.kpis.map(
+          (k) => `${k.label}: ${k.value}${k.unit ? ` ${k.unit}` : ''} — ${k.hint}`,
+        ),
+      },
+      {
+        heading: 'Metas por categoría',
+        lines: summary.metasByCategoria.length
+          ? summary.metasByCategoria.map(
+              (m) =>
+                `${m.name}: ${m.value} meta(s) · avance ${m.avgPct == null ? '—' : `${m.avgPct.toFixed(0)}%`}`,
+            )
+          : ['Sin metas'],
+      },
+      {
+        heading: 'Umbrales por parámetro',
+        lines: summary.umbralesByParam.length
+          ? summary.umbralesByParam.map(
+              (u) => `${u.name}: cumple ${u.cumple} · excede ${u.excede}`,
+            )
+          : ['Sin umbrales'],
+      },
+    ],
+  })
+}
+
+async function exportCentroDocumental(format: 'pdf' | 'csv') {
+  const summary = await loadDocumentosSummary()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('centro_documental_kpis', 'csv'),
+      ['KPI', 'Valor', 'Hint'],
+      summary.kpis.map((k) => [k.label, k.value, k.hint]),
+    )
+    return
+  }
+  downloadReportPdf({
+    title: 'Centro documental',
+    subtitle: `${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Centro documental',
+    filename: stampFilename('centro_documental', 'pdf'),
+    theme: 'expedientes',
+    kpis: summary.kpis.slice(0, 4).map((k) => ({
+      label: k.label,
+      value: k.value,
+    })),
+    sections: [
+      {
+        heading: 'Por tema',
+        lines: summary.byTema.length
+          ? summary.byTema.map((t) => `${t.name}: ${t.value}`)
+          : ['Sin datos por tema'],
+      },
+      {
+        heading: 'Por tipo',
+        lines: summary.byTipo.length
+          ? summary.byTipo.map((t) => `${t.name}: ${t.value}`)
+          : ['Sin datos por tipo'],
+      },
+    ],
+  })
+}
+
+async function exportBiblioteca(format: 'pdf' | 'csv') {
+  const docs = await loadBibliotecaDocs()
+  if (format === 'csv') {
+    downloadCsv(
+      stampFilename('biblioteca', 'csv'),
+      [
+        'Título',
+        'Categoría',
+        'Archivo',
+        'Páginas',
+        'MB',
+        'Copiloto',
+        'Catálogo',
+        'Resumen',
+      ],
+      docs.map((d) => [
+        d.title,
+        d.category,
+        d.fileName,
+        d.pages,
+        d.sizeMb,
+        d.enabledInCopilot ? 'Sí' : 'No',
+        d.isCatalog ? 'Sí' : 'No',
+        d.summary,
+      ]),
+    )
+    return
+  }
+  downloadReportPdf({
+    title: 'Biblioteca de conocimiento',
+    subtitle: `${docs.length} documento(s) · ${todayLabel()}`,
+    footer: 'Cementos Progreso Ambiente · Biblioteca',
+    filename: stampFilename('biblioteca', 'pdf'),
+    theme: 'expedientes',
+    kpis: [
+      { label: 'Total', value: String(docs.length) },
+      {
+        label: 'En copiloto',
+        value: String(docs.filter((d) => d.enabledInCopilot).length),
+      },
+      {
+        label: 'Catálogo',
+        value: String(docs.filter((d) => d.isCatalog).length),
+      },
+      {
+        label: 'Páginas',
+        value: String(docs.reduce((s, d) => s + (d.pages || 0), 0)),
+      },
+    ],
+    sections: [
+      {
+        heading: 'Índice',
+        lines: docs.slice(0, 40).map(
+          (d) =>
+            `${d.title} · ${d.category} · ${d.pages} pág. · copiloto ${d.enabledInCopilot ? 'sí' : 'no'}`,
+        ),
       },
     ],
   })

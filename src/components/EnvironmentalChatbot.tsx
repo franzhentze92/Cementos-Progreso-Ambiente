@@ -51,7 +51,7 @@ const QUICK_PROMPTS = [
 const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'bot',
-  text: 'Hola, soy Javi Paniagua, tu Asistente Ambiental CEMPRO. ¿Cómo te puedo apoyar hoy? Si quieres, podemos hacer una inspección.',
+  text: 'Hola, soy el asistente virtual de Ambiente CEMPRO. ¿Cómo te puedo apoyar hoy?',
 }
 
 const DEFAULT_UI: InspectionUiMode = {

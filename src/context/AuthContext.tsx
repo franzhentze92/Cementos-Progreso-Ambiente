@@ -10,8 +10,17 @@ import {
 import {
   ALWAYS_ALLOWED_MODULES,
   DIRECTORY_ADMIN_MODULES,
+  allowedProjectScopes,
   getModuleByPath,
+  hubUnlockedByRelated,
+  normalizeRoleModuleIds,
+  resolvesToModuleAccess,
+  SECTION_HUB_ACCESS,
 } from '../data/appModules'
+import {
+  getOperationalModule,
+  type ProjectScope,
+} from '../data/operationalModules'
 import {
   canManageDirectory,
   canManageUsers,
@@ -34,6 +43,11 @@ interface AuthContextValue {
   can: (permission: AppPermission) => boolean
   canAccessModule: (moduleId: string) => boolean
   canAccessPath: (pathname: string) => boolean
+  /** Proyectos visibles dentro de un módulo operativo (vacío = ninguno). */
+  accessibleScopesFor: (
+    section: 'operaciones' | 'entrada-datos',
+    moduleId: string,
+  ) => ProjectScope[]
   isAdmin: boolean
   isDirectoryAdmin: boolean
 }
@@ -75,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       const ids = await loadRoleModuleIds(next.role)
-      setModuleIds(ids)
+      setModuleIds(normalizeRoleModuleIds(ids))
     } catch {
       // Sin módulos en DB: no bloquear sesión; menú vacío salvo perfil/admin
       setModuleIds([])
@@ -99,7 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       setUser(current)
       try {
-        setModuleIds(await loadRoleModuleIds(current.role))
+        setModuleIds(
+          normalizeRoleModuleIds(await loadRoleModuleIds(current.role)),
+        )
       } catch {
         setModuleIds([])
       }
@@ -146,7 +162,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ) {
         return true
       }
-      return moduleSet.has(moduleId)
+      const has = (id: string) => moduleSet.has(id)
+      if (moduleSet.has(moduleId)) return true
+      if (resolvesToModuleAccess(moduleId, has)) return true
+      // Landings de sección: visibles si hay acceso a algún módulo del bloque
+      if (moduleId in SECTION_HUB_ACCESS) {
+        return hubUnlockedByRelated(moduleId, has)
+      }
+      return false
     },
     [user, moduleSet, isDirectoryAdmin],
   )
@@ -159,9 +182,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // (ProtectedRoute ya exige login). Preferimos no bloquear redirects.
         return Boolean(user)
       }
+      // proyecto.* no es una ruta navegable
+      if (mod.id.startsWith('proyecto.')) return Boolean(user)
       return canAccessModule(mod.id)
     },
     [user, canAccessModule],
+  )
+
+  const accessibleScopesFor = useCallback(
+    (section: 'operaciones' | 'entrada-datos', moduleId: string) => {
+      const def = getOperationalModule(moduleId)
+      if (!def) return []
+      if (!canAccessModule(`${section}.${moduleId}`)) return []
+
+      const applicable = def.scopes
+      if (
+        user?.role === 'Admin' ||
+        user?.role === 'Administrador' ||
+        isDirectoryAdmin
+      ) {
+        return [...applicable]
+      }
+
+      const restricted = allowedProjectScopes((id) => moduleSet.has(id))
+      if (restricted.length === 0) return [...applicable]
+      return applicable.filter((s) => restricted.includes(s))
+    },
+    [canAccessModule, user, isDirectoryAdmin, moduleSet],
   )
 
   const can = useCallback(
@@ -196,6 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       can,
       canAccessModule,
       canAccessPath,
+      accessibleScopesFor,
       isAdmin,
       isDirectoryAdmin,
     }),
@@ -209,6 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       can,
       canAccessModule,
       canAccessPath,
+      accessibleScopesFor,
       isAdmin,
       isDirectoryAdmin,
     ],

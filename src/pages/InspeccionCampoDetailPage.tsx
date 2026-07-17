@@ -67,7 +67,7 @@ function backPathFor(detail: InspeccionCampoDetail): string {
     plantaSede: detail.plantaSede,
     unidadNegocio: detail.unidadNegocio,
   })
-  return `/entrada-datos/${scope}/inspeccion-ambiental`
+  return `/entrada-datos/inspeccion-ambiental?proyecto=${scope}`
 }
 
 function opsPathFor(detail: InspeccionCampoDetail): string {
@@ -75,7 +75,7 @@ function opsPathFor(detail: InspeccionCampoDetail): string {
     plantaSede: detail.plantaSede,
     unidadNegocio: detail.unidadNegocio,
   })
-  return `/operaciones/${scope}/inspeccion-ambiental`
+  return `/operaciones/inspeccion-ambiental?proyecto=${scope}`
 }
 
 function AreaCard({ hallazgo }: { hallazgo: InspeccionHallazgoRecord }) {

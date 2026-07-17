@@ -183,12 +183,22 @@ export function buildAgroIncidentesReport(
       ? monthlyCount.filter((m) => m.total > 0)
       : monthlyCount
 
+  const unidades = new Set(
+    scoped.map((r) => r.unidadNegocio.trim()).filter(Boolean),
+  )
+  const multiUnidad = unidades.size > 1
+  const sedeKey = (r: (typeof scoped)[number]) =>
+    multiUnidad
+      ? `${r.unidadNegocio || '—'} · ${r.plantaSede}`
+      : r.plantaSede
+
   const sedeMap = new Map<string, { count: number; abiertos: number }>()
   for (const r of scoped) {
-    const cur = sedeMap.get(r.plantaSede) ?? { count: 0, abiertos: 0 }
+    const key = sedeKey(r)
+    const cur = sedeMap.get(key) ?? { count: 0, abiertos: 0 }
     cur.count += 1
     if (r.estado.toLowerCase() === 'abierto') cur.abiertos += 1
-    sedeMap.set(r.plantaSede, cur)
+    sedeMap.set(key, cur)
   }
   const sedeRanking = [...sedeMap.entries()]
     .map(([sede, v]) => ({ sede, ...v }))

@@ -1,4 +1,4 @@
-﻿import { useParams } from 'react-router-dom'
+﻿import { Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { AgroConsumoAguaPage } from './AgroConsumoAguaPage'
 import { AgroResiduosPage } from './AgroResiduosPage'
 import { AgroInspeccionesPage } from './AgroInspeccionesPage'
@@ -16,104 +16,141 @@ import { DescargaBarcosInspeccionesPage } from './DescargaBarcosInspeccionesPage
 import { AliconMonitoreosPage } from './AliconMonitoreosPage'
 import { CarbonDataEntryPage } from './CarbonDataEntryPage'
 import { ModulePlaceholder } from '../components/ModulePlaceholder'
+import {
+  ProjectScopeFilter,
+  useSelectedProjectScope,
+} from '../components/ProjectScopeFilter'
+import {
+  getOperationalModule,
+  isProjectScope,
+  type ProjectScope,
+} from '../data/operationalModules'
+import { useAuth } from '../context/AuthContext'
 
-const SCOPE_LABELS: Record<string, string> = {
-  agroprogreso: 'Agroprogreso',
-  'planta-alicon': 'Planta Alicón',
-  'descarga-barcos': 'Descarga Barcos',
-}
-
-const MODULE_TITLES: Record<string, string> = {
-  'gestion-de-residuos': 'Gestión de residuos',
-  'consumo-de-agua': 'Consumo de agua',
-  'inspeccion-ambiental': 'Inspección ambiental',
-  'incidentes-ambientales': 'Incidentes ambientales',
-  'monitoreo-ambiental': 'Monitoreo ambiental',
-  capacitaciones: 'Capacitaciones',
-  'licencias-ambientales': 'Licencias ambientales',
-  compostaje: 'Compostaje',
-  'nda-casco-verde': 'NDA Casco Verde',
-  'nda-general': 'NDA General',
-  'gestion-de-tramites': 'Gestión de trámites',
-  'huella-de-carbono': 'Huella de carbono',
-}
-
-export function DataEntryPage() {
-  const { scope = 'agroprogreso', moduleId = 'gestion-de-residuos' } =
-    useParams()
-
+function renderScopedEntry(scope: ProjectScope, moduleId: string) {
   if (scope === 'agroprogreso' && moduleId === 'consumo-de-agua') {
     return <AgroConsumoAguaPage />
   }
-
   if (scope === 'agroprogreso' && moduleId === 'gestion-de-residuos') {
     return <AgroResiduosPage />
   }
-
   if (scope === 'agroprogreso' && moduleId === 'inspeccion-ambiental') {
     return <AgroInspeccionesPage />
   }
-
   if (scope === 'agroprogreso' && moduleId === 'incidentes-ambientales') {
     return <AgroIncidentesPage />
   }
-
   if (scope === 'agroprogreso' && moduleId === 'monitoreo-ambiental') {
     return <AgroMonitoreosPage />
   }
-
   if (scope === 'agroprogreso' && moduleId === 'capacitaciones') {
     return <AgroCapacitacionesPage />
   }
-
   if (scope === 'agroprogreso' && moduleId === 'licencias-ambientales') {
     return <AgroLicenciasPage />
   }
-
   if (scope === 'agroprogreso' && moduleId === 'compostaje') {
     return <AgroCompostajePage />
   }
-
   if (scope === 'agroprogreso' && moduleId === 'nda-casco-verde') {
     return <AgroNdaCascoVerdePage />
   }
-
   if (scope === 'agroprogreso' && moduleId === 'nda-general') {
     return <AgroNdaGeneralPage />
   }
-
   if (scope === 'agroprogreso' && moduleId === 'gestion-de-tramites') {
     return <AgroGestionTramitesPage />
   }
-
   if (scope === 'planta-alicon' && moduleId === 'incidentes-ambientales') {
     return <AliconIncidentesPage />
   }
-
   if (scope === 'planta-alicon' && moduleId === 'inspeccion-ambiental') {
     return <AliconInspeccionesPage />
   }
-
   if (scope === 'descarga-barcos' && moduleId === 'inspeccion-ambiental') {
     return <DescargaBarcosInspeccionesPage />
   }
-
   if (scope === 'planta-alicon' && moduleId === 'monitoreo-ambiental') {
     return <AliconMonitoreosPage />
   }
-
   if (scope === 'planta-alicon' && moduleId === 'huella-de-carbono') {
     return <CarbonDataEntryPage />
   }
+  return null
+}
 
-  const scopeLabel = SCOPE_LABELS[scope] ?? 'Entrada de Datos'
-  const title = MODULE_TITLES[moduleId] ?? 'Entrada de Datos'
+/** Redirige /entrada-datos/:scope/:moduleId → /entrada-datos/:moduleId?proyecto= */
+export function LegacyEntradaRedirect() {
+  const { scope = '', moduleId = '' } = useParams()
+  if (isProjectScope(scope) && getOperationalModule(moduleId)) {
+    return (
+      <Navigate
+        to={`/entrada-datos/${moduleId}?proyecto=${scope}`}
+        replace
+      />
+    )
+  }
+  return <Navigate to="/entrada-datos/gestion-de-residuos" replace />
+}
+
+export function DataEntryPage() {
+  const { moduleId = '' } = useParams()
+  const [params] = useSearchParams()
+  const { canAccessModule, accessibleScopesFor } = useAuth()
+  const def = getOperationalModule(moduleId)
+  const scope = useSelectedProjectScope('entrada-datos', moduleId)
+
+  void params
+
+  if (!def || !def.entrada) {
+    return (
+      <ModulePlaceholder
+        section="Entrada de Datos"
+        title="Módulo no encontrado"
+        description="Este módulo no existe en Entrada de Datos."
+        mode="entry"
+      />
+    )
+  }
+
+  if (!canAccessModule(`entrada-datos.${moduleId}`)) {
+    return (
+      <ModulePlaceholder
+        section="Entrada de Datos"
+        title={def.label}
+        description="No tienes acceso a este módulo."
+        mode="entry"
+      />
+    )
+  }
+
+  const available = accessibleScopesFor('entrada-datos', moduleId)
+  if (available.length === 0) {
+    return (
+      <ModulePlaceholder
+        section="Entrada de Datos"
+        title={def.label}
+        description="No hay proyectos disponibles para tu rol en este módulo."
+        mode="entry"
+      />
+    )
+  }
+
+  const body =
+    scope && isProjectScope(scope)
+      ? renderScopedEntry(scope, moduleId)
+      : null
 
   return (
-    <ModulePlaceholder
-      section={`Entrada de Datos · ${scopeLabel}`}
-      title={title}
-      mode="entry"
-    />
+    <div className="module-with-scope">
+      <ProjectScopeFilter section="entrada-datos" moduleId={moduleId} />
+      {body ?? (
+        <ModulePlaceholder
+          section="Entrada de Datos"
+          title={def.label}
+          mode="entry"
+        />
+      )}
+    </div>
   )
 }

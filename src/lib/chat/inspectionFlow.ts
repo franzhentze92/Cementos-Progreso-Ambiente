@@ -29,8 +29,9 @@ export type InspectionStep =
   | 'select_project'
   | 'select_material'
   | 'select_area'
-  | 'await_photo'
   | 'select_classification'
+  | 'await_photo'
+  | 'confirm_more_same'
   | 'await_area_comment'
   | 'select_next'
   | 'await_general_comment'
@@ -80,6 +81,25 @@ const FINISH_RE =
 
 const NO_COMMENT_RE =
   /^(sin\s+comentario|ninguno|ninguna|n\/a|na|paso)([.!?\s]|$)/i
+
+const YES_RE =
+  /^(si|sí|yes|claro|dale|continuar|seguir|mas|más)([.!?\s]|$)/i
+
+const NO_RE = /^(no|nop|nel|listo|ya\s+no|terminar)([.!?\s]|$)/i
+
+/** Etiqueta en plural para el tipo elegido (mensajes del flujo). */
+function clasificacionPhrase(c: InspeccionClasificacion | null): string {
+  switch (c) {
+    case 'buena_practica':
+      return 'buenas prácticas'
+    case 'situacion_riesgo':
+      return 'situaciones de riesgo'
+    case 'observacion_general':
+      return 'observaciones'
+    default:
+      return 'hallazgos'
+  }
+}
 
 function emptyUi(partial?: Partial<InspectionUiMode>): InspectionUiMode {
   return {
@@ -295,26 +315,16 @@ async function askForArea(
   )
 }
 
-function askForPhoto(state: InspectionFlowState): InspectionTurnResult {
-  const areaName = state.currentArea?.nombre ?? 'el área'
-  return reply(
-    { ...state, step: 'await_photo', draftPhotos: [] },
-    `Abre la cámara y toma una foto en vivo de ${areaName}. Cuando la tengas, toca «Listo con fotos».`,
-    emptyUi({
-      expectPhoto: true,
-      chips: [
-        { id: '__take_photo__', label: 'Tomar foto ahora' },
-        { id: '__photos_done__', label: 'Listo con fotos' },
-      ],
-      placeholder: 'Toma la foto con la cámara…',
-    }),
-  )
-}
-
 function askClassification(state: InspectionFlowState): InspectionTurnResult {
+  const areaName = state.currentArea?.nombre ?? 'esta área'
   return reply(
-    { ...state, step: 'select_classification' },
-    '¿Cómo clasificamos lo que viste?',
+    {
+      ...state,
+      step: 'select_classification',
+      draftPhotos: [],
+      draftClasificacion: null,
+    },
+    `En ${areaName}, ¿viste una buena práctica, una observación o un riesgo?`,
     emptyUi({
       chips: classificationChips(),
       placeholder: 'Buena práctica, riesgo u observación…',
@@ -322,14 +332,62 @@ function askClassification(state: InspectionFlowState): InspectionTurnResult {
   )
 }
 
+function askForPhoto(
+  state: InspectionFlowState,
+  opts?: { more?: boolean },
+): InspectionTurnResult {
+  const areaName = state.currentArea?.nombre ?? 'el área'
+  const tipo = clasificacionPhrase(state.draftClasificacion)
+  const more = opts?.more === true
+  const msg = more
+    ? `Sube más fotos de ${tipo} en ${areaName}. Cuando termines, toca «Listo con fotos».`
+    : `Abre la cámara y toma foto(s) de ${tipo} en ${areaName}. Cuando las tengas, toca «Listo con fotos».`
+
+  return reply(
+    {
+      ...state,
+      step: 'await_photo',
+      draftPhotos: more ? state.draftPhotos : [],
+    },
+    msg,
+    emptyUi({
+      expectPhoto: true,
+      chips: [
+        { id: '__take_photo__', label: more ? 'Tomar otra foto' : 'Tomar foto ahora' },
+        { id: '__photos_done__', label: 'Listo con fotos' },
+      ],
+      placeholder: more
+        ? 'Sube más fotos o «Listo con fotos»…'
+        : 'Toma la foto con la cámara…',
+    }),
+  )
+}
+
+function askContinueSame(state: InspectionFlowState): InspectionTurnResult {
+  const tipo = clasificacionPhrase(state.draftClasificacion)
+  return reply(
+    { ...state, step: 'confirm_more_same' },
+    `¿Vas a seguir con más ${tipo}?`,
+    emptyUi({
+      chips: [
+        { id: '__yes__', label: 'Sí' },
+        { id: '__no__', label: 'No' },
+      ],
+      placeholder: 'Sí o No…',
+    }),
+  )
+}
+
 function askAreaComment(state: InspectionFlowState): InspectionTurnResult {
+  const areaName = state.currentArea?.nombre ?? 'esta área'
+  const tipo = clasificacionPhrase(state.draftClasificacion)
   return reply(
     { ...state, step: 'await_area_comment' },
-    '¿Quieres agregar un comentario de esta área? (opcional)',
+    `¿Cuál es el comentario final de ${areaName} sobre las ${tipo}? (opcional)`,
     emptyUi({
       allowSkipComment: true,
       chips: [{ id: '__no_comment__', label: 'Sin comentario' }],
-      placeholder: 'Comentario del área…',
+      placeholder: `Comentario de ${tipo}…`,
     }),
   )
 }
@@ -589,7 +647,7 @@ export async function handleInspectionText(
         const pendingAreaIds = state.pendingAreaIds.includes(area.id)
           ? state.pendingAreaIds
           : [...state.pendingAreaIds, area.id]
-        return askForPhoto({
+        return askClassification({
           ...state,
           areas,
           pendingAreaIds,
@@ -614,7 +672,26 @@ export async function handleInspectionText(
         )
       }
 
-      return askForPhoto({ ...state, currentArea: area })
+      return askClassification({ ...state, currentArea: area })
+    }
+
+    case 'select_classification': {
+      const clasificacion =
+        parseClasificacion(trimmed) ??
+        (CLASIFICACION_LABELS[trimmed as InspeccionClasificacion]
+          ? (trimmed as InspeccionClasificacion)
+          : null)
+      if (!clasificacion) {
+        return reply(
+          state,
+          'Elige una opción: buena práctica, situación de riesgo u observación general.',
+          emptyUi({
+            chips: classificationChips(),
+            placeholder: 'Clasificación…',
+          }),
+        )
+      }
+      return askForPhoto({ ...state, draftClasificacion: clasificacion })
     }
 
     case 'await_photo': {
@@ -636,7 +713,7 @@ export async function handleInspectionText(
             }),
           )
         }
-        return askClassification(state)
+        return askContinueSame(state)
       }
       return reply(
         state,
@@ -652,23 +729,24 @@ export async function handleInspectionText(
       )
     }
 
-    case 'select_classification': {
-      const clasificacion =
-        parseClasificacion(trimmed) ??
-        (CLASIFICACION_LABELS[trimmed as InspeccionClasificacion]
-          ? (trimmed as InspeccionClasificacion)
-          : null)
-      if (!clasificacion) {
-        return reply(
-          state,
-          'Elige una clasificación: buena práctica, situación de riesgo u observación general.',
-          emptyUi({
-            chips: classificationChips(),
-            placeholder: 'Clasificación…',
-          }),
-        )
+    case 'confirm_more_same': {
+      if (trimmed === '__yes__' || YES_RE.test(trimmed)) {
+        return askForPhoto(state, { more: true })
       }
-      return askAreaComment({ ...state, draftClasificacion: clasificacion })
+      if (trimmed === '__no__' || NO_RE.test(trimmed)) {
+        return askAreaComment(state)
+      }
+      return reply(
+        state,
+        `¿Vas a seguir con más ${clasificacionPhrase(state.draftClasificacion)}? Responde Sí o No.`,
+        emptyUi({
+          chips: [
+            { id: '__yes__', label: 'Sí' },
+            { id: '__no__', label: 'No' },
+          ],
+          placeholder: 'Sí o No…',
+        }),
+      )
     }
 
     case 'await_area_comment': {

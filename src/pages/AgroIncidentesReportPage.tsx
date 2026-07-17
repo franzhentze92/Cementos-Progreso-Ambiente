@@ -25,7 +25,12 @@ import {
   type AgroIncidentesReport,
 } from '../data/agroIncidentesReport'
 import { formatPctFromValor } from '../data/agroIncidentes'
-import { loadAgroIncidentes } from '../lib/agroIncidentesApi'
+import { loadIncidentesForScopes } from '../lib/operationalAggregateApi'
+import {
+  PROJECT_SCOPE_LABELS,
+  scopesLabel,
+  type ProjectScope,
+} from '../data/operationalModules'
 
 const ALERT_CLASS: Record<string, string> = {
   Crítico: 'alert-crit',
@@ -46,7 +51,11 @@ const tooltipStyle = {
   fontSize: 13,
 }
 
-export function AgroIncidentesReportPage() {
+export function AgroIncidentesReportPage({
+  scopes = ['agroprogreso'],
+}: {
+  scopes?: ProjectScope[]
+}) {
   const [report, setReport] = useState<AgroIncidentesReport | null>(null)
   const [years, setYears] = useState<number[]>([])
   const [year, setYear] = useState<number | 'all'>('all')
@@ -54,13 +63,18 @@ export function AgroIncidentesReportPage() {
   const [error, setError] = useState<string | null>(null)
   const [rawCount, setRawCount] = useState(0)
 
+  const scopeKey = scopes.join(',')
+  const projectLabel = scopesLabel(scopes)
+  const entryScope = scopes[0] ?? 'agroprogreso'
+  const entryPath = `/entrada-datos/incidentes-ambientales?proyecto=${entryScope}`
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       setLoading(true)
       setError(null)
       try {
-        const records = await loadAgroIncidentes()
+        const records = await loadIncidentesForScopes(scopes)
         if (cancelled) return
         setRawCount(records.length)
         const built = buildAgroIncidentesReport(records, year)
@@ -80,7 +94,7 @@ export function AgroIncidentesReportPage() {
     return () => {
       cancelled = true
     }
-  }, [year])
+  }, [year, scopeKey])
 
   const chartMonthly = useMemo(
     () => report?.monthlyCount ?? [],
@@ -91,7 +105,7 @@ export function AgroIncidentesReportPage() {
     return (
       <div className="carbon-page hc-loading">
         <Loader2 className="hc-spin" size={28} />
-        <p>Cargando incidentes ambientales Agroprogreso…</p>
+        <p>Cargando incidentes ambientales ({projectLabel})…</p>
       </div>
     )
   }
@@ -101,10 +115,7 @@ export function AgroIncidentesReportPage() {
       <div className="carbon-page">
         <div className="hc-banner hc-banner-error" role="alert">
           <strong>Error:</strong> {error ?? 'Sin datos'}
-          <Link
-            to="/entrada-datos/agroprogreso/incidentes-ambientales"
-            className="btn-secondary-link"
-          >
+          <Link to={entryPath} className="btn-secondary-link">
             Ir a captura →
           </Link>
         </div>
@@ -120,11 +131,12 @@ export function AgroIncidentesReportPage() {
         <div>
           <p className="carbon-kicker">
             <Sprout size={14} />
-            Operaciones · Agroprogreso
+            Operaciones · {projectLabel}
           </p>
           <h1>Incidentes ambientales</h1>
           <p>
-            Datos reales · hoja Incidentes (Agroprogreso) ·{' '}
+            Datos reales · Incidentes (
+            {scopes.map((s) => PROJECT_SCOPE_LABELS[s]).join(', ')}) ·{' '}
             {meta.periodLabel}
           </p>
         </div>
@@ -296,10 +308,7 @@ export function AgroIncidentesReportPage() {
               {report.detailRows.length} filas ({rawCount} totales)
             </p>
           </div>
-          <Link
-            to="/entrada-datos/agroprogreso/incidentes-ambientales"
-            className="btn-secondary-link"
-          >
+          <Link to={entryPath} className="btn-secondary-link">
             Ir a captura →
           </Link>
         </div>
@@ -357,7 +366,7 @@ export function AgroIncidentesReportPage() {
         {totals.abiertos
           ? ` · ${totals.abiertos} abierto(s) pendientes`
           : ' · sin abiertos'}
-        . Solo datos reales (Agroprogreso). {formatNum(meta.totalRows)}{' '}
+        . Solo datos reales ({projectLabel}). {formatNum(meta.totalRows)}{' '}
         registro(s).
       </p>
     </div>

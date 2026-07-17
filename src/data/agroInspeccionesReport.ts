@@ -47,6 +47,7 @@ export type AgroInspeccionReport = {
     fecha: string
     mes: string
     sede: string
+    unidadNegocio: string
     responsable: string
     material: string
     resultado: number | null
@@ -198,12 +199,22 @@ export function buildAgroInspeccionReport(
     }
   })
 
+  const unidades = new Set(
+    scoped.map((r) => r.unidadNegocio.trim()).filter(Boolean),
+  )
+  const multiUnidad = unidades.size > 1
+  const sedeKey = (r: (typeof scoped)[number]) =>
+    multiUnidad
+      ? `${r.unidadNegocio || '—'} · ${r.plantaSede}`
+      : r.plantaSede
+
   const sedeMap = new Map<string, { scores: number[]; count: number }>()
   for (const r of scoped) {
-    const cur = sedeMap.get(r.plantaSede) ?? { scores: [], count: 0 }
+    const key = sedeKey(r)
+    const cur = sedeMap.get(key) ?? { scores: [], count: 0 }
     cur.count += 1
     if (r.resultadoGeneral != null) cur.scores.push(r.resultadoGeneral)
-    sedeMap.set(r.plantaSede, cur)
+    sedeMap.set(key, cur)
   }
   const sedeRanking = [...sedeMap.entries()]
     .map(([sede, v]) => ({
@@ -232,7 +243,8 @@ export function buildAgroInspeccionReport(
     .map((r) => ({
       fecha: r.fecha,
       mes: monthFromFecha(r.fecha) ?? r.mes,
-      sede: r.plantaSede,
+      sede: sedeKey(r),
+      unidadNegocio: r.unidadNegocio || '—',
       responsable: r.responsable || '—',
       material: r.materialDescarga || '—',
       resultado: r.resultadoGeneral,

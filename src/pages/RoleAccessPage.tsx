@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext'
 import {
   APP_MODULE_GROUPS,
   ASSIGNABLE_MODULES,
+  normalizeRoleModuleIds,
   type AppModuleGroupId,
 } from '../data/appModules'
 import { DIRECTORY_ADMIN_USERNAME, type AppRole } from '../data/users'
@@ -49,10 +50,12 @@ export function RoleAccessPage() {
           ? selectedRole
           : r[0]?.code ?? ''
       setSelectedRole(nextRole)
-      const ids = new Set(maps[nextRole] ?? [])
+      const ids = maps[nextRole] ?? []
       // Filtrar solo asignables
       const assignable = new Set(ASSIGNABLE_MODULES.map((m) => m.id))
-      const filtered = new Set([...ids].filter((id) => assignable.has(id)))
+      const filtered = new Set(
+        normalizeRoleModuleIds(ids).filter((id) => assignable.has(id)),
+      )
       setSelected(filtered)
       setBaseline(new Set(filtered))
     } catch (err) {
@@ -72,7 +75,9 @@ export function RoleAccessPage() {
     if (!selectedRole) return
     const assignable = new Set(ASSIGNABLE_MODULES.map((m) => m.id))
     const ids = new Set(
-      (allMaps[selectedRole] ?? []).filter((id) => assignable.has(id)),
+      normalizeRoleModuleIds(allMaps[selectedRole] ?? []).filter((id) =>
+        assignable.has(id),
+      ),
     )
     setSelected(ids)
     setBaseline(new Set(ids))

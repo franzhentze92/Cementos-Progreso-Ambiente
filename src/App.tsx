@@ -34,6 +34,16 @@ export default function App() {
                 path="/monitoreo-en-vivo"
                 element={<LiveMonitoringPage />}
               />
+              {/* Informe de inspección de campo (mismo módulo de inspección ambiental) */}
+              <Route
+                path="/entrada-datos/:scope/inspeccion-ambiental/informe/:id"
+                element={<InspeccionCampoDetailPage />}
+              />
+              <Route
+                path="/operaciones/:scope/inspeccion-ambiental/informe/:id"
+                element={<InspeccionCampoDetailPage />}
+              />
+              {/* Compatibilidad con rutas legacy del bot */}
               <Route
                 path="/inspecciones-campo/:id"
                 element={<InspeccionCampoDetailPage />}

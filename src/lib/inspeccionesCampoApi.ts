@@ -408,7 +408,10 @@ async function syncEjecucionInspeccion(input: {
   const dia = Number(input.fecha.slice(8, 10)) || 1
   const anio = Number(input.fecha.slice(0, 4))
   const fechaCanon = buildFecha(anio, mes as MonitoringMonth, dia)
-  const link = inspeccionCampoDetailPath(input.inspeccionCampoId)
+  const link = inspeccionCampoDetailPath(input.inspeccionCampoId, {
+    plantaSede: input.plantaSede,
+    unidadNegocio: input.unidadNegocio,
+  })
 
   const payload = {
     dia,

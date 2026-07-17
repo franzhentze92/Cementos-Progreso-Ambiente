@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
-  isInspeccionCampoDetailPath,
   inspeccionCampoDetailPath,
+  inspeccionCampoIdFromLink,
 } from '../data/inspeccionesCampo'
 import { findInspeccionCampoId } from '../lib/inspeccionesCampoApi'
 
@@ -15,7 +15,10 @@ type Props = {
   title?: string
 }
 
-/** Botón Abrir: abre el informe interno de la plataforma. */
+/**
+ * Abre el informe de inspección DENTRO de la plataforma (misma pestaña).
+ * Nunca usa target=_blank ni URLs externas para el informe.
+ */
 export function InspeccionAbrirLink({
   link,
   fecha,
@@ -26,28 +29,24 @@ export function InspeccionAbrirLink({
 }: Props) {
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
-
-  const directHref =
-    link && isInspeccionCampoDetailPath(link) ? link.trim() : null
-
-  if (directHref) {
-    return (
-      <Link to={directHref} className={className} title={title}>
-        Abrir
-      </Link>
-    )
-  }
-
-  const canResolve = Boolean(fecha && plantaSede && unidadNegocio)
-
-  if (!canResolve && !link?.trim()) {
-    return <span>—</span>
-  }
+  const [error, setError] = useState<string | null>(null)
 
   async function openInforme() {
     if (busy) return
     setBusy(true)
+    setError(null)
     try {
+      const fromLink = link ? inspeccionCampoIdFromLink(link) : null
+      if (fromLink) {
+        navigate(
+          inspeccionCampoDetailPath(fromLink, {
+            plantaSede,
+            unidadNegocio,
+          }),
+        )
+        return
+      }
+
       if (fecha && plantaSede && unidadNegocio) {
         const id = await findInspeccionCampoId({
           fecha,
@@ -55,18 +54,20 @@ export function InspeccionAbrirLink({
           unidadNegocio,
         })
         if (id) {
-          navigate(inspeccionCampoDetailPath(id))
+          navigate(
+            inspeccionCampoDetailPath(id, {
+              plantaSede,
+              unidadNegocio,
+            }),
+          )
           return
         }
       }
-      if (link?.trim()) {
-        window.open(link.trim(), '_blank', 'noopener,noreferrer')
-      }
+
+      setError('Sin informe de campo')
     } catch (err) {
       console.warn('[inspeccion abrir]', err)
-      if (link?.trim()) {
-        window.open(link.trim(), '_blank', 'noopener,noreferrer')
-      }
+      setError('No se pudo abrir')
     } finally {
       setBusy(false)
     }
@@ -76,11 +77,11 @@ export function InspeccionAbrirLink({
     <button
       type="button"
       className={className}
-      title={title}
+      title={error ?? title}
       disabled={busy}
       onClick={() => void openInforme()}
     >
-      {busy ? '…' : 'Abrir'}
+      {busy ? '…' : error ? '—' : 'Abrir'}
     </button>
   )
 }

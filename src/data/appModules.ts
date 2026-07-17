@@ -198,8 +198,11 @@ export function getModuleByPath(pathname: string): AppModuleDef | undefined {
   const exact = BY_PATH.get(clean)
   if (exact) return exact
 
-  // Prefijos dinámicos /operaciones/:scope/:moduleId y /entrada-datos/...
-  const ops = clean.match(/^\/(operaciones|entrada-datos)\/([^/]+)\/([^/]+)$/)
+  // Prefijos dinámicos /operaciones|entrada-datos/:scope/:moduleId[/...]
+  // Incluye rutas hijas como .../inspeccion-ambiental/informe/:id
+  const ops = clean.match(
+    /^\/(operaciones|entrada-datos)\/([^/]+)\/([^/]+)(?:\/.*)?$/,
+  )
   if (ops) {
     const id = `${ops[1]}.${ops[2]}.${ops[3]}`
     return BY_ID.get(id)

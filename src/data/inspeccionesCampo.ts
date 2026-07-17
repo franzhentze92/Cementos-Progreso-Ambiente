@@ -89,18 +89,35 @@ export type InspeccionCampoDetail = InspeccionCampoRecord & {
   hallazgos: InspeccionHallazgoRecord[]
 }
 
-/** Ruta interna del informe detallado en la plataforma. */
-export function inspeccionCampoDetailPath(id: string): string {
-  return `/inspecciones-campo/${id}`
+/** Ruta interna del informe detallado (bajo el módulo de inspección). */
+export function inspeccionCampoDetailPath(
+  id: string,
+  opts?: { unidadNegocio?: string; plantaSede?: string },
+): string {
+  const isAlicon =
+    (opts?.plantaSede ?? '').toLowerCase() === 'alicon' ||
+    (opts?.unidadNegocio ?? '').toLowerCase().includes('cementos')
+  const scope = isAlicon ? 'planta-alicon' : 'agroprogreso'
+  return `/entrada-datos/${scope}/inspeccion-ambiental/informe/${id}`
 }
 
 export function isInspeccionCampoDetailPath(link: string): boolean {
-  return /^\/inspecciones-campo\/[0-9a-f-]{36}/i.test(link.trim())
+  return Boolean(inspeccionCampoIdFromLink(link))
 }
 
+/** Extrae el UUID del informe desde rutas nuevas, legacy o URL absoluta. */
 export function inspeccionCampoIdFromLink(link: string): string | null {
-  const m = link.trim().match(/^\/inspecciones-campo\/([0-9a-f-]{36})/i)
-  return m?.[1] ?? null
+  const t = link.trim()
+  const patterns = [
+    /\/entrada-datos\/[^/]+\/inspeccion-ambiental\/informe\/([0-9a-f-]{36})/i,
+    /\/operaciones\/[^/]+\/inspeccion-ambiental\/informe\/([0-9a-f-]{36})/i,
+    /\/inspecciones-campo\/([0-9a-f-]{36})/i,
+  ]
+  for (const re of patterns) {
+    const m = t.match(re)
+    if (m?.[1]) return m[1]
+  }
+  return null
 }
 
 export function parseClasificacion(raw: string): InspeccionClasificacion | null {

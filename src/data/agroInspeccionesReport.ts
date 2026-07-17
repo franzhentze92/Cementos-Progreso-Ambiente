@@ -48,6 +48,7 @@ export type AgroInspeccionReport = {
     mes: string
     sede: string
     responsable: string
+    material: string
     resultado: number | null
     hallazgos: number | null
     riesgo: string
@@ -233,6 +234,7 @@ export function buildAgroInspeccionReport(
       mes: monthFromFecha(r.fecha) ?? r.mes,
       sede: r.plantaSede,
       responsable: r.responsable || '—',
+      material: r.materialDescarga || '—',
       resultado: r.resultadoGeneral,
       hallazgos: r.numHallazgos,
       riesgo: r.nivelRiesgo || '—',

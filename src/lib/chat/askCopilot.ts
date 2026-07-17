@@ -60,7 +60,15 @@ export function selectDomainsForQuestion(
   if (/inspecci|hallazgo|casco verde/.test(blob)) {
     add('agroInspecciones')
     add('aliconDesempeno')
+    add('descargaBarcosInspecciones')
     add('agroNda')
+  }
+  if (
+    /descarga\s*barcos|barco|buque|muelle|descarga\s*de\s*barco|clinker|coque/.test(
+      blob,
+    )
+  ) {
+    add('descargaBarcosInspecciones')
   }
   if (/monitoreo|par[aá]metro|muestreo/.test(blob)) {
     add('agroMonitoreos')

@@ -1,12 +1,14 @@
 import {
   CLASIFICACION_LABELS,
   INSPECCION_PROYECTOS,
+  inspeccionScopeFromSite,
   parseClasificacion,
   type InspeccionArea,
   type InspeccionClasificacion,
   type InspeccionHallazgoDraft,
   type InspeccionProyecto,
 } from '../../data/inspeccionesCampo'
+import { parseMaterialDescarga } from '../../data/descargaBarcosInspecciones'
 import {
   cancelInspeccionCampo,
   completeInspeccionCampo,
@@ -25,6 +27,7 @@ export type InspectionChip = {
 export type InspectionStep =
   | 'idle'
   | 'select_project'
+  | 'select_material'
   | 'select_area'
   | 'await_photo'
   | 'select_classification'
@@ -37,6 +40,8 @@ export type InspectionFlowState = {
   step: InspectionStep
   inspeccionId: string | null
   proyecto: InspeccionProyecto | null
+  /** Clinker | Coque cuando el proyecto es Descarga Barcos */
+  materialDescarga: string
   areas: InspeccionArea[]
   pendingAreaIds: string[]
   currentArea: InspeccionArea | null
@@ -91,6 +96,7 @@ export function createIdleInspectionState(): InspectionFlowState {
     step: 'idle',
     inspeccionId: null,
     proyecto: null,
+    materialDescarga: '',
     areas: [],
     pendingAreaIds: [],
     currentArea: null,
@@ -112,6 +118,53 @@ export function wantsStartInspection(text: string): boolean {
 
 function projectChips(): InspectionChip[] {
   return INSPECCION_PROYECTOS.map((p) => ({ id: p.id, label: p.label }))
+}
+
+function materialChips(): InspectionChip[] {
+  return [
+    { id: 'Clinker', label: 'Clinker' },
+    { id: 'Coque', label: 'Coque' },
+  ]
+}
+
+function isDescargaBarcosProject(proyecto: InspeccionProyecto): boolean {
+  return (
+    inspeccionScopeFromSite({
+      plantaSede: proyecto.plantaSede,
+      unidadNegocio: proyecto.unidadNegocio,
+    }) === 'descarga-barcos'
+  )
+}
+
+function askForMaterial(state: InspectionFlowState): InspectionTurnResult {
+  return reply(
+    { ...state, step: 'select_material' },
+    `En Descarga Barcos, ¿qué material se está descargando: Clinker o Coque?`,
+    emptyUi({
+      chips: materialChips(),
+      placeholder: 'Clinker o Coque…',
+    }),
+  )
+}
+
+async function startDraftAndAskArea(
+  state: InspectionFlowState,
+  proyecto: InspeccionProyecto,
+  responsable: string,
+  materialDescarga = '',
+): Promise<InspectionTurnResult> {
+  const draft = await createInspeccionCampoDraft({
+    plantaSede: proyecto.plantaSede,
+    unidadNegocio: proyecto.unidadNegocio,
+    responsable,
+    materialDescarga,
+  })
+  return askForArea({
+    ...state,
+    proyecto,
+    materialDescarga,
+    inspeccionId: draft.id,
+  })
 }
 
 function areaChips(
@@ -370,6 +423,7 @@ async function finalizeInspection(
     responsable,
     comentarioGeneral,
     hallazgos: state.hallazgos,
+    materialDescarga: state.materialDescarga,
   })
 
   const done: InspectionFlowState = {
@@ -380,17 +434,24 @@ async function finalizeInspection(
     hallazgos: state.hallazgos,
     comentarioGeneral,
     proyecto: state.proyecto,
+    materialDescarga: state.materialDescarga,
   }
 
+  const materialLine = state.materialDescarga
+    ? `Material: ${state.materialDescarga}.`
+    : null
   const resumen = [
     `Inspección de ${state.proyecto.label} guardada correctamente.`,
+    materialLine,
     `Áreas registradas: ${state.hallazgos.length}.`,
     `Fotos: ${state.hallazgos.reduce((n, h) => n + h.fotoUrls.length, 0)}.`,
     '',
     `Nota general: ${notaGeneral}`,
     '',
     'Si quieres otra inspección, dime «quiero hacer una inspección».',
-  ].join('\n')
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   return reply(done, resumen, emptyUi({ placeholder: 'Escribe tu pregunta…' }))
 }
@@ -435,18 +496,36 @@ export async function handleInspectionText(
         )
       }
 
-      // Persistir inspección en cuanto hay proyecto
-      const draft = await createInspeccionCampoDraft({
-        plantaSede: proyecto.plantaSede,
-        unidadNegocio: proyecto.unidadNegocio,
-        responsable: opts.responsable,
-      })
+      if (isDescargaBarcosProject(proyecto)) {
+        return askForMaterial({
+          ...state,
+          proyecto,
+          materialDescarga: '',
+          inspeccionId: null,
+        })
+      }
 
-      return askForArea({
-        ...state,
-        proyecto,
-        inspeccionId: draft.id,
-      })
+      return startDraftAndAskArea(state, proyecto, opts.responsable)
+    }
+
+    case 'select_material': {
+      const material = parseMaterialDescarga(trimmed)
+      if (!material || !state.proyecto) {
+        return reply(
+          state,
+          'Indica si el material descargado es Clinker o Coque.',
+          emptyUi({
+            chips: materialChips(),
+            placeholder: 'Clinker o Coque…',
+          }),
+        )
+      }
+      return startDraftAndAskArea(
+        state,
+        state.proyecto,
+        opts.responsable,
+        material,
+      )
     }
 
     case 'select_area':

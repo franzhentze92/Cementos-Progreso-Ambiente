@@ -6,6 +6,7 @@ export type ChatDomainId =
   | 'agroCompostaje'
   | 'agroIncidentes'
   | 'agroInspecciones'
+  | 'descargaBarcosInspecciones'
   | 'agroMonitoreos'
   | 'agroCapacitaciones'
   | 'agroLicencias'

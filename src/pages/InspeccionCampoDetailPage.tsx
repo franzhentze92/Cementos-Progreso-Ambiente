@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import {
   CLASIFICACION_LABELS,
+  inspeccionScopeFromSite,
   type InspeccionCampoDetail,
   type InspeccionClasificacion,
   type InspeccionHallazgoRecord,
@@ -62,21 +63,19 @@ function formatFecha(fecha: string): string {
 }
 
 function backPathFor(detail: InspeccionCampoDetail): string {
-  const isAlicon =
-    detail.plantaSede.toLowerCase() === 'alicon' ||
-    detail.unidadNegocio.toLowerCase().includes('cementos')
-  return isAlicon
-    ? '/entrada-datos/planta-alicon/inspeccion-ambiental'
-    : '/entrada-datos/agroprogreso/inspeccion-ambiental'
+  const scope = inspeccionScopeFromSite({
+    plantaSede: detail.plantaSede,
+    unidadNegocio: detail.unidadNegocio,
+  })
+  return `/entrada-datos/${scope}/inspeccion-ambiental`
 }
 
 function opsPathFor(detail: InspeccionCampoDetail): string {
-  const isAlicon =
-    detail.plantaSede.toLowerCase() === 'alicon' ||
-    detail.unidadNegocio.toLowerCase().includes('cementos')
-  return isAlicon
-    ? '/operaciones/planta-alicon/inspeccion-ambiental'
-    : '/operaciones/agroprogreso/inspeccion-ambiental'
+  const scope = inspeccionScopeFromSite({
+    plantaSede: detail.plantaSede,
+    unidadNegocio: detail.unidadNegocio,
+  })
+  return `/operaciones/${scope}/inspeccion-ambiental`
 }
 
 function AreaCard({ hallazgo }: { hallazgo: InspeccionHallazgoRecord }) {
@@ -260,7 +259,12 @@ export function InspeccionCampoDetailPage() {
             Informe de inspección de campo
           </span>
           <h1>{detail.plantaSede}</h1>
-          <p>{detail.unidadNegocio}</p>
+          <p>
+            {detail.unidadNegocio}
+            {detail.materialDescarga
+              ? ` · Material: ${detail.materialDescarga}`
+              : ''}
+          </p>
           <div className="insp-detail-meta">
             <span>
               <CalendarDays size={14} />
@@ -270,6 +274,12 @@ export function InspeccionCampoDetailPage() {
               <User size={14} />
               {detail.responsable || 'Sin responsable'}
             </span>
+            {detail.materialDescarga ? (
+              <span>
+                <Factory size={14} />
+                {detail.materialDescarga}
+              </span>
+            ) : null}
             <span>
               <Factory size={14} />
               {detail.estado === 'completada' ? 'Completada' : detail.estado}

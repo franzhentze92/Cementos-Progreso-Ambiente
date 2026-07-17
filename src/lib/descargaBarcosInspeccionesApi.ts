@@ -1,6 +1,6 @@
 import {
-  ALICON_INSPECCION_SEDE,
-  ALICON_INSPECCION_UNIDAD,
+  DESCARGA_BARCOS_INSPECCION_SEDE,
+  DESCARGA_BARCOS_INSPECCION_UNIDAD,
   buildFecha,
   parseIntSafe,
   parseNum,
@@ -8,7 +8,7 @@ import {
   type AgroInspeccionFormRow,
   type AgroInspeccionRecord,
   type MonitoringMonth,
-} from '../data/aliconInspecciones'
+} from '../data/descargaBarcosInspecciones'
 import { supabase } from './supabase'
 
 type DbRow = {
@@ -56,19 +56,20 @@ function mapRow(row: DbRow): AgroInspeccionRecord {
 const SELECT_COLS =
   'id, dia, mes, anio, semana, fecha, unidad_negocio, planta_sede, responsable, resultado_general, num_hallazgos, nivel_riesgo, requiere_accion_inmediata, observaciones, informe, link, material_descarga'
 
-/** Solo filas sede Alicon (incluye legado unidad «Cementos Progeso»). */
-export async function loadAliconInspecciones(): Promise<AgroInspeccionRecord[]> {
+export async function loadDescargaBarcosInspecciones(): Promise<
+  AgroInspeccionRecord[]
+> {
   const { data, error } = await supabase
     .from('ejecuciones_inspecciones')
     .select(SELECT_COLS)
-    .eq('planta_sede', ALICON_INSPECCION_SEDE)
+    .eq('planta_sede', DESCARGA_BARCOS_INSPECCION_SEDE)
     .order('fecha', { ascending: false })
 
   if (error) throw error
   return (data ?? []).map((row) => mapRow(row as DbRow))
 }
 
-export async function saveAliconInspeccionesMonth(
+export async function saveDescargaBarcosInspeccionesMonth(
   year: number,
   month: MonitoringMonth,
   rows: AgroInspeccionFormRow[],
@@ -76,7 +77,7 @@ export async function saveAliconInspeccionesMonth(
   const { error: delError } = await supabase
     .from('ejecuciones_inspecciones')
     .delete()
-    .eq('planta_sede', ALICON_INSPECCION_SEDE)
+    .eq('planta_sede', DESCARGA_BARCOS_INSPECCION_SEDE)
     .eq('anio', year)
     .eq('mes', month)
 
@@ -87,14 +88,15 @@ export async function saveAliconInspeccionesMonth(
   const payload = rows.map((row) => {
     const dia = parseIntSafe(row.dia) ?? 1
     const fecha = buildFecha(year, month, dia)
+    const material = row.materialDescarga.trim()
     return {
       dia,
       mes: month,
       anio: year,
       semana: weekFromFecha(fecha),
       fecha,
-      unidad_negocio: ALICON_INSPECCION_UNIDAD,
-      planta_sede: ALICON_INSPECCION_SEDE,
+      unidad_negocio: DESCARGA_BARCOS_INSPECCION_UNIDAD,
+      planta_sede: DESCARGA_BARCOS_INSPECCION_SEDE,
       responsable: row.responsable.trim(),
       resultado_general: parseNum(row.resultadoGeneral),
       num_hallazgos: parseIntSafe(row.numHallazgos),
@@ -103,13 +105,13 @@ export async function saveAliconInspeccionesMonth(
       observaciones: row.observaciones.trim(),
       informe: row.informe.trim() || 'Abrir informe',
       link: row.link.trim(),
-      material_descarga: (row.materialDescarga ?? '').trim(),
+      material_descarga: material,
     }
   })
 
   const seen = new Set<string>()
   const deduped = payload.filter((p) => {
-    const k = `${p.fecha}|${p.planta_sede}`
+    const k = `${p.fecha}|${p.planta_sede}|${p.material_descarga}`
     if (seen.has(k)) return false
     seen.add(k)
     return true

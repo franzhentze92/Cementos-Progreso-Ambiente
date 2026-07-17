@@ -6943,3 +6943,274 @@ img {
   font-size: 13px;
   line-height: 1.45;
 }
+
+/* Compromisos Ambientales */
+.compromisos-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 1.25rem;
+  padding: 8px;
+  background: #f3f6f3;
+  border: 1px solid #dde5dd;
+  border-radius: 10px;
+}
+
+.compromisos-subnav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  color: #3d4d3d;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.compromisos-subnav-link:hover {
+  background: #e8f0e8;
+}
+
+.compromisos-subnav-link.active {
+  background: #fff;
+  border-color: #c5d6c5;
+  color: var(--progreso-green-dark, #047935);
+  font-weight: 600;
+}
+
+.compromisos-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.compromisos-filters input[type='search'] {
+  min-width: 220px;
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #d0d7d0;
+  border-radius: 8px;
+}
+
+.compromisos-title-cell {
+  display: grid;
+  gap: 2px;
+}
+
+.compromisos-title-cell span,
+.compromisos-muted {
+  font-size: 0.78rem;
+  color: var(--progreso-gray, #5e5f61);
+}
+
+.compromisos-avance {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 90px;
+}
+
+.compromisos-avance-bar {
+  height: 6px;
+  background: var(--progreso-green, #5ab64b);
+  border-radius: 999px;
+  max-width: 56px;
+  min-width: 4px;
+}
+
+.compromisos-form-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.compromisos-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+.compromisos-form-grid label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #3d4d3d;
+}
+
+.compromisos-form-grid input,
+.compromisos-form-grid select,
+.compromisos-form-grid textarea {
+  padding: 8px 10px;
+  border: 1px solid #d0d7d0;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.compromisos-span-2 {
+  grid-column: span 2;
+}
+
+.compromisos-span-3 {
+  grid-column: span 3;
+}
+
+.compromisos-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding-bottom: 1.5rem;
+}
+
+.compromisos-hitos-list {
+  display: grid;
+  gap: 8px;
+}
+
+.compromisos-hito-row {
+  display: grid;
+  grid-template-columns: 28px 1.4fr 130px 130px 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.compromisos-hito-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #e8f0e8;
+  color: #047935;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.compromisos-hito-row input,
+.compromisos-hito-row select {
+  padding: 7px 9px;
+  border: 1px solid #d0d7d0;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.compromisos-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 12px;
+  border-left: 2px solid #d7e2d7;
+  display: grid;
+  gap: 16px;
+}
+
+.compromisos-timeline-item {
+  position: relative;
+  padding-left: 18px;
+}
+
+.compromisos-timeline-dot {
+  position: absolute;
+  left: -19px;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--progreso-green, #5ab64b);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #c5d6c5;
+}
+
+.compromisos-timeline-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.compromisos-timeline-head span {
+  font-size: 0.8rem;
+  color: #5e5f61;
+}
+
+.compromisos-timeline-comp {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+}
+
+.compromisos-timeline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: #5e5f61;
+}
+
+.compromisos-bloqueo {
+  margin: 4px 0 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #fff4e8;
+  color: #8a4b12;
+  font-size: 0.86rem;
+}
+
+.compromisos-file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.compromisos-resp-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.compromisos-role-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.compromisos-row-selected {
+  background: #eef6ef;
+}
+
+.fase1-empty {
+  text-align: center;
+  padding: 28px 12px !important;
+  color: #5e5f61;
+}
+
+@media (max-width: 980px) {
+  .compromisos-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .compromisos-span-2,
+  .compromisos-span-3 {
+    grid-column: span 2;
+  }
+
+  .compromisos-hito-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .compromisos-hito-num {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .compromisos-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compromisos-span-2,
+  .compromisos-span-3 {
+    grid-column: span 1;
+  }
+}

@@ -13,12 +13,14 @@ import { AgroNdaGeneralReportPage } from './AgroNdaGeneralReportPage'
 import { AgroGestionTramitesReportPage } from './AgroGestionTramitesReportPage'
 import { AliconIncidentesReportPage } from './AliconIncidentesReportPage'
 import { AliconInspeccionesReportPage } from './AliconInspeccionesReportPage'
+import { DescargaBarcosInspeccionesReportPage } from './DescargaBarcosInspeccionesReportPage'
 import { AliconMonitoreosReportPage } from './AliconMonitoreosReportPage'
 import { ModulePlaceholder } from '../components/ModulePlaceholder'
 
 const SCOPE_LABELS: Record<string, string> = {
   agroprogreso: 'Agroprogreso',
   'planta-alicon': 'Planta Alicón',
+  'descarga-barcos': 'Descarga Barcos',
 }
 
 const MODULE_TITLES: Record<string, string> = {
@@ -50,6 +52,10 @@ export function OperacionesPage() {
 
   if (scope === 'planta-alicon' && moduleId === 'inspeccion-ambiental') {
     return <AliconInspeccionesReportPage />
+  }
+
+  if (scope === 'descarga-barcos' && moduleId === 'inspeccion-ambiental') {
+    return <DescargaBarcosInspeccionesReportPage />
   }
 
   if (scope === 'planta-alicon' && moduleId === 'monitoreo-ambiental') {

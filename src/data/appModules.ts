@@ -5,10 +5,13 @@
 
 export type AppModuleGroupId =
   | 'core'
+  | 'compromisos-ambientales'
   | 'operaciones.agroprogreso'
   | 'operaciones.planta-alicon'
+  | 'operaciones.descarga-barcos'
   | 'entrada-datos.agroprogreso'
   | 'entrada-datos.planta-alicon'
+  | 'entrada-datos.descarga-barcos'
   | 'admin'
 
 export type AppModuleDef = {
@@ -31,6 +34,11 @@ export const APP_MODULE_GROUPS: AppModuleGroup[] = [
     description: 'Páginas principales de la aplicación',
   },
   {
+    id: 'compromisos-ambientales',
+    label: 'Compromisos Ambientales',
+    description: 'Registro, evidencias, seguimiento y responsables',
+  },
+  {
     id: 'operaciones.agroprogreso',
     label: 'Operaciones · Agroprogreso',
     description: 'Reportes y analítica Agroprogreso',
@@ -41,6 +49,11 @@ export const APP_MODULE_GROUPS: AppModuleGroup[] = [
     description: 'Reportes y analítica Alicón',
   },
   {
+    id: 'operaciones.descarga-barcos',
+    label: 'Operaciones · Descarga Barcos',
+    description: 'Reportes y analítica Descarga Barcos',
+  },
+  {
     id: 'entrada-datos.agroprogreso',
     label: 'Entrada de datos · Agroprogreso',
     description: 'Formularios de captura Agroprogreso',
@@ -49,6 +62,11 @@ export const APP_MODULE_GROUPS: AppModuleGroup[] = [
     id: 'entrada-datos.planta-alicon',
     label: 'Entrada de datos · Planta Alicón',
     description: 'Formularios de captura Alicón',
+  },
+  {
+    id: 'entrada-datos.descarga-barcos',
+    label: 'Entrada de datos · Descarga Barcos',
+    description: 'Formularios de captura Descarga Barcos',
   },
   {
     id: 'admin',
@@ -83,6 +101,22 @@ const ALICON_ENTRY = [
   ['inspeccion-ambiental', 'Inspección ambiental'],
   ['monitoreo-ambiental', 'Monitoreo ambiental'],
   ['huella-de-carbono', 'Huella de carbono'],
+] as const
+
+const DESCARGA_BARCOS_OPS = [
+  ['inspeccion-ambiental', 'Inspecciones'],
+] as const
+
+const DESCARGA_BARCOS_ENTRY = [
+  ['inspeccion-ambiental', 'Inspecciones'],
+] as const
+
+const COMPROMISOS_MODULES = [
+  ['lista', 'Lista de compromisos'],
+  ['crear', 'Crear / Editar compromiso'],
+  ['evidencias', 'Evidencias'],
+  ['seguimiento', 'Seguimiento'],
+  ['responsables', 'Responsables'],
 ] as const
 
 function leaf(
@@ -169,11 +203,27 @@ export const APP_MODULES: AppModuleDef[] = [
     group: 'core',
     path: '#chatbot',
   },
+  ...COMPROMISOS_MODULES.map(([slug, label]) =>
+    leaf(
+      'compromisos-ambientales',
+      'compromisos-ambientales',
+      slug,
+      label,
+    ),
+  ),
   ...AGRO_MODULES.map(([slug, label]) =>
     leaf('operaciones.agroprogreso', 'operaciones.agroprogreso', slug, label),
   ),
   ...ALICON_OPS.map(([slug, label]) =>
     leaf('operaciones.planta-alicon', 'operaciones.planta-alicon', slug, label),
+  ),
+  ...DESCARGA_BARCOS_OPS.map(([slug, label]) =>
+    leaf(
+      'operaciones.descarga-barcos',
+      'operaciones.descarga-barcos',
+      slug,
+      label,
+    ),
   ),
   ...AGRO_MODULES.map(([slug, label]) =>
     leaf('entrada-datos.agroprogreso', 'entrada-datos.agroprogreso', slug, label),
@@ -182,6 +232,14 @@ export const APP_MODULES: AppModuleDef[] = [
     leaf(
       'entrada-datos.planta-alicon',
       'entrada-datos.planta-alicon',
+      slug,
+      label,
+    ),
+  ),
+  ...DESCARGA_BARCOS_ENTRY.map(([slug, label]) =>
+    leaf(
+      'entrada-datos.descarga-barcos',
+      'entrada-datos.descarga-barcos',
       slug,
       label,
     ),
@@ -226,6 +284,7 @@ export function firstAllowedPath(
     'monitoreo-en-vivo',
     'cumplimiento',
     'capa',
+    'compromisos-ambientales.lista',
     'metas',
     'umbrales',
     'intensidad',
@@ -260,6 +319,11 @@ export function getModuleByPath(pathname: string): AppModuleDef | undefined {
   const clean = pathname.replace(/\/+$/, '') || '/'
   const exact = BY_PATH.get(clean)
   if (exact) return exact
+
+  // /compromisos-ambientales/editar/:id → mismo módulo que crear
+  if (/^\/compromisos-ambientales\/editar\/[^/]+$/.test(clean)) {
+    return BY_ID.get('compromisos-ambientales.crear')
+  }
 
   // Prefijos dinámicos /operaciones|entrada-datos/:scope/:moduleId[/...]
   // Incluye rutas hijas como .../inspeccion-ambiental/informe/:id

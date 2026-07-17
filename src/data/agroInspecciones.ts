@@ -18,6 +18,10 @@ export type AgroInspeccionSede = (typeof AGRO_INSPECCION_SEDES)[number]
 export const NIVELES_RIESGO = ['Bajo', 'Medio', 'Alto'] as const
 export const ACCION_INMEDIATA = ['No', 'Si'] as const
 
+/** Solo aplica a Descarga Barcos; vacío en Agro/Alicón. */
+export const MATERIALES_DESCARGA = ['Clinker', 'Coque'] as const
+export type MaterialDescarga = (typeof MATERIALES_DESCARGA)[number]
+
 export type AgroInspeccionRecord = {
   id: string
   dia: number
@@ -35,6 +39,8 @@ export type AgroInspeccionRecord = {
   observaciones: string
   informe: string
   link: string
+  /** Clinker | Coque (Descarga Barcos) o vacío */
+  materialDescarga: string
 }
 
 export type AgroInspeccionFormRow = {
@@ -50,6 +56,7 @@ export type AgroInspeccionFormRow = {
   observaciones: string
   informe: string
   link: string
+  materialDescarga: string
 }
 
 const MONTH_INDEX: Record<MonitoringMonth, number> = {
@@ -148,6 +155,7 @@ export function emptyInspeccionRow(
     observaciones: '',
     informe: 'Abrir informe',
     link: '',
+    materialDescarga: '',
   }
 }
 
@@ -173,6 +181,7 @@ export function formRowsFromRecords(
       observaciones: r.observaciones,
       informe: r.informe || 'Abrir informe',
       link: r.link,
+      materialDescarga: r.materialDescarga || '',
     }))
 }
 

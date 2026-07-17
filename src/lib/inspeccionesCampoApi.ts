@@ -39,6 +39,7 @@ type CampoRow = {
   requiere_accion_inmediata: string
   num_hallazgos: number
   estado: string
+  material_descarga: string | null
 }
 
 type HallazgoRow = {
@@ -75,6 +76,7 @@ function mapCampo(row: CampoRow): InspeccionCampoRecord {
     requiereAccionInmediata: row.requiere_accion_inmediata,
     numHallazgos: row.num_hallazgos,
     estado: row.estado,
+    materialDescarga: row.material_descarga ?? '',
   }
 }
 
@@ -223,6 +225,7 @@ export async function createInspeccionCampoDraft(input: {
   unidadNegocio: string
   responsable: string
   fecha?: string
+  materialDescarga?: string
 }): Promise<InspeccionCampoRecord> {
   const fecha = input.fecha ?? localDateISO()
 
@@ -240,9 +243,10 @@ export async function createInspeccionCampoDraft(input: {
       requiere_accion_inmediata: 'No',
       num_hallazgos: 0,
       estado: 'en_curso',
+      material_descarga: (input.materialDescarga ?? '').trim(),
     })
     .select(
-      'id, fecha, unidad_negocio, planta_sede, responsable, comentario_general, nota_general, resultado_general, nivel_riesgo, requiere_accion_inmediata, num_hallazgos, estado',
+      'id, fecha, unidad_negocio, planta_sede, responsable, comentario_general, nota_general, resultado_general, nivel_riesgo, requiere_accion_inmediata, num_hallazgos, estado, material_descarga',
     )
     .single()
 
@@ -301,6 +305,7 @@ export async function completeInspeccionCampo(input: {
   comentarioGeneral: string
   hallazgos: InspeccionHallazgoDraft[]
   fecha?: string
+  materialDescarga?: string
 }): Promise<{
   inspeccion: InspeccionCampoRecord
   notaGeneral: string
@@ -327,7 +332,7 @@ export async function completeInspeccionCampo(input: {
     })
     .eq('id', input.inspeccionId)
     .select(
-      'id, fecha, unidad_negocio, planta_sede, responsable, comentario_general, nota_general, resultado_general, nivel_riesgo, requiere_accion_inmediata, num_hallazgos, estado',
+      'id, fecha, unidad_negocio, planta_sede, responsable, comentario_general, nota_general, resultado_general, nivel_riesgo, requiere_accion_inmediata, num_hallazgos, estado, material_descarga',
     )
     .single()
 
@@ -343,6 +348,10 @@ export async function completeInspeccionCampo(input: {
     scoring,
     notaGeneral,
     inspeccionCampoId: input.inspeccionId,
+    materialDescarga:
+      input.materialDescarga ??
+      (data as CampoRow).material_descarga ??
+      '',
   })
 
   return { inspeccion: mapCampo(data as CampoRow), notaGeneral }
@@ -399,6 +408,7 @@ async function syncEjecucionInspeccion(input: {
   scoring: ReturnType<typeof scoreFromHallazgos>
   notaGeneral: string
   inspeccionCampoId: string
+  materialDescarga?: string
 }) {
   const mes = monthFromFecha(input.fecha)
   if (!mes) {
@@ -429,10 +439,11 @@ async function syncEjecucionInspeccion(input: {
     observaciones: input.notaGeneral,
     informe: 'Abrir informe',
     link,
+    material_descarga: (input.materialDescarga ?? '').trim(),
   }
 
   const { error } = await supabase.from('ejecuciones_inspecciones').upsert(payload, {
-    onConflict: 'fecha,planta_sede,unidad_negocio',
+    onConflict: 'fecha,planta_sede,unidad_negocio,material_descarga',
   })
 
   if (error) {
@@ -448,7 +459,7 @@ export async function loadInspeccionCampoDetail(
   const { data: campoData, error: campoError } = await supabase
     .from('inspecciones_campo')
     .select(
-      'id, fecha, unidad_negocio, planta_sede, responsable, comentario_general, nota_general, resultado_general, nivel_riesgo, requiere_accion_inmediata, num_hallazgos, estado',
+      'id, fecha, unidad_negocio, planta_sede, responsable, comentario_general, nota_general, resultado_general, nivel_riesgo, requiere_accion_inmediata, num_hallazgos, estado, material_descarga',
     )
     .eq('id', id)
     .maybeSingle()

@@ -24,6 +24,7 @@ import {
   Activity,
   Brain,
   FolderOpen,
+  Ship,
   Sprout,
   Thermometer,
   Trash2,
@@ -31,6 +32,9 @@ import {
   UserRound,
   KeyRound,
   Library,
+  FilePlus2,
+  History,
+  Handshake,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import type { LucideIcon } from 'lucide-react'
@@ -141,6 +145,19 @@ const OPERACIONES_BRANCHES: NavBranch[] = [
       },
     ],
   },
+  {
+    id: 'descarga-barcos',
+    label: 'Descarga Barcos',
+    icon: Ship,
+    match: '/operaciones/descarga-barcos',
+    children: [
+      {
+        to: '/operaciones/descarga-barcos/inspeccion-ambiental',
+        label: 'Inspecciones',
+        icon: ClipboardList,
+      },
+    ],
+  },
 ]
 
 const ENTRADA_BRANCHES: NavBranch[] = [
@@ -235,7 +252,54 @@ const ENTRADA_BRANCHES: NavBranch[] = [
       },
     ],
   },
+  {
+    id: 'descarga-barcos-entrada',
+    label: 'Descarga Barcos',
+    icon: Ship,
+    match: '/entrada-datos/descarga-barcos',
+    children: [
+      {
+        to: '/entrada-datos/descarga-barcos/inspeccion-ambiental',
+        label: 'Inspecciones',
+        icon: ClipboardList,
+      },
+    ],
+  },
 ]
+
+const COMPROMISOS_BRANCH: NavBranch = {
+  id: 'compromisos-ambientales',
+  label: 'Compromisos Ambientales',
+  icon: Handshake,
+  match: '/compromisos-ambientales',
+  children: [
+    {
+      to: '/compromisos-ambientales/lista',
+      label: 'Lista de compromisos',
+      icon: ClipboardList,
+    },
+    {
+      to: '/compromisos-ambientales/crear',
+      label: 'Crear / Editar',
+      icon: FilePlus2,
+    },
+    {
+      to: '/compromisos-ambientales/evidencias',
+      label: 'Evidencias',
+      icon: FolderOpen,
+    },
+    {
+      to: '/compromisos-ambientales/seguimiento',
+      label: 'Seguimiento',
+      icon: History,
+    },
+    {
+      to: '/compromisos-ambientales/responsables',
+      label: 'Responsables',
+      icon: Users,
+    },
+  ],
+}
 
 function NestedBranchNav({
   branches,
@@ -333,6 +397,11 @@ export function Sidebar({
     children: b.children.filter((c) => canAccessPath(c.to)),
   })).filter((b) => b.children.length > 0)
 
+  const visibleCompromisos = COMPROMISOS_BRANCH.children.filter((c) =>
+    canAccessPath(c.to),
+  )
+  const showCompromisos = visibleCompromisos.length > 0
+
   const showDashboard = canAccessPath('/dashboard')
   const showMapa = canAccessPath('/mapa')
   const showMonitoreoEnVivo = canAccessPath('/monitoreo-en-vivo')
@@ -353,6 +422,9 @@ export function Sidebar({
   )
   const [entradasOpen, setEntradasOpen] = useState(
     path.startsWith('/entrada-datos'),
+  )
+  const [compromisosOpen, setCompromisosOpen] = useState(
+    path.startsWith('/compromisos-ambientales'),
   )
   const [operacionesBranchOpen, setOperacionesBranchOpen] = useState(() =>
     initialBranchOpen(OPERACIONES_BRANCHES, path),
@@ -384,10 +456,14 @@ export function Sidebar({
         return next
       })
     }
+    if (path.startsWith('/compromisos-ambientales')) {
+      setCompromisosOpen(true)
+    }
   }, [path])
 
   const operacionesRouteActive = path.startsWith('/operaciones')
   const entradaRouteActive = path.startsWith('/entrada-datos')
+  const compromisosRouteActive = path.startsWith('/compromisos-ambientales')
 
   return (
     <aside
@@ -463,6 +539,42 @@ export function Sidebar({
             <ClipboardCheck />
             <span className="nav-label">CAPA</span>
           </NavLink>
+        )}
+
+        {showCompromisos && (
+          <>
+            <button
+              type="button"
+              className={`nav-group-btn${compromisosRouteActive ? ' active' : ''}${compromisosOpen ? ' expanded' : ''}`}
+              onClick={() => setCompromisosOpen((v) => !v)}
+              title="Compromisos Ambientales"
+              aria-expanded={compromisosOpen}
+            >
+              <Handshake />
+              <span className="nav-label">Compromisos Ambientales</span>
+              <ChevronRight
+                className={`nav-chevron${compromisosOpen ? ' open' : ''}`}
+                size={16}
+              />
+            </button>
+            <div className={`nav-sub${compromisosOpen ? ' open' : ''}`}>
+              {visibleCompromisos.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end
+                  className={({ isActive }) =>
+                    `nav-item${isActive ? ' active' : ''}`
+                  }
+                  title={item.label}
+                  onClick={onNavigate}
+                >
+                  <item.icon size={14} />
+                  <span className="nav-label">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </>
         )}
 
         {showMetas && (

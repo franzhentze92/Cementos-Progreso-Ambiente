@@ -15,6 +15,11 @@ import { LiveMonitoringPage } from './pages/LiveMonitoringPage'
 import { InspeccionCampoDetailPage } from './pages/InspeccionCampoDetailPage'
 import { CumplimientoPage } from './pages/CumplimientoPage'
 import { CapaPage } from './pages/CapaPage'
+import { CompromisosListaPage } from './pages/CompromisosListaPage'
+import { CompromisosFormPage } from './pages/CompromisosFormPage'
+import { CompromisosEvidenciasPage } from './pages/CompromisosEvidenciasPage'
+import { CompromisosSeguimientoPage } from './pages/CompromisosSeguimientoPage'
+import { CompromisosResponsablesPage } from './pages/CompromisosResponsablesPage'
 import { MetasPage } from './pages/MetasPage'
 import { UmbralesPage } from './pages/UmbralesPage'
 import { IntensidadPage } from './pages/IntensidadPage'
@@ -46,6 +51,36 @@ export default function App() {
               />
               <Route path="/cumplimiento" element={<CumplimientoPage />} />
               <Route path="/capa" element={<CapaPage />} />
+              <Route
+                path="/compromisos-ambientales"
+                element={
+                  <Navigate to="/compromisos-ambientales/lista" replace />
+                }
+              />
+              <Route
+                path="/compromisos-ambientales/lista"
+                element={<CompromisosListaPage />}
+              />
+              <Route
+                path="/compromisos-ambientales/crear"
+                element={<CompromisosFormPage />}
+              />
+              <Route
+                path="/compromisos-ambientales/editar/:id"
+                element={<CompromisosFormPage />}
+              />
+              <Route
+                path="/compromisos-ambientales/evidencias"
+                element={<CompromisosEvidenciasPage />}
+              />
+              <Route
+                path="/compromisos-ambientales/seguimiento"
+                element={<CompromisosSeguimientoPage />}
+              />
+              <Route
+                path="/compromisos-ambientales/responsables"
+                element={<CompromisosResponsablesPage />}
+              />
               <Route path="/metas" element={<MetasPage />} />
               <Route path="/umbrales" element={<UmbralesPage />} />
               <Route path="/intensidad" element={<IntensidadPage />} />

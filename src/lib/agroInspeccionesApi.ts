@@ -27,6 +27,7 @@ type DbRow = {
   observaciones: string
   informe: string
   link: string
+  material_descarga: string | null
 }
 
 function mapRow(row: DbRow): AgroInspeccionRecord {
@@ -47,11 +48,12 @@ function mapRow(row: DbRow): AgroInspeccionRecord {
     observaciones: row.observaciones ?? '',
     informe: row.informe ?? 'Abrir informe',
     link: row.link ?? '',
+    materialDescarga: row.material_descarga ?? '',
   }
 }
 
 const SELECT_COLS =
-  'id, dia, mes, anio, semana, fecha, unidad_negocio, planta_sede, responsable, resultado_general, num_hallazgos, nivel_riesgo, requiere_accion_inmediata, observaciones, informe, link'
+  'id, dia, mes, anio, semana, fecha, unidad_negocio, planta_sede, responsable, resultado_general, num_hallazgos, nivel_riesgo, requiere_accion_inmediata, observaciones, informe, link, material_descarga'
 
 /** Solo filas Agroprogreso (entrada / reporte Agro). */
 export async function loadAgroInspecciones(): Promise<AgroInspeccionRecord[]> {
@@ -101,6 +103,7 @@ export async function saveAgroInspeccionesMonth(
       observaciones: row.observaciones.trim(),
       informe: row.informe.trim() || 'Abrir informe',
       link: row.link.trim(),
+      material_descarga: (row.materialDescarga ?? '').trim(),
     }
   })
 

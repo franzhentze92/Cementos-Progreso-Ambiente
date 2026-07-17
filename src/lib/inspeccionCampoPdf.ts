@@ -211,21 +211,32 @@ export async function downloadInspeccionCampoPdf(
   doc.setFontSize(9)
   doc.text(formatFecha(detail.fecha), PAGE_W - MARGIN, 27, { align: 'right' })
   doc.text(detail.unidadNegocio, PAGE_W - MARGIN, 33, { align: 'right' })
+  if (detail.materialDescarga) {
+    doc.text(
+      `Material: ${detail.materialDescarga}`,
+      PAGE_W - MARGIN,
+      39,
+      { align: 'right' },
+    )
+  }
 
-  let y = 54
+  let y = detail.materialDescarga ? 58 : 54
 
   // Meta
   doc.setTextColor(...GRAY)
   doc.setFontSize(9)
   doc.text(`Inspector: ${detail.responsable || '—'}`, MARGIN, y)
+  if (detail.materialDescarga) {
+    doc.text(`Material: ${detail.materialDescarga}`, MARGIN + 70, y)
+  }
   doc.text(
     `Estado: ${detail.estado === 'completada' ? 'Completada' : detail.estado}`,
-    MARGIN + 80,
+    MARGIN + 110,
     y,
   )
   doc.text(
     `Acción inmediata: ${detail.requiereAccionInmediata || 'No'}`,
-    MARGIN + 140,
+    MARGIN + 160,
     y,
   )
   y += 8

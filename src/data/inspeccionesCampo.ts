@@ -5,6 +5,10 @@ import {
   ALICON_INSPECCION_SEDE,
   ALICON_INSPECCION_UNIDAD,
 } from './aliconInspecciones'
+import {
+  DESCARGA_BARCOS_INSPECCION_SEDE,
+  DESCARGA_BARCOS_INSPECCION_UNIDAD,
+} from './descargaBarcosInspecciones'
 
 export const INSPECCION_CLASIFICACIONES = [
   'buena_practica',
@@ -40,6 +44,12 @@ export const INSPECCION_PROYECTOS: InspeccionProyecto[] = [
     plantaSede: ALICON_INSPECCION_SEDE,
     unidadNegocio: ALICON_INSPECCION_UNIDAD,
   },
+  {
+    id: `descarga-barcos:${DESCARGA_BARCOS_INSPECCION_SEDE}`,
+    label: DESCARGA_BARCOS_INSPECCION_SEDE,
+    plantaSede: DESCARGA_BARCOS_INSPECCION_SEDE,
+    unidadNegocio: DESCARGA_BARCOS_INSPECCION_UNIDAD,
+  },
 ]
 
 export type InspeccionArea = {
@@ -72,6 +82,8 @@ export type InspeccionCampoRecord = {
   requiereAccionInmediata: string
   numHallazgos: number
   estado: string
+  /** Clinker | Coque en Descarga Barcos; vacío en otros proyectos */
+  materialDescarga: string
 }
 
 export type InspeccionHallazgoRecord = {
@@ -89,15 +101,33 @@ export type InspeccionCampoDetail = InspeccionCampoRecord & {
   hallazgos: InspeccionHallazgoRecord[]
 }
 
+/** Resuelve el scope de URL a partir de sede / unidad de negocio. */
+export function inspeccionScopeFromSite(opts?: {
+  unidadNegocio?: string
+  plantaSede?: string
+}): 'agroprogreso' | 'planta-alicon' | 'descarga-barcos' {
+  const sede = (opts?.plantaSede ?? '').toLowerCase()
+  const unidad = (opts?.unidadNegocio ?? '').toLowerCase()
+  if (
+    sede.includes('descarga') ||
+    sede.includes('barco') ||
+    unidad.includes('descarga') ||
+    unidad.includes('barco')
+  ) {
+    return 'descarga-barcos'
+  }
+  if (sede === 'alicon' || unidad.includes('cementos')) {
+    return 'planta-alicon'
+  }
+  return 'agroprogreso'
+}
+
 /** Ruta interna del informe detallado (bajo el módulo de inspección). */
 export function inspeccionCampoDetailPath(
   id: string,
   opts?: { unidadNegocio?: string; plantaSede?: string },
 ): string {
-  const isAlicon =
-    (opts?.plantaSede ?? '').toLowerCase() === 'alicon' ||
-    (opts?.unidadNegocio ?? '').toLowerCase().includes('cementos')
-  const scope = isAlicon ? 'planta-alicon' : 'agroprogreso'
+  const scope = inspeccionScopeFromSite(opts)
   return `/entrada-datos/${scope}/inspeccion-ambiental/informe/${id}`
 }
 

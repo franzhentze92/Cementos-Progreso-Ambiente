@@ -4,6 +4,7 @@ import { loadAgroCapacitacionesDomain } from './agroCapacitaciones'
 import { loadAgroCompostajeDomain } from './agroCompostaje'
 import { loadAgroIncidentesDomain } from './agroIncidentes'
 import { loadAgroInspeccionesDomain } from './agroInspecciones'
+import { loadDescargaBarcosInspeccionesDomain } from './descargaBarcosInspecciones'
 import { loadAgroLicenciasDomain } from './agroLicencias'
 import { loadAgroMonitoreosDomain } from './agroMonitoreos'
 import { loadAgroNdaDomain } from './agroNda'
@@ -33,6 +34,7 @@ export const CHAT_DOMAIN_LOADERS: Record<ChatDomainId, ChatDomainLoader> = {
   agroCompostaje: loadAgroCompostajeDomain,
   agroIncidentes: loadAgroIncidentesDomain,
   agroInspecciones: loadAgroInspeccionesDomain,
+  descargaBarcosInspecciones: loadDescargaBarcosInspeccionesDomain,
   agroMonitoreos: loadAgroMonitoreosDomain,
   agroCapacitaciones: loadAgroCapacitacionesDomain,
   agroLicencias: loadAgroLicenciasDomain,
@@ -58,6 +60,7 @@ export const DEFAULT_CHAT_DOMAINS: ChatDomainId[] = [
   'agroCompostaje',
   'agroIncidentes',
   'agroInspecciones',
+  'descargaBarcosInspecciones',
   'agroMonitoreos',
   'agroCapacitaciones',
   'agroLicencias',

@@ -11,6 +11,14 @@ export type ChatDomainId =
   | 'agroLicencias'
   | 'agroTramites'
   | 'agroNda'
+  | 'cumplimiento'
+  | 'capa'
+  | 'metas'
+  | 'umbrales'
+  | 'intensidad'
+  | 'circularidad'
+  | 'expedientes'
+  | 'analista'
   | 'knowledge'
 
 export type ChatMessagePayload = {

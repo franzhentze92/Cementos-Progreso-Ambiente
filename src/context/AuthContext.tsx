@@ -138,7 +138,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (DIRECTORY_ADMIN_MODULES.has(moduleId)) {
         return isDirectoryAdmin
       }
-      if (isDirectoryAdmin) return true
+      // Admin de aplicación: acceso completo a módulos asignables
+      if (
+        user.role === 'Admin' ||
+        user.role === 'Administrador' ||
+        isDirectoryAdmin
+      ) {
+        return true
+      }
       return moduleSet.has(moduleId)
     },
     [user, moduleSet, isDirectoryAdmin],

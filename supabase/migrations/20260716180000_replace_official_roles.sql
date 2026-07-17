@@ -18,7 +18,7 @@ DELETE FROM app_role_modules;
 
 INSERT INTO app_role_modules (role_code, module_id)
 SELECT 'Admin', m FROM unnest(ARRAY[
-  'dashboard','mapa','monitoreo-en-vivo','perfil','chatbot',
+  'dashboard','mapa','monitoreo-en-vivo','cumplimiento','capa','exportes','perfil','chatbot',
   'operaciones.agroprogreso.gestion-de-residuos',
   'operaciones.agroprogreso.consumo-de-agua',
   'operaciones.agroprogreso.inspeccion-ambiental',
@@ -54,7 +54,7 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO app_role_modules (role_code, module_id)
 SELECT 'Gerencia', m FROM unnest(ARRAY[
-  'dashboard','mapa','monitoreo-en-vivo','perfil','chatbot',
+  'dashboard','mapa','monitoreo-en-vivo','cumplimiento','capa','exportes','perfil','chatbot',
   'operaciones.agroprogreso.gestion-de-residuos',
   'operaciones.agroprogreso.consumo-de-agua',
   'operaciones.agroprogreso.inspeccion-ambiental',
@@ -76,6 +76,8 @@ ON CONFLICT DO NOTHING;
 INSERT INTO app_role_modules (role_code, module_id)
 SELECT 'Gestor_Datos_Alicon', m FROM unnest(ARRAY[
   'perfil',
+  'cumplimiento',
+  'capa',
   'entrada-datos.planta-alicon.incidentes-ambientales',
   'entrada-datos.planta-alicon.inspeccion-ambiental',
   'entrada-datos.planta-alicon.monitoreo-ambiental',
@@ -86,6 +88,8 @@ ON CONFLICT DO NOTHING;
 INSERT INTO app_role_modules (role_code, module_id)
 SELECT 'Gestor_Datos_Agroprogreso', m FROM unnest(ARRAY[
   'perfil',
+  'cumplimiento',
+  'capa',
   'entrada-datos.agroprogreso.gestion-de-residuos',
   'entrada-datos.agroprogreso.consumo-de-agua',
   'entrada-datos.agroprogreso.inspeccion-ambiental',

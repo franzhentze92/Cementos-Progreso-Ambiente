@@ -45,6 +45,21 @@ import { loadAliconInspecciones } from './aliconInspeccionesApi'
 import { loadAgroMonitoreos } from './agroMonitoreosApi'
 import { loadAgroNdaGeneral } from './agroNdaGeneralApi'
 import { loadAgroLicencias } from './agroLicenciasApi'
+import { loadCumplimiento } from './cumplimientoApi'
+import { loadCapas } from './capaApi'
+import { loadMetas } from './metasApi'
+import { loadUmbrales } from './umbralesApi'
+import { loadEscenarios } from './intensidadApi'
+import { loadCircularidad } from './circularidadApi'
+import { loadExpedientes } from './expedientesApi'
+import { loadBriefings } from './analistaApi'
+import { buildCumplimientoReport } from '../data/cumplimientoReport'
+import { buildCapaReport } from '../data/capaReport'
+import { buildMetasReport } from '../data/metasReport'
+import { buildUmbralesReport } from '../data/umbralesReport'
+import { buildIntensidadReport } from '../data/intensidadReport'
+import { buildCircularidadReport } from '../data/circularidadReport'
+import { buildExpedientesReport } from '../data/expedientesReport'
 
 async function settled<T>(
   label: string,
@@ -76,6 +91,14 @@ export async function loadDashboardSummary(): Promise<DashboardSummary> {
     monRes,
     ndaRes,
     licRes,
+    cumRes,
+    capaRes,
+    metasRes,
+    umbralesRes,
+    escRes,
+    circRes,
+    expRes,
+    briefRes,
   ] = await Promise.all([
     settled('Alicon monitoreo', () => loadCarbonCampaign()),
     settled('Consumo agua', () => loadAgroConsumoAgua()),
@@ -88,6 +111,14 @@ export async function loadDashboardSummary(): Promise<DashboardSummary> {
     settled('Monitoreos Agro', () => loadAgroMonitoreos()),
     settled('NDA General', () => loadAgroNdaGeneral()),
     settled('Licencias', () => loadAgroLicencias()),
+    settled('Cumplimiento', () => loadCumplimiento()),
+    settled('CAPA', () => loadCapas()),
+    settled('Metas', () => loadMetas()),
+    settled('Umbrales', () => loadUmbrales()),
+    settled('Escenarios', () => loadEscenarios()),
+    settled('Circularidad', () => loadCircularidad()),
+    settled('Expedientes', () => loadExpedientes()),
+    settled('Analista', () => loadBriefings()),
   ])
 
   const carbon =
@@ -179,6 +210,65 @@ export async function loadDashboardSummary(): Promise<DashboardSummary> {
       ? buildAgroLicenciasReport(licRes.value)
       : (failed.push(licRes.label), null)
 
+  const cumplimiento =
+    cumRes.ok
+      ? buildCumplimientoReport(cumRes.value)
+      : (failed.push(cumRes.label), null)
+
+  const capa =
+    capaRes.ok
+      ? buildCapaReport(capaRes.value)
+      : (failed.push(capaRes.label), null)
+
+  const metas =
+    metasRes.ok
+      ? buildMetasReport(metasRes.value)
+      : (failed.push(metasRes.label), null)
+
+  const umbrales =
+    umbralesRes.ok && monRes.ok
+      ? buildUmbralesReport(umbralesRes.value, monRes.value)
+      : (failed.push(
+          umbralesRes.ok ? 'Umbrales (requiere monitoreos)' : umbralesRes.label,
+        ),
+        null)
+
+  const intensidad = escRes.ok
+    ? buildIntensidadReport(
+        carbonRes.ok ? buildCarbonReport(carbonRes.value.state) : null,
+        escRes.value,
+      )
+    : (failed.push(escRes.label), null)
+
+  const circularidad = circRes.ok
+    ? buildCircularidadReport(
+        circRes.value,
+        residuosRes.ok ? residuosRes.value : [],
+      )
+    : (failed.push(circRes.label), null)
+
+  const expedientes = expRes.ok
+    ? buildExpedientesReport(expRes.value)
+    : (failed.push(expRes.label), null)
+
+  const analista = briefRes.ok
+    ? (() => {
+        const latest = briefRes.value[0]
+        if (!latest) return null
+        const topSignal = [...latest.signals].sort((a, b) => b.score - a.score)[0]
+        return {
+          kpis: latest.kpis,
+          top: topSignal
+            ? {
+                level: topSignal.level,
+                title: topSignal.title,
+                text: topSignal.text,
+              }
+            : null,
+        }
+      })()
+    : (failed.push(briefRes.label), null)
+
   return buildDashboardSummary({
     carbon,
     agua,
@@ -191,6 +281,14 @@ export async function loadDashboardSummary(): Promise<DashboardSummary> {
     monitoreos,
     nda,
     licencias,
+    cumplimiento,
+    capa,
+    metas,
+    umbrales,
+    intensidad,
+    circularidad,
+    expedientes,
+    analista,
     failed,
   })
 }

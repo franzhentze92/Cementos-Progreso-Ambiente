@@ -11,11 +11,19 @@ import { loadAgroResiduosDomain } from './agroResiduos'
 import { loadAgroTramitesDomain } from './agroTramites'
 import { loadAliconDesempenoDomain } from './aliconDesempeno'
 import { loadCarbonDomain } from './carbon'
+import { loadCumplimientoDomain } from './cumplimiento'
+import { loadCapaDomain } from './capa'
+import { loadMetasDomain } from './metas'
+import { loadUmbralesDomain } from './umbrales'
+import { loadIntensidadDomain } from './intensidad'
+import { loadCircularidadDomain } from './circularidad'
+import { loadExpedientesDomain } from './expedientes'
+import { loadAnalistaDomain } from './analista'
 import { loadKnowledgeDomain } from './knowledge'
 
 /**
  * Registro de dominios del copiloto.
- * Cubre las 22 tablas públicas de Supabase + documentos de Contexto Chatbot.
+ * Cubre las tablas públicas de Supabase + documentos de Contexto Chatbot.
  */
 export const CHAT_DOMAIN_LOADERS: Record<ChatDomainId, ChatDomainLoader> = {
   carbon: loadCarbonDomain,
@@ -30,6 +38,14 @@ export const CHAT_DOMAIN_LOADERS: Record<ChatDomainId, ChatDomainLoader> = {
   agroLicencias: loadAgroLicenciasDomain,
   agroTramites: loadAgroTramitesDomain,
   agroNda: loadAgroNdaDomain,
+  cumplimiento: loadCumplimientoDomain,
+  capa: loadCapaDomain,
+  metas: loadMetasDomain,
+  umbrales: loadUmbralesDomain,
+  intensidad: loadIntensidadDomain,
+  circularidad: loadCircularidadDomain,
+  expedientes: loadExpedientesDomain,
+  analista: loadAnalistaDomain,
   knowledge: loadKnowledgeDomain,
 }
 
@@ -47,6 +63,14 @@ export const DEFAULT_CHAT_DOMAINS: ChatDomainId[] = [
   'agroLicencias',
   'agroTramites',
   'agroNda',
+  'cumplimiento',
+  'capa',
+  'metas',
+  'umbrales',
+  'intensidad',
+  'circularidad',
+  'expedientes',
+  'analista',
   'knowledge',
 ]
 

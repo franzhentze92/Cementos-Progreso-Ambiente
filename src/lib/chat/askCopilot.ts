@@ -65,10 +65,79 @@ export function selectDomainsForQuestion(
   if (/monitoreo|par[aá]metro|muestreo/.test(blob)) {
     add('agroMonitoreos')
     add('aliconDesempeno')
+    add('umbrales')
   }
   if (/capacitaci|taller/.test(blob)) add('agroCapacitaciones')
   if (/licencia|vencer|vencid|vigencia|expediente/.test(blob)) add('agroLicencias')
   if (/tr[aá]mite|prioridad/.test(blob)) add('agroTramites')
+  if (
+    /cumplimiento|obligaci[oó]n|regulator|compliance|autoridad|marn|permiso ambiental/.test(
+      blob,
+    )
+  ) {
+    add('cumplimiento')
+    add('agroLicencias')
+    add('agroTramites')
+  }
+  if (
+    /capa|correctiv|preventiv|plan de acci[oó]n|hallazgo|eficacia|verificaci[oó]n de cierre/.test(
+      blob,
+    )
+  ) {
+    add('capa')
+    add('agroInspecciones')
+    add('agroIncidentes')
+  }
+  if (
+    /meta|kpi|indicador|avance|objetivo ambiental|gesti[oó]n por resultados/.test(
+      blob,
+    )
+  ) {
+    add('metas')
+  }
+  if (
+    /umbral|l[ií]mite permisible|excedenc|fuera de l[ií]mite|evaluaci[oó]n autom[aá]tica/.test(
+      blob,
+    )
+  ) {
+    add('umbrales')
+    add('agroMonitoreos')
+  }
+  if (
+    /intensidad|escenario|kg\s*co2|kwh\/t|clinker factor|qu[eé] pasa si|benchmarking carbono/.test(
+      blob,
+    )
+  ) {
+    add('intensidad')
+    add('carbon')
+  }
+  if (
+    /circularidad|valorizaci[oó]n|manifiesto|aprovechamiento|econom[ií]a circular|gestor de residuos/.test(
+      blob,
+    )
+  ) {
+    add('circularidad')
+    add('agroResiduos')
+  }
+  if (
+    /expediente|evidencia documental|resoluci[oó]n|acta|repositorio documental|versionado/.test(
+      blob,
+    )
+  ) {
+    add('expedientes')
+    add('cumplimiento')
+  }
+  if (
+    /analista|briefing|semanal|se[nñ]ales predictiv|copiloto proactivo|borrador ejecutivo|radar ambiental/.test(
+      blob,
+    )
+  ) {
+    add('analista')
+    add('cumplimiento')
+    add('capa')
+    add('metas')
+    add('umbrales')
+  }
   if (/\bnda\b|nota ida|desempeño/.test(blob)) {
     add('agroNda')
     add('aliconDesempeno')

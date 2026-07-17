@@ -540,6 +540,75 @@ export function DashboardPage() {
               <span>Por vencer ≤12m</span>
               <strong>{fmt(compliance.licencias.proximoVencer)}</strong>
             </div>
+            <div>
+              <span>Obligaciones vencidas</span>
+              <strong>
+                <Link to="/cumplimiento">
+                  {fmt(compliance.obligacionesVencidas)}
+                </Link>
+              </strong>
+            </div>
+            <div>
+              <span>CAPA abiertas</span>
+              <strong>
+                <Link to="/capa">
+                  {fmt(compliance.capaAbiertas)}
+                  {compliance.capaVencidas > 0
+                    ? ` · ${fmt(compliance.capaVencidas)} venc.`
+                    : ''}
+                </Link>
+              </strong>
+            </div>
+            <div>
+              <span>Metas en riesgo</span>
+              <strong>
+                <Link to="/metas">{fmt(compliance.metasEnRiesgo)}</Link>
+              </strong>
+            </div>
+            <div>
+              <span>Excedencias monitoreo</span>
+              <strong>
+                <Link to="/umbrales">
+                  {fmt(compliance.umbralesExcedencias)}
+                </Link>
+              </strong>
+            </div>
+            <div>
+              <span>Intensidad CO₂e</span>
+              <strong>
+                <Link to="/intensidad">
+                  {compliance.intensidadKgT == null
+                    ? '—'
+                    : `${fmt(compliance.intensidadKgT, 1)} kg/t`}
+                </Link>
+              </strong>
+            </div>
+            <div>
+              <span>Valorización</span>
+              <strong>
+                <Link to="/circularidad">
+                  {compliance.circularidadPct == null
+                    ? '—'
+                    : `${fmt(compliance.circularidadPct, 1)}%`}
+                </Link>
+              </strong>
+            </div>
+            <div>
+              <span>Expedientes vigentes</span>
+              <strong>
+                <Link to="/expedientes">
+                  {fmt(compliance.expedientesVigentes)}
+                </Link>
+              </strong>
+            </div>
+            <div>
+              <span>Señales críticas</span>
+              <strong>
+                <Link to="/analista">
+                  {fmt(compliance.analistaCriticos)}
+                </Link>
+              </strong>
+            </div>
           </div>
         </section>
 

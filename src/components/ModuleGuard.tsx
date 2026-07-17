@@ -20,6 +20,12 @@ export function ModuleGuard({ children }: { children: React.ReactNode }) {
 
   if (!user) return <Navigate to="/login" replace />
 
+  // Rutas catch-all del layout (404): no aplicar RBAC de módulo
+  const mod = getModuleByPath(location.pathname)
+  if (!mod) {
+    return <>{children}</>
+  }
+
   if (!canAccessPath(location.pathname)) {
     if (
       location.pathname === '/dashboard' ||
@@ -28,15 +34,13 @@ export function ModuleGuard({ children }: { children: React.ReactNode }) {
     ) {
       return <Navigate to={home} replace />
     }
-    const mod = getModuleByPath(location.pathname)
     return (
       <div className="access-denied">
         <ShieldOff size={32} />
         <h1>Sin acceso a este módulo</h1>
         <p>
-          Tu rol no tiene asignada la página
-          {mod ? ` “${mod.label}”` : ''}. Pide al administrador que te habilite
-          el acceso.
+          Tu rol no tiene asignada la página “{mod.label}”. Pide al
+          administrador que te habilite el acceso en Accesos por rol.
         </p>
         <Link to={home} className="btn-primary-link">
           Ir a inicio

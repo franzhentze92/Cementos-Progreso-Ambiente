@@ -16,7 +16,14 @@ import {
   MapPinned,
   Radio,
   Recycle,
+  Scale,
+  ClipboardCheck,
+  Package,
+  Target,
   ShieldAlert,
+  Activity,
+  Brain,
+  FolderOpen,
   Sprout,
   Thermometer,
   Trash2,
@@ -329,6 +336,15 @@ export function Sidebar({
   const showDashboard = canAccessPath('/dashboard')
   const showMapa = canAccessPath('/mapa')
   const showMonitoreoEnVivo = canAccessPath('/monitoreo-en-vivo')
+  const showCumplimiento = canAccessPath('/cumplimiento')
+  const showCapa = canAccessPath('/capa')
+  const showMetas = canAccessPath('/metas')
+  const showUmbrales = canAccessPath('/umbrales')
+  const showIntensidad = canAccessPath('/intensidad')
+  const showCircularidad = canAccessPath('/circularidad')
+  const showExpedientes = canAccessPath('/expedientes')
+  const showAnalista = canAccessPath('/analista')
+  const showExportes = canAccessPath('/exportes')
   const showOperaciones = visibleOperaciones.length > 0
   const showEntrada = visibleEntrada.length > 0
 
@@ -422,6 +438,114 @@ export function Sidebar({
           >
             <Radio />
             <span className="nav-label">Monitoreo En Vivo</span>
+          </NavLink>
+        )}
+
+        {showCumplimiento && (
+          <NavLink
+            to="/cumplimiento"
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            title="Cumplimiento legal"
+            onClick={onNavigate}
+          >
+            <Scale />
+            <span className="nav-label">Cumplimiento</span>
+          </NavLink>
+        )}
+
+        {showCapa && (
+          <NavLink
+            to="/capa"
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            title="CAPA"
+            onClick={onNavigate}
+          >
+            <ClipboardCheck />
+            <span className="nav-label">CAPA</span>
+          </NavLink>
+        )}
+
+        {showMetas && (
+          <NavLink
+            to="/metas"
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            title="Metas y KPIs"
+            onClick={onNavigate}
+          >
+            <Target />
+            <span className="nav-label">Metas</span>
+          </NavLink>
+        )}
+
+        {showUmbrales && (
+          <NavLink
+            to="/umbrales"
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            title="Umbrales de monitoreo"
+            onClick={onNavigate}
+          >
+            <Gauge />
+            <span className="nav-label">Umbrales</span>
+          </NavLink>
+        )}
+
+        {showIntensidad && (
+          <NavLink
+            to="/intensidad"
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            title="Intensidad de carbono"
+            onClick={onNavigate}
+          >
+            <Activity />
+            <span className="nav-label">Intensidad</span>
+          </NavLink>
+        )}
+
+        {showCircularidad && (
+          <NavLink
+            to="/circularidad"
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            title="Circularidad"
+            onClick={onNavigate}
+          >
+            <Recycle />
+            <span className="nav-label">Circularidad</span>
+          </NavLink>
+        )}
+
+        {showExpedientes && (
+          <NavLink
+            to="/expedientes"
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            title="Expedientes ambientales"
+            onClick={onNavigate}
+          >
+            <FolderOpen />
+            <span className="nav-label">Expedientes</span>
+          </NavLink>
+        )}
+
+        {showAnalista && (
+          <NavLink
+            to="/analista"
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            title="Analista semanal"
+            onClick={onNavigate}
+          >
+            <Brain />
+            <span className="nav-label">Analista</span>
+          </NavLink>
+        )}
+
+        {showExportes && (
+          <NavLink
+            to="/exportes"
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            title="Exportes"
+            onClick={onNavigate}
+          >
+            <Package />
+            <span className="nav-label">Exportes</span>
           </NavLink>
         )}
 

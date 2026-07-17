@@ -13,7 +13,17 @@ import { BibliotecaPage } from './pages/BibliotecaPage'
 import { MapPage } from './pages/MapPage'
 import { LiveMonitoringPage } from './pages/LiveMonitoringPage'
 import { InspeccionCampoDetailPage } from './pages/InspeccionCampoDetailPage'
+import { CumplimientoPage } from './pages/CumplimientoPage'
+import { CapaPage } from './pages/CapaPage'
+import { MetasPage } from './pages/MetasPage'
+import { UmbralesPage } from './pages/UmbralesPage'
+import { IntensidadPage } from './pages/IntensidadPage'
+import { CircularidadPage } from './pages/CircularidadPage'
+import { ExpedientesPage } from './pages/ExpedientesPage'
+import { AnalistaPage } from './pages/AnalistaPage'
+import { ExportesPage } from './pages/ExportesPage'
 import { SmartHomeRedirect } from './components/SmartHomeRedirect'
+import { NotFoundPage } from './pages/NotFoundPage'
 
 function RedirectPlantaAliconLegacy() {
   const { moduleId = 'huella-de-carbono' } = useParams()
@@ -34,6 +44,15 @@ export default function App() {
                 path="/monitoreo-en-vivo"
                 element={<LiveMonitoringPage />}
               />
+              <Route path="/cumplimiento" element={<CumplimientoPage />} />
+              <Route path="/capa" element={<CapaPage />} />
+              <Route path="/metas" element={<MetasPage />} />
+              <Route path="/umbrales" element={<UmbralesPage />} />
+              <Route path="/intensidad" element={<IntensidadPage />} />
+              <Route path="/circularidad" element={<CircularidadPage />} />
+              <Route path="/expedientes" element={<ExpedientesPage />} />
+              <Route path="/analista" element={<AnalistaPage />} />
+              <Route path="/exportes" element={<ExportesPage />} />
               {/* Informe de inspección de campo (mismo módulo de inspección ambiental) */}
               <Route
                 path="/entrada-datos/:scope/inspeccion-ambiental/informe/:id"
@@ -128,6 +147,8 @@ export default function App() {
                   />
                 }
               />
+              {/* Dentro del layout: no redirigir en silencio al dashboard */}
+              <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Route>
           <Route path="/" element={<SmartHomeRedirect />} />

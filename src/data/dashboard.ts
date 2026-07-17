@@ -12,6 +12,14 @@ import type { AgroInspeccionReport } from './agroInspeccionesReport'
 import type { AgroMonitoreosReport } from './agroMonitoreosReport'
 import type { AgroNdaGeneralReport } from './agroNdaGeneralReport'
 import type { AgroLicenciasReport } from './agroLicenciasReport'
+import type { CumplimientoReport } from './cumplimientoReport'
+import type { CapaReport } from './capaReport'
+import type { MetasReport } from './metasReport'
+import type { UmbralesReport } from './umbralesReport'
+import type { IntensidadReport } from './intensidadReport'
+import type { CircularidadReport } from './circularidadReport'
+import type { ExpedientesReport } from './expedientesReport'
+import type { AnalistaKpis, AnalistaSignalLevel } from './analista'
 
 export type DashInsightLevel = 'Crítico' | 'Atención' | 'Positivo'
 
@@ -94,6 +102,16 @@ export type DashboardSummary = {
       byEstado: AgroLicenciasReport['byEstado']
       proximoVencer: number
     }
+    obligacionesVencidas: number
+    obligacionesPorVencer: number
+    capaAbiertas: number
+    capaVencidas: number
+    metasEnRiesgo: number
+    umbralesExcedencias: number
+    intensidadKgT: number | null
+    circularidadPct: number | null
+    expedientesVigentes: number
+    analistaCriticos: number
   }
   sites: {
     operative: number
@@ -159,6 +177,17 @@ type BuildInput = {
   monitoreos: AgroMonitoreosReport | null
   nda: AgroNdaGeneralReport | null
   licencias: AgroLicenciasReport | null
+  cumplimiento: CumplimientoReport | null
+  capa: CapaReport | null
+  metas: MetasReport | null
+  umbrales: UmbralesReport | null
+  intensidad: IntensidadReport | null
+  circularidad: CircularidadReport | null
+  expedientes: ExpedientesReport | null
+  analista: {
+    kpis: AnalistaKpis
+    top: { level: AnalistaSignalLevel; title: string; text: string } | null
+  } | null
   failed: string[]
 }
 
@@ -359,6 +388,99 @@ export function buildDashboardSummary(input: BuildInput): DashboardSummary {
     }
   }
 
+  if (input.cumplimiento) {
+    for (const ins of input.cumplimiento.insights.slice(0, 2)) {
+      insights.push({
+        ...ins,
+        id: `cum-${ins.id}`,
+        source: 'Cumplimiento',
+        href: '/cumplimiento',
+      })
+    }
+  }
+
+  if (input.capa) {
+    for (const ins of input.capa.insights.slice(0, 2)) {
+      insights.push({
+        ...ins,
+        id: `capa-${ins.id}`,
+        source: 'CAPA',
+        href: '/capa',
+      })
+    }
+  }
+
+  if (input.metas) {
+    for (const ins of input.metas.insights.slice(0, 2)) {
+      insights.push({
+        ...ins,
+        id: `meta-${ins.id}`,
+        source: 'Metas',
+        href: '/metas',
+      })
+    }
+  }
+
+  if (input.umbrales) {
+    for (const ins of input.umbrales.insights.slice(0, 2)) {
+      insights.push({
+        ...ins,
+        id: `umb-${ins.id}`,
+        source: 'Umbrales',
+        href: '/umbrales',
+      })
+    }
+  }
+
+  if (input.intensidad) {
+    for (const ins of input.intensidad.insights.slice(0, 1)) {
+      insights.push({
+        ...ins,
+        id: `int-${ins.id}`,
+        source: 'Intensidad',
+        href: '/intensidad',
+      })
+    }
+  }
+
+  if (input.circularidad) {
+    for (const ins of input.circularidad.insights.slice(0, 1)) {
+      insights.push({
+        ...ins,
+        id: `cir-${ins.id}`,
+        source: 'Circularidad',
+        href: '/circularidad',
+      })
+    }
+  }
+
+  if (input.expedientes) {
+    for (const ins of input.expedientes.insights.slice(0, 1)) {
+      insights.push({
+        ...ins,
+        id: `exp-${ins.id}`,
+        source: 'Expedientes',
+        href: '/expedientes',
+      })
+    }
+  }
+
+  if (input.analista?.top) {
+    const top = input.analista.top
+    const level: DashInsightLevel =
+      top.level === 'Crítico' || top.level === 'Atención' || top.level === 'Positivo'
+        ? top.level
+        : 'Atención'
+    insights.push({
+      id: 'analista-top',
+      level,
+      title: top.title,
+      text: top.text,
+      source: 'Analista',
+      href: '/analista',
+    })
+  }
+
   const levelRank: Record<DashInsightLevel, number> = {
     Crítico: 0,
     Atención: 1,
@@ -524,6 +646,108 @@ export function buildDashboardSummary(input: BuildInput): DashboardSummary {
     })
   }
 
+  if (input.cumplimiento) {
+    extraKpis.push({
+      id: 'obl-venc',
+      label: 'Obligaciones vencidas',
+      value: fmt(input.cumplimiento.meta.vencidos),
+      unit: '',
+      hint: `${fmt(input.cumplimiento.meta.porVencer)} por vencer`,
+      tone:
+        input.cumplimiento.meta.vencidos > 0 ||
+        input.cumplimiento.meta.porVencer > 0
+          ? 'warn'
+          : 'default',
+      href: '/cumplimiento',
+    })
+  }
+
+  if (input.capa) {
+    extraKpis.push({
+      id: 'capa-open',
+      label: 'CAPA abiertas',
+      value: fmt(input.capa.meta.abiertas),
+      unit: '',
+      hint:
+        input.capa.meta.vencidas > 0
+          ? `${fmt(input.capa.meta.vencidas)} compromiso vencido`
+          : `${fmt(input.capa.meta.pctCierre, 1)}% cierre`,
+      tone:
+        input.capa.meta.vencidas > 0 || input.capa.meta.abiertas > 0
+          ? 'warn'
+          : 'default',
+      href: '/capa',
+    })
+  }
+
+  if (input.metas) {
+    const riesgo = input.metas.meta.enRiesgo + input.metas.meta.noCumplidas
+    extraKpis.push({
+      id: 'metas-risk',
+      label: 'Metas en riesgo',
+      value: fmt(riesgo),
+      unit: '',
+      hint:
+        input.metas.meta.avgProgress != null
+          ? `avance prom. ${fmt(input.metas.meta.avgProgress, 1)}%`
+          : `${fmt(input.metas.meta.total)} metas`,
+      tone: riesgo > 0 ? 'warn' : 'default',
+      href: '/metas',
+    })
+  }
+
+  if (input.umbrales) {
+    extraKpis.push({
+      id: 'umb-excede',
+      label: 'Excedencias monitoreo',
+      value: fmt(input.umbrales.meta.excede),
+      unit: '',
+      hint:
+        input.umbrales.meta.cumplePct != null
+          ? `${fmt(input.umbrales.meta.cumplePct, 1)}% cumple auto`
+          : `${fmt(input.umbrales.meta.activos)} umbrales activos`,
+      tone: input.umbrales.meta.excede > 0 ? 'warn' : 'default',
+      href: '/umbrales',
+    })
+  }
+
+  if (input.intensidad?.baseline.intensidadKgT != null) {
+    extraKpis.push({
+      id: 'int-kg',
+      label: 'Intensidad CO₂e',
+      value: fmt(input.intensidad.baseline.intensidadKgT, 1),
+      unit: 'kg/t',
+      hint: `${input.intensidad.scenarios.length} escenarios`,
+      tone: 'dark',
+      href: '/intensidad',
+    })
+  }
+
+  if (input.circularidad?.meta.tasaValorizacionPct != null) {
+    extraKpis.push({
+      id: 'cir-pct',
+      label: 'Valorización',
+      value: fmt(input.circularidad.meta.tasaValorizacionPct, 1),
+      unit: '%',
+      hint: `${fmt(input.circularidad.meta.totalFlujos)} flujos`,
+      tone:
+        input.circularidad.meta.tasaValorizacionPct < 50 ? 'warn' : 'default',
+      href: '/circularidad',
+    })
+  }
+
+  if (input.analista && input.analista.kpis.criticos > 0) {
+    extraKpis.push({
+      id: 'analista-crit',
+      label: 'Señales críticas',
+      value: fmt(input.analista.kpis.criticos),
+      unit: '',
+      hint: 'Analista semanal',
+      tone: 'warn',
+      href: '/analista',
+    })
+  }
+
   if (inspAvg != null) {
     extraKpis.push({
       id: 'insp',
@@ -551,6 +775,14 @@ export function buildDashboardSummary(input: BuildInput): DashboardSummary {
     input.monitoreos,
     input.nda,
     input.licencias,
+    input.cumplimiento,
+    input.capa,
+    input.metas,
+    input.umbrales,
+    input.intensidad,
+    input.circularidad,
+    input.expedientes,
+    input.analista,
   ].filter(Boolean).length
 
   return {
@@ -580,9 +812,20 @@ export function buildDashboardSummary(input: BuildInput): DashboardSummary {
         byEstado: lic?.byEstado ?? [],
         proximoVencer: lic?.proximoVencer.length ?? 0,
       },
+      obligacionesVencidas: input.cumplimiento?.meta.vencidos ?? 0,
+      obligacionesPorVencer: input.cumplimiento?.meta.porVencer ?? 0,
+      capaAbiertas: input.capa?.meta.abiertas ?? 0,
+      capaVencidas: input.capa?.meta.vencidas ?? 0,
+      metasEnRiesgo:
+        (input.metas?.meta.enRiesgo ?? 0) + (input.metas?.meta.noCumplidas ?? 0),
+      umbralesExcedencias: input.umbrales?.meta.excede ?? 0,
+      intensidadKgT: input.intensidad?.baseline.intensidadKgT ?? null,
+      circularidadPct: input.circularidad?.meta.tasaValorizacionPct ?? null,
+      expedientesVigentes: input.expedientes?.meta.vigentes ?? 0,
+      analistaCriticos: input.analista?.kpis.criticos ?? 0,
     },
     sites,
-    insights: insights.slice(0, 6),
+    insights: insights.slice(0, 8),
     modulesLoaded,
     modulesFailed: input.failed,
   }

@@ -6387,3 +6387,559 @@ img {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* -- Fase 1: Cumplimiento / CAPA / Exportes ------------------------------- */
+.fase1-page .hc-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.fase1-page .hc-header-actions .btn-primary,
+.fase1-page .hc-header-actions .btn-secondary-link,
+.fase1-filters .btn-primary,
+.fase1-filters .btn-secondary-link {
+  cursor: pointer;
+  font: inherit;
+  text-decoration: none;
+}
+
+.fase1-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.fase1-section-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--progreso-green-dark, #047935);
+}
+
+.fase1-section-sub {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--progreso-gray, #5e5f61);
+}
+
+.fase1-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.fase1-filters select {
+  min-width: 150px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--progreso-border, #e2e5e8);
+  background: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.fase1-calendar {
+  display: grid;
+  gap: 8px;
+}
+
+.fase1-cal-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--progreso-border, #e2e5e8);
+  background: #fff;
+}
+
+.fase1-cal-item strong {
+  display: block;
+  color: var(--progreso-green-dark, #047935);
+}
+
+.fase1-cal-item span {
+  color: var(--progreso-gray, #5e5f61);
+  font-size: 0.85rem;
+}
+
+.fase1-cal-meta {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.fase1-cal-item.risk-vencido,
+.fase1-cal-item.risk-critico {
+  border-color: #f0c2a8;
+  background: #fff8f4;
+}
+
+.fase1-cal-item.risk-atencion {
+  border-color: #cfe0f5;
+  background: #f5f9ff;
+}
+
+/* Modal alta / edición */
+.fase1-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(18, 32, 22, 0.48);
+  backdrop-filter: blur(2px);
+}
+
+.fase1-modal {
+  width: min(760px, 100%);
+  max-height: min(90vh, 920px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(4, 40, 20, 0.28);
+  padding: 18px 20px 20px;
+}
+
+.fase1-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--progreso-border, #e2e5e8);
+}
+
+.fase1-modal-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--progreso-green-dark, #047935);
+}
+
+.fase1-modal-close {
+  border: none;
+  background: #eef3ee;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #355035;
+}
+
+.fase1-modal-close:hover {
+  background: #dde8dd;
+}
+
+.fase1-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+.fase1-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--progreso-gray, #5e5f61);
+}
+
+.fase1-form input,
+.fase1-form select,
+.fase1-form textarea {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--progreso-border, #e2e5e8);
+  font: inherit;
+  color: #1a2a1a;
+  background: #fff;
+}
+
+.fase1-span-2 {
+  grid-column: 1 / -1;
+}
+
+.fase1-form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+/* Tabla Fase 1 */
+.fase1-table-section {
+  background: #fff;
+  border: 1px solid var(--progreso-border, #e2e5e8);
+  border-radius: 14px;
+  padding: 16px 16px 8px;
+}
+
+.fase1-table-wrap {
+  margin-top: 4px;
+  border-radius: 10px;
+  border: 1px solid #e8ece8;
+}
+
+.fase1-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.88rem;
+  table-layout: fixed;
+}
+
+.fase1-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--progreso-gray, #5e5f61);
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--progreso-border, #e2e5e8);
+  background: #f4f8f4;
+  white-space: nowrap;
+}
+
+.fase1-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eef2ee;
+  color: var(--progreso-dark, #1a2a1a);
+  vertical-align: top;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.fase1-table tbody tr:hover {
+  background: rgba(90, 182, 75, 0.05);
+}
+
+.fase1-table .fase1-td-code {
+  width: 9%;
+}
+
+.fase1-table .fase1-td-main {
+  width: 28%;
+}
+
+.fase1-table .fase1-td-loc {
+  width: 14%;
+}
+
+.fase1-table .fase1-td-date {
+  width: 12%;
+}
+
+.fase1-th-actions,
+.fase1-row-actions {
+  width: 88px;
+  text-align: right;
+}
+
+.fase1-td-code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--progreso-green-dark, #047935);
+  background: #eef6ef;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+
+.fase1-td-main,
+.fase1-td-loc,
+.fase1-td-date,
+.fase1-td-code {
+  display: table-cell;
+}
+
+.fase1-td-main strong,
+.fase1-td-loc > span:first-child,
+.fase1-td-date > span:first-child {
+  display: block;
+  line-height: 1.35;
+}
+
+.fase1-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: var(--progreso-gray, #5e5f61);
+  line-height: 1.3;
+}
+
+.fase1-meta.is-late {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.fase1-chip {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #f0f4f0;
+  font-size: 0.78rem;
+  color: #355035;
+  white-space: nowrap;
+}
+
+.fase1-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.fase1-pill--ok {
+  background: #e7f6ea;
+  color: #047935;
+}
+
+.fase1-pill--warn {
+  background: #fff4e5;
+  color: #9a6700;
+}
+
+.fase1-pill--danger {
+  background: #fdecea;
+  color: #b42318;
+}
+
+.fase1-pill--info {
+  background: #e8f1fb;
+  color: #1d4f91;
+}
+
+.fase1-pill--muted {
+  background: #eef0f0;
+  color: #5e5f61;
+}
+
+.fase1-row.risk-vencido,
+.fase1-row.risk-vencida,
+.fase1-row.risk-critico,
+.fase1-row.risk-critica {
+  box-shadow: inset 3px 0 0 #c45c26;
+}
+
+.fase1-row-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.fase1-row-actions button {
+  border: none;
+  background: #eef5ef;
+  color: var(--progreso-green-dark, #047935);
+  border-radius: 6px;
+  padding: 7px;
+  cursor: pointer;
+}
+
+.fase1-row-actions button:hover {
+  background: #dcecdd;
+}
+
+.fase1-empty {
+  text-align: center;
+  color: var(--progreso-gray, #5e5f61);
+  padding: 28px 18px !important;
+}
+
+.fase1-inline-link {
+  border: none;
+  background: none;
+  color: var(--progreso-green-dark, #047935);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.fase1-export-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.fase1-export-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--progreso-border, #e2e5e8);
+  border-top-width: 4px;
+  background: #fff;
+}
+
+.fase1-export-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: #eef6ef;
+  color: var(--progreso-green-dark, #047935);
+}
+
+.fase1-export-body h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  color: var(--progreso-green-dark, #047935);
+}
+
+.fase1-export-body p {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--progreso-gray, #5e5f61);
+}
+
+.fase1-export-audience {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f0f4f0;
+  color: #3d4d3d;
+}
+
+.fase1-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fase1-help-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: var(--progreso-gray, #5e5f61);
+}
+
+@media (max-width: 980px) {
+  .fase1-table {
+    table-layout: auto;
+  }
+}
+
+@media (max-width: 800px) {
+  .fase1-form {
+    grid-template-columns: 1fr;
+  }
+
+  .fase1-cal-item {
+    flex-direction: column;
+  }
+
+  .fase1-cal-meta {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .fase1-section-head {
+    flex-direction: column;
+  }
+
+  .fase1-filters {
+    justify-content: flex-start;
+  }
+}
+/* Fase 2 — mapa operativo vivo */
+.map-mode-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  background: #eef1ef;
+}
+
+.map-mode-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: #5e5f61;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.map-mode-toggle button.is-active {
+  background: #fff;
+  color: #047935;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.map-ops-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+  padding-bottom: 4px;
+}
+
+.map-ops-links a {
+  font-size: 13px;
+  font-weight: 600;
+  color: #047935;
+  text-decoration: none;
+}
+
+.map-ops-links a:hover {
+  text-decoration: underline;
+}
+
+.map-overlay-loading {
+  position: absolute;
+  z-index: 500;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  color: #334155;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.map-frame {
+  position: relative;
+}
+
+.map-ops-signals {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.map-ops-detail {
+  font-size: 13px;
+  line-height: 1.45;
+}

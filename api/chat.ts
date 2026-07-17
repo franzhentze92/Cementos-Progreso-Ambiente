@@ -1,7 +1,13 @@
-/// <reference types="node" />
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 type ChatTurn = { role: 'user' | 'assistant' | 'system'; content: string }
+
+function readEnv(name: string): string | undefined {
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+    .process?.env
+  const value = env?.[name]
+  return typeof value === 'string' && value.trim() ? value : undefined
+}
 
 const SYSTEM_PROMPT = `Eres el Asistente Ambiental / copiloto de Cementos Progreso (CEMPRO).
 Tu mundo es la empresa: Planta Alicón, Agroprogreso (fincas) y los datos/documentos de esta plataforma.
@@ -147,7 +153,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).json({ error: 'Method not allowed' })
     }
 
-    const apiKey = process.env.OPENAI_API_KEY
+    const apiKey = readEnv('OPENAI_API_KEY')
     if (!apiKey) {
       return res.status(503).json({
         error: 'OPENAI_API_KEY no configurada en el servidor',

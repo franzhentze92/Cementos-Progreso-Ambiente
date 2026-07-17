@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 type ChatTurn = { role: 'user' | 'assistant' | 'system'; content: string }

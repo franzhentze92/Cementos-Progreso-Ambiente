@@ -184,6 +184,48 @@ function slugPart(value: string): string {
     .slice(0, 48) || 'general'
 }
 
+/**
+ * Convierte a JPEG redimensionado antes de subir.
+ * Evita HEIC/archivos grandes que suelen fallar con HTTP 520 vía CDN.
+ */
+async function prepareFotoUpload(file: File): Promise<File> {
+  const maxSide = 1600
+  const quality = 0.82
+
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
+    const w = Math.max(1, Math.round(bitmap.width * scale))
+    const h = Math.max(1, Math.round(bitmap.height * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      bitmap.close()
+      return file
+    }
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, w, h)
+    ctx.drawImage(bitmap, 0, 0, w, h)
+    bitmap.close()
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), 'image/jpeg', quality),
+    )
+    if (!blob || blob.size <= 0) return file
+
+    const base = file.name.replace(/\.[^.]+$/, '') || 'evidencia'
+    return new File([blob], `${base}.jpg`, {
+      type: 'image/jpeg',
+      lastModified: Date.now(),
+    })
+  } catch {
+    // Si el navegador no puede decodificar (p. ej. HEIC puro), intenta el original
+    return file
+  }
+}
+
 /** Sube evidencia al bucket `inspeccion-fotos` y devuelve URL pública. */
 export async function uploadInspeccionFoto(
   file: File,
@@ -192,24 +234,31 @@ export async function uploadInspeccionFoto(
   if (!file || file.size <= 0) {
     throw new Error('El archivo de foto está vacío')
   }
-  if (file.size > 10 * 1024 * 1024) {
-    throw new Error('La foto supera 10 MB')
+  if (file.size > 12 * 1024 * 1024) {
+    throw new Error('La foto supera 12 MB')
   }
 
-  const mime = normalizeMime(file)
+  const prepared = await prepareFotoUpload(file)
+  const mime = normalizeMime(prepared)
   const planta = slugPart(opts?.plantaSede ?? 'general')
   const inspeccion = slugPart(opts?.inspeccionId ?? 'draft')
   const ext = extFromMime(mime)
   const path = `${planta}/${inspeccion}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`
 
-  const { error } = await supabase.storage.from(FOTO_BUCKET).upload(path, file, {
+  const { error } = await supabase.storage.from(FOTO_BUCKET).upload(path, prepared, {
     cacheControl: '3600',
     upsert: false,
     contentType: mime,
   })
 
   if (error) {
-    throw new Error(`No se pudo subir la foto: ${error.message}`)
+    const msg = error.message || 'Error desconocido'
+    if (/520|521|522|524|cloudflare|fetch failed|network/i.test(msg)) {
+      throw new Error(
+        'No se pudo subir la foto (error de red/CDN). Prueba otra vez con una foto más liviana o usa Galería.',
+      )
+    }
+    throw new Error(`No se pudo subir la foto: ${msg}`)
   }
 
   const { data } = supabase.storage.from(FOTO_BUCKET).getPublicUrl(path)

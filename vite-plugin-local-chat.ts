@@ -121,7 +121,7 @@ export function localChatApiPlugin(apiKey: string | undefined): Plugin {
           try {
             const body = await readJsonBody<ExtractBody>(req)
             const { extractMonitoreoFromText } = await import(
-              './api/extractMonitoreoLogic'
+              './server/extractMonitoreoLogic'
             )
             const result = await extractMonitoreoFromText({
               text: body.text ?? '',

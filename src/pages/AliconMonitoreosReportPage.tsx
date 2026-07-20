@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Factory,
+  FlaskConical,
   Loader2,
   Thermometer,
 } from 'lucide-react'
@@ -54,13 +55,14 @@ const tooltipStyle = {
 }
 
 export function AliconMonitoreosReportPage() {
-  const [report, setReport] = useState<AliconMonitoreoReport | null>(null)
+  const [scheduleReport, setScheduleReport] =
+    useState<AliconMonitoreoReport | null>(null)
   const [labVisual, setLabVisual] = useState<LabMonitoreosVisual | null>(null)
   const [years, setYears] = useState<number[]>([])
   const [year, setYear] = useState<number | 'all'>('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [rawCount, setRawCount] = useState(0)
+  const [showSchedule, setShowSchedule] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -68,21 +70,26 @@ export function AliconMonitoreosReportPage() {
       setLoading(true)
       setError(null)
       try {
-        const [records, labRows] = await Promise.all([
-          loadAliconMonitoreos(),
-          loadLabMonitoreosByUnidad('Alicón').catch(() => []),
+        const [scheduleRows, labRows] = await Promise.all([
+          loadAliconMonitoreos().catch(() => []),
+          loadLabMonitoreosByUnidad('Alicón'),
         ])
         if (cancelled) return
-        setRawCount(records.length)
-        const built = buildAliconMonitoreoReport(records, year)
+        const built = buildAliconMonitoreoReport(scheduleRows, year)
         const labBuilt = buildLabMonitoreosVisual(labRows, year)
         const yearSet = new Set([
           ...built.meta.years,
           ...labBuilt.meta.years,
         ])
         setYears([...yearSet].sort((a, b) => b - a))
-        setReport(built)
+        setScheduleReport(built)
         setLabVisual(labBuilt)
+        // Solo auto-abrir cronograma si no hay lab (evitar confundirlo con datos reales)
+        if (labBuilt.meta.totalRows === 0 && built.meta.totalRows > 0) {
+          setShowSchedule(true)
+        } else if (labBuilt.meta.totalRows > 0) {
+          setShowSchedule(false)
+        }
       } catch (err) {
         if (cancelled) return
         setError(
@@ -99,7 +106,10 @@ export function AliconMonitoreosReportPage() {
     }
   }, [year])
 
-  const chartMonthly = useMemo(() => report?.monthlyCount ?? [], [report])
+  const chartMonthly = useMemo(
+    () => scheduleReport?.monthlyCount ?? [],
+    [scheduleReport],
+  )
 
   if (loading) {
     return (
@@ -110,13 +120,13 @@ export function AliconMonitoreosReportPage() {
     )
   }
 
-  if (error || !report) {
+  if (error) {
     return (
       <div className="carbon-page">
         <div className="hc-banner hc-banner-error" role="alert">
-          <strong>Error:</strong> {error ?? 'Sin datos'}
+          <strong>Error:</strong> {error}
           <Link
-            to="/entrada-datos/planta-alicon/monitoreo-ambiental"
+            to="/entrada-datos/monitoreo-ambiental?proyecto=planta-alicon"
             className="btn-secondary-link"
           >
             Ir a captura →
@@ -126,7 +136,8 @@ export function AliconMonitoreosReportPage() {
     )
   }
 
-  const { meta, kpis, insights, totals } = report
+  const labCount = labVisual?.meta.totalRows ?? 0
+  const scheduleCount = scheduleReport?.meta.totalRows ?? 0
 
   return (
     <div className="carbon-page alicon-monitoreos-report">
@@ -138,24 +149,23 @@ export function AliconMonitoreosReportPage() {
           </p>
           <h1>Monitoreos de cumplimiento / control</h1>
           <p>
-            Resultados de laboratorio (agua, aire, ruido) y cronograma de
-            ejecuciones · prioriza los parámetros medidos de los informes PDF
+            Resultados reales de laboratorio (agua potable, material
+            particulado, ruido). El cronograma de ejecuciones es solo
+            programación operativa y se muestra aparte.
           </p>
         </div>
         <div className="carbon-header-meta">
           <div>
             <span>Parámetros lab</span>
-            <strong>{labVisual?.meta.totalRows ?? 0}</strong>
+            <strong>{labCount}</strong>
           </div>
           <div>
             <span>Puntos lab</span>
             <strong>{labVisual?.meta.puntos ?? 0}</strong>
           </div>
           <div>
-            <span>Cronograma</span>
-            <strong>
-              {meta.ejecutados}/{meta.totalRows}
-            </strong>
+            <span>Medios</span>
+            <strong>{labVisual?.meta.medios ?? 0}</strong>
           </div>
           <div>
             <span>Periodo</span>
@@ -185,257 +195,324 @@ export function AliconMonitoreosReportPage() {
 
       <div className="lab-import-cta content-panel">
         <div>
-          <strong>Cargar resultados de laboratorio</strong>
+          <strong>
+            <FlaskConical
+              size={16}
+              style={{ marginRight: 6, verticalAlign: -3 }}
+            />
+            Resultados de laboratorio
+          </strong>
           <p>
-            Sube los PDFs de agua potable, material particulado y ruido. Los
-            parámetros aparecen en esta página y en la tabla de entrada de
-            datos.
+            Sube los PDFs de agua, aire y ruido. Aquí se grafican y detallan
+            los parámetros medidos (pH, PM2.5, LAeq, etc.), no el cronograma
+            ARO/ARE.
           </p>
         </div>
         <Link
           to="/entrada-datos/monitoreo-ambiental?proyecto=planta-alicon"
           className="btn-primary"
         >
-          Ir a captura →
+          Cargar PDF / ver entrada →
         </Link>
       </div>
 
-      {labVisual ? (
-        <LabMonitoreosResultsSection
-          visual={labVisual}
-          entryHref="/entrada-datos/monitoreo-ambiental?proyecto=planta-alicon"
-          title="Resultados de laboratorio"
-          subtitle="Agua potable · material particulado · ruido"
-        />
-      ) : null}
-
-      <section className="lab-results-report-split">
-        <h2 className="lab-results-report-split-title">
-          Cronograma · Ejecuciones Moni
-        </h2>
-        <p className="lab-results-report-split-sub">
-          Programación y estado de monitoreos (captura manual por mes)
-        </p>
-      </section>
-
-      <div className="carbon-kpi-grid">
-        {kpis.map((kpi) => (
-          <article key={kpi.id} className="carbon-kpi">
-            <span>{kpi.label}</span>
-            <strong>{kpi.value}</strong>
-            <p>{kpi.hint}</p>
-          </article>
-        ))}
-      </div>
-
-      {insights.length > 0 ? (
-        <div className="carbon-alerts">
-          {insights.map((alert) => (
-            <article
-              key={alert.id}
-              className={`carbon-alert ${ALERT_CLASS[alert.level]}`}
-            >
-              {alert.level === 'Positivo' ? (
-                <CheckCircle2 size={18} />
-              ) : (
-                <AlertTriangle size={18} />
-              )}
-              <div>
-                <strong>
-                  {alert.level}: {alert.title}
-                </strong>
-                <p>{alert.text}</p>
-              </div>
-            </article>
-          ))}
+      {labCount === 0 ? (
+        <div className="hc-banner hc-banner-warn" role="status">
+          <AlertTriangle size={18} />
+          <span>
+            Aún no hay resultados de laboratorio guardados para Alicón. Sube
+            un PDF en Entrada de datos y pulsa «Guardar todo el informe». Lo
+            que ves abajo como ARO / ARE / MP es solo el{' '}
+            <strong>cronograma de ejecuciones</strong>, no mediciones.
+          </span>
         </div>
       ) : null}
 
-      <div className="carbon-main-grid">
-        <section className="dash-panel">
-          <div className="dash-panel-head">
+      {labVisual && labCount > 0 ? (
+        <LabMonitoreosResultsSection
+          visual={labVisual}
+          entryHref="/entrada-datos/monitoreo-ambiental?proyecto=planta-alicon"
+          title="Resultados reales de laboratorio"
+          subtitle="Parámetros de informes PDF · agua potable · material particulado · ruido"
+        />
+      ) : null}
+
+      <section className="alicon-schedule-report-section">
+        <div className="alicon-schedule-report-head">
+          <div>
             <h2>
               <Thermometer
                 size={18}
                 style={{ marginRight: 8, verticalAlign: -3 }}
               />
-              Monitoreos por mes
+              Cronograma de ejecuciones (opcional)
             </h2>
-            <p>Según fecha de inicio · Ejecutado / Programado</p>
-          </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={chartMonthly}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e8ece8" />
-              <XAxis dataKey="short" tick={{ fontSize: 12 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend />
-              <Bar
-                dataKey="ejecutados"
-                name="Ejecutados"
-                stackId="a"
-                fill="#047935"
-              />
-              <Bar
-                dataKey="programados"
-                name="Programados"
-                stackId="a"
-                fill="#c9a227"
-                radius={[6, 6, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </section>
-
-        <section className="dash-panel">
-          <div className="dash-panel-head">
-            <h2>Tipo de monitoreo</h2>
-            <p>Interno vs externo</p>
-          </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie
-                data={report.tipoShare}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                innerRadius={48}
-                outerRadius={78}
-                paddingAngle={2}
-              >
-                {report.tipoShare.map((s) => (
-                  <Cell
-                    key={s.name}
-                    fill={TIPO_COLORS[s.name] ?? '#047935'}
-                  />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </section>
-      </div>
-
-      <div className="carbon-main-grid">
-        <section className="dash-panel">
-          <div className="dash-panel-head">
-            <h2>Por sede</h2>
-            <p>Cantidad de ejecuciones</p>
-          </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={report.sedeRanking}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e8ece8" />
-              <XAxis dataKey="sede" tick={{ fontSize: 11 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="count" name="Monitoreos" radius={[6, 6, 0, 0]}>
-                {report.sedeRanking.map((s, i) => (
-                  <Cell
-                    key={s.sede}
-                    fill={SEDE_COLORS[i % SEDE_COLORS.length]}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </section>
-
-        <section className="dash-panel">
-          <div className="dash-panel-head">
-            <h2>Parámetros</h2>
-            <p>Distribución por parámetro medido</p>
-          </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={report.parametroShare} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#e8ece8" />
-              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={120}
-                tick={{ fontSize: 11 }}
-              />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="value" name="Ejecuciones" radius={[0, 6, 6, 0]}>
-                {report.parametroShare.map((s, i) => (
-                  <Cell
-                    key={s.name}
-                    fill={PARAM_COLORS[i % PARAM_COLORS.length]}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </section>
-      </div>
-
-      <section className="dash-panel">
-        <div className="dash-panel-head row">
-          <div>
-            <h2>Detalle de monitoreos</h2>
             <p>
-              {report.detailRows.length} filas ({rawCount} totales)
+              Programación operativa (Interno/Externo, ARO, ARE, MP).{' '}
+              <strong>No son resultados de laboratorio</strong> ni sustituyen
+              los parámetros medidos arriba.
             </p>
           </div>
-          <Link
-            to="/entrada-datos/planta-alicon/monitoreo-ambiental"
+          <button
+            type="button"
             className="btn-secondary-link"
+            onClick={() => setShowSchedule((v) => !v)}
           >
-            Ir a captura →
-          </Link>
+            {showSchedule
+              ? 'Ocultar cronograma'
+              : `Mostrar cronograma (${scheduleCount})`}
+          </button>
         </div>
-        <div className="carbon-table-wrap agro-detail-wrap">
-          <table className="carbon-table">
-            <thead>
-              <tr>
-                <th>Inicio</th>
-                <th>Fin</th>
-                <th>Mes</th>
-                <th>Sede</th>
-                <th>Tipo</th>
-                <th>Parámetro</th>
-                <th>Puntos</th>
-                <th>Estado</th>
-                <th>Referencia</th>
-                <th>Comentarios</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.detailRows.length === 0 ? (
-                <tr>
-                  <td colSpan={10}>Sin monitoreos en el periodo.</td>
-                </tr>
-              ) : (
-                report.detailRows.map((row, i) => (
-                  <tr key={`${row.fechaInicio}-${row.sede}-${row.parametro}-${i}`}>
-                    <td>{row.fechaInicio}</td>
-                    <td>{row.fechaFin}</td>
-                    <td>{row.mes}</td>
-                    <td>{row.sede}</td>
-                    <td>{row.tipo}</td>
-                    <td>{row.parametro}</td>
-                    <td>{formatNum(row.puntos, 0)}</td>
-                    <td>{row.estado}</td>
-                    <td>{row.referencia}</td>
-                    <td>{row.comentarios}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+
+        {showSchedule && scheduleReport ? (
+          <>
+            <div className="hc-banner hc-banner-warn" role="note">
+              <AlertTriangle size={18} />
+              <span>
+                Esta sección es el plan/estado de campañas (Ejecuciones Moni).
+                Para cumplimiento por analito (coliformes, PM10, LAeq…) usa
+                «Resultados reales de laboratorio».
+              </span>
+            </div>
+
+            <div className="carbon-kpi-grid">
+              {scheduleReport.kpis.map((kpi) => (
+                <article key={kpi.id} className="carbon-kpi">
+                  <span>{kpi.label}</span>
+                  <strong>{kpi.value}</strong>
+                  <p>{kpi.hint}</p>
+                </article>
+              ))}
+            </div>
+
+            {scheduleReport.insights.length > 0 ? (
+              <div className="carbon-alerts">
+                {scheduleReport.insights.map((alert) => (
+                  <article
+                    key={alert.id}
+                    className={`carbon-alert ${ALERT_CLASS[alert.level]}`}
+                  >
+                    {alert.level === 'Positivo' ? (
+                      <CheckCircle2 size={18} />
+                    ) : (
+                      <AlertTriangle size={18} />
+                    )}
+                    <div>
+                      <strong>
+                        {alert.level}: {alert.title}
+                      </strong>
+                      <p>{alert.text}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="carbon-main-grid">
+              <section className="dash-panel">
+                <div className="dash-panel-head">
+                  <h2>Ejecuciones por mes</h2>
+                  <p>Según fecha de inicio · Ejecutado / Programado</p>
+                </div>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={chartMonthly}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e8ece8" />
+                    <XAxis dataKey="short" tick={{ fontSize: 12 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Legend />
+                    <Bar
+                      dataKey="ejecutados"
+                      name="Ejecutados"
+                      stackId="a"
+                      fill="#047935"
+                    />
+                    <Bar
+                      dataKey="programados"
+                      name="Programados"
+                      stackId="a"
+                      fill="#c9a227"
+                      radius={[6, 6, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </section>
+
+              <section className="dash-panel">
+                <div className="dash-panel-head">
+                  <h2>Tipo (cronograma)</h2>
+                  <p>Interno vs externo</p>
+                </div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={scheduleReport.tipoShare}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={48}
+                      outerRadius={78}
+                      paddingAngle={2}
+                    >
+                      {scheduleReport.tipoShare.map((s) => (
+                        <Cell
+                          key={s.name}
+                          fill={TIPO_COLORS[s.name] ?? '#047935'}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </section>
+            </div>
+
+            <div className="carbon-main-grid">
+              <section className="dash-panel">
+                <div className="dash-panel-head">
+                  <h2>Por sede (cronograma)</h2>
+                  <p>Cantidad de ejecuciones programadas/hechas</p>
+                </div>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={scheduleReport.sedeRanking}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e8ece8" />
+                    <XAxis dataKey="sede" tick={{ fontSize: 11 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Bar
+                      dataKey="count"
+                      name="Ejecuciones"
+                      radius={[6, 6, 0, 0]}
+                    >
+                      {scheduleReport.sedeRanking.map((s, i) => (
+                        <Cell
+                          key={s.sede}
+                          fill={SEDE_COLORS[i % SEDE_COLORS.length]}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </section>
+
+              <section className="dash-panel">
+                <div className="dash-panel-head">
+                  <h2>Categorías del cronograma</h2>
+                  <p>ARO / ARE / MP (no son analitos de lab)</p>
+                </div>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart
+                    data={scheduleReport.parametroShare}
+                    layout="vertical"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e8ece8" />
+                    <XAxis
+                      type="number"
+                      allowDecimals={false}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={120}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Bar
+                      dataKey="value"
+                      name="Ejecuciones"
+                      radius={[0, 6, 6, 0]}
+                    >
+                      {scheduleReport.parametroShare.map((s, i) => (
+                        <Cell
+                          key={s.name}
+                          fill={PARAM_COLORS[i % PARAM_COLORS.length]}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </section>
+            </div>
+
+            <section className="dash-panel">
+              <div className="dash-panel-head row">
+                <div>
+                  <h2>Detalle del cronograma</h2>
+                  <p>
+                    {scheduleReport.detailRows.length} filas · Ejecuciones Moni
+                    (programación)
+                  </p>
+                </div>
+                <Link
+                  to="/entrada-datos/monitoreo-ambiental?proyecto=planta-alicon"
+                  className="btn-secondary-link"
+                >
+                  Editar cronograma →
+                </Link>
+              </div>
+              <div className="carbon-table-wrap agro-detail-wrap">
+                <table className="carbon-table">
+                  <thead>
+                    <tr>
+                      <th>Inicio</th>
+                      <th>Fin</th>
+                      <th>Mes</th>
+                      <th>Sede</th>
+                      <th>Tipo</th>
+                      <th>Categoría</th>
+                      <th>Puntos</th>
+                      <th>Estado</th>
+                      <th>Referencia</th>
+                      <th>Comentarios</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scheduleReport.detailRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={10}>Sin ejecuciones en el periodo.</td>
+                      </tr>
+                    ) : (
+                      scheduleReport.detailRows.map((row, i) => (
+                        <tr
+                          key={`${row.fechaInicio}-${row.sede}-${row.parametro}-${i}`}
+                        >
+                          <td>{row.fechaInicio}</td>
+                          <td>{row.fechaFin}</td>
+                          <td>{row.mes}</td>
+                          <td>{row.sede}</td>
+                          <td>{row.tipo}</td>
+                          <td>{row.parametro}</td>
+                          <td>{formatNum(row.puntos, 0)}</td>
+                          <td>{row.estado}</td>
+                          <td>{row.referencia}</td>
+                          <td>{row.comentarios}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <p className="agro-report-footnote">
+              Cronograma: {formatNum(scheduleReport.totals.puntos, 0)} puntos ·{' '}
+              {scheduleReport.totals.programados} programado(s). Fuente:
+              Ejecuciones Moni (no laboratorio).
+            </p>
+          </>
+        ) : null}
       </section>
 
-      <p className="agro-report-footnote">
-        Puntos monitoreados en el periodo:{' '}
-        <strong>{formatNum(totals.puntos, 0)}</strong>
-        {totals.programados
-          ? ` · ${totals.programados} programado(s)`
-          : ''}
-        . Solo datos reales (Planta Alicón · Ejecuciones Moni).
-      </p>
+      {labCount > 0 ? (
+        <p className="agro-report-footnote">
+          Laboratorio: <strong>{labCount}</strong> parámetros en{' '}
+          <strong>{labVisual?.meta.puntos ?? 0}</strong> punto(s) · fuente
+          informes PDF (agua / aire / ruido).
+        </p>
+      ) : null}
     </div>
   )
 }

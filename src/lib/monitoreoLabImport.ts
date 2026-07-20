@@ -238,8 +238,8 @@ function enrichWithTableHeuristics(
   puntos.set(targetKey, target)
 
   const noteExtra =
-    target.parametros.length > before
-      ? `Tabla del PDF: +${target.parametros.length - before} parámetros completados.`
+    heuristic.length > 0
+      ? `Valores tomados de la tabla del PDF (${heuristic.length} analitos; no del LD).`
       : null
 
   const normalized = normalizeExtracted({

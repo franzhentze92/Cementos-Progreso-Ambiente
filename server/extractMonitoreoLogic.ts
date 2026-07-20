@@ -93,9 +93,10 @@ REGLA CRÍTICA — límites (NO confundir):
 Otras reglas:
 - Un informe puede tener VARIOS puntos (Salida Lagunas Alicon, Patio de coque, Colindancia este, etc.). Un objeto en "muestreos" por cada punto.
 - Si el PDF mezcla aire y ruido, crea muestreos SEPARADOS por tipoMedio aunque sea el mismo punto geográfico: uno "Material particulado" (PM2.5, PM10, TSP) y otro "Ruido" (LAeq, LAmax…). Nunca pongas LAeq bajo Material particulado.
-- Extrae TODOS los analitos de la tabla INFORME DE RESULTADOS / Analito (metales, microbio, fisicoquímicos). No te detengas en 10–15: incluye la lista completa.
+- Extrae TODOS los analitos de la tabla INFORME DE RESULTADOS / Analito. No te detengas en 10–15.
+- Extrae el VALOR de la columna Valor/Resultado, NUNCA el LD. Ejemplo: "4.69 Magnesio 0.4" → 4.69; "42 Color aparente 5" → 42; ">23 Coliformes 1.1" → >23.
 - resultado: número; si viene "<0.01" o ">23" usa el número y anota el texto original en observaciones.
-- Para tablas con columnas LMA/LMP/LD: limitePermisible = LMP (o LMA si no hay LMP); limiteDeteccion = LD.
+- limitePermisible = LMP/LMA legal; limiteDeteccion = LD.
 - cumple: Si/No solo si el informe lo indica o se deduce vs limitePermisible legal; si no hay límite legal, cumple "".
 - No inventes cifras ni límites.
 - Cliente Alicón / Cementos Progreso / Puerto Barrios → unidadNegocio "Alicón", plantaSede "Alicon".

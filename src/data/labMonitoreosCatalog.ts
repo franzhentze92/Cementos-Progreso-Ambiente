@@ -86,6 +86,50 @@ export const LAB_PARAMETROS_RUIDO = [
   'LAmin',
 ] as const
 
+/** Infere el medio del analito (p. ej. LAeq → Ruido aunque el muestreo venga como Mixto/MP). */
+export function inferLabMedioFromParametro(
+  parametro: string,
+  fallbackMedio = 'Monitoreo',
+): string {
+  const key = parametro
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .trim()
+
+  if (
+    /^(laeq|lamax|lamin|la\s|noise|ruido|presion sonora|presión sonora|dba|db\b)/i.test(
+      key,
+    ) ||
+    LAB_PARAMETROS_RUIDO.some((p) => key.includes(p.toLowerCase()))
+  ) {
+    return 'Ruido'
+  }
+
+  if (
+    /^(pm2|pm10|pm2\.5|pm2,5|tsp|pts|so2|no2|\bco\b|\bo3\b|material particulado)/i.test(
+      key,
+    ) ||
+    LAB_PARAMETROS_AIRE.some((p) => key.includes(p.toLowerCase()))
+  ) {
+    return 'Material particulado'
+  }
+
+  if (
+    /agua|ph|turbid|conductiv|cloro|coliform|dbo|dqo|hierro|mangan|solidos|caudal|nitr|fosf|fósf|grasa|color/i.test(
+      key,
+    ) ||
+    LAB_PARAMETROS_AGUA.some((p) => key === p.toLowerCase() || key.includes(p.toLowerCase()))
+  ) {
+    const fb = matchLabMedio(fallbackMedio)
+    if (fb.startsWith('Agua') || fb === 'Agua ordinaria') return fb
+    return 'Agua potable'
+  }
+
+  const fb = matchLabMedio(fallbackMedio)
+  return fb === 'Mixto' || fb === 'Monitoreo' ? fallbackMedio || 'Monitoreo' : fb
+}
+
 const PARAM_ALIASES: Record<string, string> = {
   'ph': 'pH',
   'turbiedad': 'Turbidez',

@@ -8,6 +8,7 @@ import {
   type AgroMonitoreoRecord,
   type MonitoringMonth,
 } from '../data/agroMonitoreos'
+import { inferLabMedioFromParametro } from '../data/labMonitoreosCatalog'
 import { supabase } from './supabase'
 
 type DbRow = {
@@ -180,7 +181,8 @@ export type LabMuestreoSaveInput = {
 
 /**
  * Guarda un informe de laboratorio completo (1+ puntos de muestreo).
- * Reemplaza por (unidad, fecha, sede, punto) cada muestreo.
+ * Reemplaza por (unidad, fecha, sede, punto) cada punto (todos los medios juntos).
+ * Asigna medio por parámetro (LAeq → Ruido, PM → Material particulado, etc.).
  */
 export async function saveLabMonitoreoInforme(input: {
   unidadNegocio: string
@@ -196,56 +198,100 @@ export async function saveLabMonitoreoInforme(input: {
   const laboratorio = input.laboratorio?.trim() || ''
   const medioInforme = input.medio?.trim() || ''
   const withMeta = await hasLabMetaColumns()
-  let savedRows = 0
+
+  // Agrupa por fecha+punto para no borrar aire al guardar ruido del mismo punto.
+  type Group = {
+    fecha: string
+    punto: string
+    latitud: number | null
+    longitud: number | null
+    rows: Array<{
+      medio: string
+      parametro: string
+      resultado: number | null
+      unidad: string
+      limitePermisible: string
+      cumple: string
+      observaciones: string
+    }>
+  }
+  const groups = new Map<string, Group>()
 
   for (const m of input.muestreos) {
     const fecha = m.fecha?.trim()
     const punto = m.puntoMuestreo.trim()
     if (!fecha || !punto || !m.parametros.length) continue
+    const key = `${fecha}|${punto}`
+    const group = groups.get(key) ?? {
+      fecha,
+      punto,
+      latitud: m.latitud,
+      longitud: m.longitud,
+      rows: [],
+    }
+    if (m.latitud != null) group.latitud = m.latitud
+    if (m.longitud != null) group.longitud = m.longitud
+    for (const row of m.parametros) {
+      if (!row.parametro.trim()) continue
+      const medio = inferLabMedioFromParametro(
+        row.parametro,
+        m.tipoMedio || medioInforme || 'Monitoreo',
+      )
+      group.rows.push({
+        medio,
+        parametro: row.parametro.trim(),
+        resultado: row.resultado,
+        unidad: row.unidad.trim(),
+        limitePermisible: row.limitePermisible.trim(),
+        cumple: row.cumple.trim(),
+        observaciones: row.observaciones.trim(),
+      })
+    }
+    groups.set(key, group)
+  }
 
+  let savedRows = 0
+
+  for (const group of groups.values()) {
     const { error: delError } = await supabase
       .from('agro_monitoreos_ambientales')
       .delete()
       .eq('unidad_negocio', unidad)
-      .eq('fecha', fecha)
+      .eq('fecha', group.fecha)
       .eq('planta_sede', sede)
-      .eq('punto_muestreo', punto)
+      .eq('punto_muestreo', group.punto)
 
     if (delError) throw delError
 
-    const medioFila = m.tipoMedio.trim() || medioInforme || 'Monitoreo'
-
-    const payload = m.parametros
-      .filter((r) => r.parametro.trim())
-      .map((row) => {
-        const obsParts = [row.observaciones.trim()]
-        if (!withMeta) {
-          if (laboratorio) obsParts.push(`Laboratorio: ${laboratorio}`)
-          if (fuente) obsParts.push(`Fuente: ${fuente}`)
-          if (medioInforme) obsParts.push(`Medio informe: ${medioInforme}`)
-        }
-        const base: Record<string, unknown> = {
-          fecha,
-          unidad_negocio: unidad,
-          planta_sede: sede,
-          punto_muestreo: punto,
-          tipo_agua: medioFila,
-          parametro: row.parametro.trim(),
-          resultado: row.resultado,
-          unidad: row.unidad.trim(),
-          limite_permisible: row.limitePermisible.trim() || 'No aplica',
-          cumple: row.cumple.trim() || '',
-          observaciones: obsParts.filter(Boolean).join(' · '),
-          latitud: m.latitud,
-          longitud: m.longitud,
-        }
-        if (withMeta) {
-          base.laboratorio = laboratorio
-          base.fuente_informe = fuente
-          base.medio = medioFila
-        }
-        return base
-      })
+    const payload = group.rows.map((row) => {
+      const obsParts = [row.observaciones]
+      if (!withMeta) {
+        if (laboratorio) obsParts.push(`Laboratorio: ${laboratorio}`)
+        if (fuente) obsParts.push(`Fuente: ${fuente}`)
+        if (medioInforme) obsParts.push(`Medio informe: ${medioInforme}`)
+      }
+      const base: Record<string, unknown> = {
+        fecha: group.fecha,
+        unidad_negocio: unidad,
+        planta_sede: sede,
+        punto_muestreo: group.punto,
+        tipo_agua: row.medio,
+        parametro: row.parametro,
+        resultado: row.resultado,
+        unidad: row.unidad,
+        limite_permisible: row.limitePermisible || 'No aplica',
+        cumple: row.cumple || '',
+        observaciones: obsParts.filter(Boolean).join(' · '),
+        latitud: group.latitud,
+        longitud: group.longitud,
+      }
+      if (withMeta) {
+        base.laboratorio = laboratorio
+        base.fuente_informe = fuente
+        base.medio = row.medio
+      }
+      return base
+    })
 
     if (!payload.length) continue
 
@@ -259,7 +305,7 @@ export async function saveLabMonitoreoInforme(input: {
 
   return {
     savedRows,
-    puntos: input.muestreos.filter((m) => m.parametros.length > 0).length,
+    puntos: groups.size,
     metaColumns: withMeta,
   }
 }

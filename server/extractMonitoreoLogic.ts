@@ -92,7 +92,7 @@ REGLA CRÍTICA — límites (NO confundir):
 
 Otras reglas:
 - Un informe puede tener VARIOS puntos (Salida Lagunas Alicon, Patio de coque, Colindancia este, etc.). Un objeto en "muestreos" por cada punto.
-- Si el PDF mezcla aire y ruido, separa por punto; tipoMedio "Material particulado" o "Ruido"; medio del informe "Mixto" si aplica.
+- Si el PDF mezcla aire y ruido, crea muestreos SEPARADOS por tipoMedio aunque sea el mismo punto geográfico: uno "Material particulado" (PM2.5, PM10, TSP) y otro "Ruido" (LAeq, LAmax…). Nunca pongas LAeq bajo Material particulado.
 - Extrae TODOS los analitos con valor numérico (pH, metales, coliformes, PM2.5, PM10, TSP, LAeq, etc.).
 - resultado: número; si viene "<0.01" usa 0.01 y anota en observaciones "Valor reportado <0.01".
 - cumple: Si/No solo si el informe lo indica o se deduce vs limitePermisible legal; si no hay límite legal, cumple "".

@@ -12,6 +12,7 @@ import {
 } from '../data/agroMonitoreos'
 import { MONITORING_MONTHS } from '../data/carbonMonitoring'
 import {
+  inferLabMedioFromParametro,
   matchLabMedio,
   matchLabParametro,
   matchLabPunto,
@@ -68,11 +69,11 @@ export type LabImportPreview = {
 }
 
 function normalizeExtracted(data: ExtractedMonitoreo): ExtractedMonitoreo {
-  const medio = matchLabMedio(data.medio)
-  const muestreos = (data.muestreos ?? []).map((m) => ({
+  const medioInforme = matchLabMedio(data.medio)
+  const muestreosRaw = (data.muestreos ?? []).map((m) => ({
     ...m,
     puntoMuestreo: matchLabPunto(m.puntoMuestreo),
-    tipoMedio: matchLabMedio(m.tipoMedio || medio),
+    tipoMedio: matchLabMedio(m.tipoMedio || medioInforme),
     parametros: m.parametros.map((p) => {
       const sanitized = sanitizeLimitePermisible(
         p.limitePermisible,
@@ -81,15 +82,35 @@ function normalizeExtracted(data: ExtractedMonitoreo): ExtractedMonitoreo {
       )
       let cumple = p.cumple
       if (!sanitized.limite && cumple) cumple = ''
+      const parametro = matchLabParametro(p.parametro)
       return {
         ...p,
-        parametro: matchLabParametro(p.parametro),
+        parametro,
         limitePermisible: sanitized.limite,
         observaciones: sanitized.observaciones,
         cumple,
       }
     }),
   }))
+
+  // Separa aire vs ruido (y agua) aunque vengan en el mismo punto del PDF.
+  const muestreos: ExtractedMuestreo[] = []
+  for (const m of muestreosRaw) {
+    const byMedio = new Map<string, ExtractedMonitoreoParam[]>()
+    for (const p of m.parametros) {
+      const medio = inferLabMedioFromParametro(p.parametro, m.tipoMedio)
+      const list = byMedio.get(medio) ?? []
+      list.push(p)
+      byMedio.set(medio, list)
+    }
+    for (const [tipoMedio, parametros] of byMedio) {
+      muestreos.push({
+        ...m,
+        tipoMedio,
+        parametros,
+      })
+    }
+  }
 
   let unidad = data.unidadNegocio || 'Alicón'
   if (/agro/i.test(unidad)) unidad = 'Agroprogreso'
@@ -103,6 +124,12 @@ function normalizeExtracted(data: ExtractedMonitoreo): ExtractedMonitoreo {
     )
     if (hit) sede = hit
   }
+
+  const medios = [...new Set(muestreos.map((m) => m.tipoMedio))]
+  const medio =
+    medios.length > 1
+      ? 'Mixto'
+      : matchLabMedio(medios[0] || medioInforme)
 
   const first = muestreos[0]
   return {

@@ -139,19 +139,23 @@ export function AliconMonitoreosReportPage() {
           <h1>Monitoreos de cumplimiento / control</h1>
           <p>
             Resultados de laboratorio (agua, aire, ruido) y cronograma de
-            ejecuciones · {meta.periodLabel}
+            ejecuciones · prioriza los parámetros medidos de los informes PDF
           </p>
         </div>
         <div className="carbon-header-meta">
           <div>
-            <span>Total / programados</span>
-            <strong>
-              {meta.totalRows}/{meta.programados}
-            </strong>
+            <span>Parámetros lab</span>
+            <strong>{labVisual?.meta.totalRows ?? 0}</strong>
           </div>
           <div>
-            <span>Ejecutados</span>
-            <strong>{meta.ejecutados}</strong>
+            <span>Puntos lab</span>
+            <strong>{labVisual?.meta.puntos ?? 0}</strong>
+          </div>
+          <div>
+            <span>Cronograma</span>
+            <strong>
+              {meta.ejecutados}/{meta.totalRows}
+            </strong>
           </div>
           <div>
             <span>Periodo</span>
@@ -181,10 +185,11 @@ export function AliconMonitoreosReportPage() {
 
       <div className="lab-import-cta content-panel">
         <div>
-          <strong>Cargar o capturar datos</strong>
+          <strong>Cargar resultados de laboratorio</strong>
           <p>
-            En Entrada de datos puedes subir el PDF del laboratorio o capturar
-            el cronograma de ejecuciones de forma manual.
+            Sube los PDFs de agua potable, material particulado y ruido. Los
+            parámetros aparecen en esta página y en la tabla de entrada de
+            datos.
           </p>
         </div>
         <Link
@@ -200,7 +205,7 @@ export function AliconMonitoreosReportPage() {
           visual={labVisual}
           entryHref="/entrada-datos/monitoreo-ambiental?proyecto=planta-alicon"
           title="Resultados de laboratorio"
-          subtitle="Informes IMA / laboratorio · agua, aire y ruido"
+          subtitle="Agua potable · material particulado · ruido"
         />
       ) : null}
 

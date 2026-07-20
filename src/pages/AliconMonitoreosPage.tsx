@@ -21,7 +21,6 @@ import {
   countByEstadoMes,
   emptyAliconMonitoreoRow,
   formRowsFromRecords,
-  formatNum,
   monthFromFecha,
   monthHasMonitoreos,
   yearFromFecha,
@@ -30,11 +29,20 @@ import {
   type MonitoringMonth,
 } from '../data/aliconMonitoreos'
 import {
+  CUMPLE_OPCIONES,
+  formatNum as formatLabNum,
+  monthFromFecha as labMonthFromFecha,
+  yearFromFecha as labYearFromFecha,
+  type AgroMonitoreoRecord,
+} from '../data/agroMonitoreos'
+import { LAB_MEDIOS, ALICON_LAB_PUNTOS } from '../data/labMonitoreosCatalog'
+import {
   currentMonitoringMonth,
   currentMonitoringYear,
   selectableMonitoringYears,
 } from '../data/carbonMonitoring'
 import { MonitoreoLabImport } from '../components/MonitoreoLabImport'
+import { loadLabMonitoreosByUnidad } from '../lib/agroMonitoreosApi'
 import {
   loadAliconMonitoreos,
   saveAliconMonitoreosMonth,
@@ -74,9 +82,13 @@ function MonthRail({
 }
 
 const FILTER_ALL = 'all'
+const LAB_UNIDAD = 'Alicón'
 
 export function AliconMonitoreosPage() {
-  const [records, setRecords] = useState<AliconMonitoreoRecord[]>([])
+  const [labRecords, setLabRecords] = useState<AgroMonitoreoRecord[]>([])
+  const [scheduleRecords, setScheduleRecords] = useState<
+    AliconMonitoreoRecord[]
+  >([])
   const [year, setYear] = useState(() => currentMonitoringYear())
   const [month, setMonth] = useState<MonitoringMonth>(() =>
     currentMonitoringMonth(),
@@ -88,18 +100,24 @@ export function AliconMonitoreosPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveOk, setSaveOk] = useState(false)
   const [labSaveOk, setLabSaveOk] = useState<string | null>(null)
+  const [showSchedule, setShowSchedule] = useState(false)
 
   const [filterYear, setFilterYear] = useState<string>(FILTER_ALL)
   const [filterMonth, setFilterMonth] = useState<string>(FILTER_ALL)
   const [filterSede, setFilterSede] = useState<string>(FILTER_ALL)
-  const [filterEstado, setFilterEstado] = useState<string>(FILTER_ALL)
+  const [filterMedio, setFilterMedio] = useState<string>(FILTER_ALL)
+  const [filterCumple, setFilterCumple] = useState<string>(FILTER_ALL)
 
   async function reload() {
     setLoading(true)
     setLoadError(null)
     try {
-      const data = await loadAliconMonitoreos()
-      setRecords(data)
+      const [lab, schedule] = await Promise.all([
+        loadLabMonitoreosByUnidad(LAB_UNIDAD),
+        loadAliconMonitoreos(),
+      ])
+      setLabRecords(lab)
+      setScheduleRecords(schedule)
     } catch (err) {
       setLoadError(
         err instanceof Error
@@ -116,9 +134,9 @@ export function AliconMonitoreosPage() {
   }, [])
 
   useEffect(() => {
-    const rows = formRowsFromRecords(records, year, month)
+    const rows = formRowsFromRecords(scheduleRecords, year, month)
     setFormRows(rows.length ? rows : [emptyAliconMonitoreoRow(year, month)])
-  }, [records, year, month])
+  }, [scheduleRecords, year, month])
 
   useEffect(() => {
     if (!saveOk) return
@@ -128,52 +146,79 @@ export function AliconMonitoreosPage() {
 
   const years = useMemo(
     () =>
-      selectableMonitoringYears(
-        records.map((r) => yearFromFecha(r.fechaInicio)),
-      ),
-    [records],
+      selectableMonitoringYears([
+        ...labRecords.map((r) => labYearFromFecha(r.fecha)),
+        ...scheduleRecords.map((r) => yearFromFecha(r.fechaInicio)),
+      ]),
+    [labRecords, scheduleRecords],
   )
 
   const recordYears = useMemo(
     () =>
-      [...new Set(records.map((r) => yearFromFecha(r.fechaInicio)))].sort(
-        (a, b) => b - a,
-      ),
-    [records],
+      [...new Set(labRecords.map((r) => labYearFromFecha(r.fecha)))]
+        .filter((y) => Number.isFinite(y) && y > 1900)
+        .sort((a, b) => b - a),
+    [labRecords],
   )
 
   const filledMonths = useMemo(() => {
     const set = new Set<MonitoringMonth>()
     for (const m of MONITORING_MONTHS) {
-      if (monthHasMonitoreos(records, year, m)) set.add(m)
+      if (monthHasMonitoreos(scheduleRecords, year, m)) set.add(m)
     }
     return set
-  }, [records, year])
+  }, [scheduleRecords, year])
 
   const programadosMes = useMemo(
-    () => countByEstadoMes(records, year, month, 'Programado'),
-    [records, year, month],
+    () => countByEstadoMes(scheduleRecords, year, month, 'Programado'),
+    [scheduleRecords, year, month],
   )
 
-  const filteredRecords = useMemo(() => {
-    return records.filter((row) => {
+  const labSedespuntos = useMemo(() => {
+    const sedes = new Set<string>([...ALICON_MONITOREO_SEDES])
+    const puntos = new Set<string>([...ALICON_LAB_PUNTOS])
+    for (const r of labRecords) {
+      if (r.plantaSede) sedes.add(r.plantaSede)
+      if (r.puntoMuestreo) puntos.add(r.puntoMuestreo)
+    }
+    return { sedes: [...sedes], puntos: [...puntos] }
+  }, [labRecords])
+
+  const filteredLab = useMemo(() => {
+    return labRecords.filter((row) => {
+      const medio = row.medio || row.tipoAgua || ''
       if (
         filterYear !== FILTER_ALL &&
-        String(yearFromFecha(row.fechaInicio)) !== filterYear
+        String(labYearFromFecha(row.fecha)) !== filterYear
       )
         return false
       if (
         filterMonth !== FILTER_ALL &&
-        monthFromFecha(row.fechaInicio) !== filterMonth
+        labMonthFromFecha(row.fecha) !== filterMonth
       )
         return false
       if (filterSede !== FILTER_ALL && row.plantaSede !== filterSede)
         return false
-      if (filterEstado !== FILTER_ALL && row.estado !== filterEstado)
+      if (filterMedio !== FILTER_ALL && medio !== filterMedio) return false
+      if (
+        filterCumple !== FILTER_ALL &&
+        row.cumple.toLowerCase() !== filterCumple.toLowerCase()
+      )
         return false
       return true
     })
-  }, [records, filterYear, filterMonth, filterSede, filterEstado])
+  }, [
+    labRecords,
+    filterYear,
+    filterMonth,
+    filterSede,
+    filterMedio,
+    filterCumple,
+  ])
+
+  function medioOf(r: AgroMonitoreoRecord) {
+    return r.medio?.trim() || r.tipoAgua?.trim() || '—'
+  }
 
   function patchRow(
     localId: string,
@@ -195,7 +240,7 @@ export function AliconMonitoreosPage() {
     })
   }
 
-  async function persist() {
+  async function persistSchedule() {
     setSaving(true)
     setSaveError(null)
     try {
@@ -206,7 +251,7 @@ export function AliconMonitoreosPage() {
           (r.parametro.trim() || r.comentarios.trim() || r.id),
       )
       const saved = await saveAliconMonitoreosMonth(year, month, toSave)
-      setRecords((prev) => {
+      setScheduleRecords((prev) => {
         const rest = prev.filter(
           (r) =>
             !(
@@ -221,7 +266,7 @@ export function AliconMonitoreosPage() {
       setSaveOk(true)
     } catch (err) {
       setSaveError(
-        err instanceof Error ? err.message : 'No se pudo guardar el mes',
+        err instanceof Error ? err.message : 'No se pudo guardar el cronograma',
       )
     } finally {
       setSaving(false)
@@ -230,7 +275,7 @@ export function AliconMonitoreosPage() {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    void persist()
+    void persistSchedule()
   }
 
   if (loading) {
@@ -242,6 +287,9 @@ export function AliconMonitoreosPage() {
     )
   }
 
+  const labPuntos = new Set(labRecords.map((r) => r.puntoMuestreo)).size
+  const labMedios = new Set(labRecords.map((r) => medioOf(r))).size
+
   return (
     <div className="entry-page hc-entry alicon-monitoreos-page">
       <div className="page-header entry-header">
@@ -252,9 +300,10 @@ export function AliconMonitoreosPage() {
           </p>
           <h1>Monitoreos de cumplimiento / control</h1>
           <p>
-            Captura manual del cronograma (Ejecuciones Moni) o carga del PDF de
-            laboratorio: la IA extrae parámetros y los guarda. Los resultados
-            visuales se ven en el reporte de operaciones.
+            Resultados reales de laboratorio (agua potable, material
+            particulado, ruido). Distinto del{' '}
+            <Link to="/monitoreo-en-vivo">monitoreo en vivo</Link>. Sube el PDF
+            o revisa la tabla de parámetros abajo.
           </p>
         </div>
         <div className="hc-header-actions">
@@ -262,24 +311,19 @@ export function AliconMonitoreosPage() {
             to="/operaciones/planta-alicon/monitoreo-ambiental"
             className="btn-secondary-link"
           >
-            Ver resultados →
+            Ver reporte →
           </Link>
-          <button
-            type="button"
-            className="btn-primary"
-            disabled={saving}
-            onClick={() => void persist()}
-          >
-            {saving ? <Loader2 className="hc-spin" size={16} /> : <Save size={16} />}
-            {saving ? 'Guardando…' : 'Guardar mes'}
-          </button>
         </div>
       </div>
 
       {loadError ? (
         <div className="hc-banner hc-banner-error" role="alert">
           <strong>No se pudo cargar:</strong> {loadError}
-          <button type="button" className="btn-ghost" onClick={() => void reload()}>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => void reload()}
+          >
             Reintentar
           </button>
         </div>
@@ -294,7 +338,7 @@ export function AliconMonitoreosPage() {
       {saveOk ? (
         <div className="hc-banner hc-banner-ok" role="status">
           <CheckCircle2 size={18} />
-          Guardado correctamente
+          Cronograma de ejecuciones guardado
         </div>
       ) : null}
 
@@ -313,286 +357,47 @@ export function AliconMonitoreosPage() {
         month={month}
         expectedUnidad="Alicón"
         reportHref="/operaciones/planta-alicon/monitoreo-ambiental"
-        hint="Opción A: sube el PDF del laboratorio (agua, aire, ruido) y pulsa «Guardar todo el informe». Opción B: captura el cronograma de ejecuciones en el formulario de abajo con «Guardar mes»."
+        hint="Sube los PDFs de laboratorio (agua potable, aire / material particulado, ruido). Pulsa «Guardar todo el informe» para que aparezcan en la tabla de abajo y en el reporte."
         onSaved={(result) => {
           setLabSaveOk(
             `Informe guardado: ${result.savedRows} parámetros en ${result.puntos} punto(s).`,
           )
+          void reload()
         }}
       />
 
       <div className="entry-summary hc-summary">
         <div>
-          <span>Captura manual</span>
-          <strong>Ejecuciones Moni</strong>
+          <span>Parámetros lab</span>
+          <strong>{labRecords.length}</strong>
         </div>
         <div>
-          <span>Periodo</span>
-          <strong>
-            {month} {year}
-          </strong>
+          <span>Puntos</span>
+          <strong>{labPuntos}</strong>
         </div>
         <div>
-          <span>Programados en el mes</span>
-          <strong>{programadosMes}</strong>
+          <span>Medios</span>
+          <strong>{labMedios}</strong>
         </div>
         <div>
-          <span>Monitoreos mes</span>
-          <strong>{formRows.length}</strong>
+          <span>Unidad</span>
+          <strong>Alicón</strong>
         </div>
       </div>
 
-      <form className="entry-form" onSubmit={handleSubmit}>
-        <div className="hc-month-bar">
-          <div className="agro-agua-period">
-            <label htmlFor="alicon-moni-year">Año</label>
-            <select
-              id="alicon-moni-year"
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-            <span className="hc-month-label">Mes (fecha inicio)</span>
-            <strong>{month}</strong>
-          </div>
-          <MonthRail month={month} onChange={setMonth} filled={filledMonths} />
-        </div>
-
-        <section className="entry-section">
-          <div className="entry-section-head alicon-sheet-head">
-            <div>
-              <h2>
-                <Thermometer
-                  size={18}
-                  style={{ marginRight: 8, verticalAlign: -3 }}
-                />
-                Monitoreos del mes
-              </h2>
-              <p>
-                El mes en edición se basa en la fecha de inicio. Unidad:
-                Cementos Progreso.
-              </p>
-            </div>
-            <button type="button" className="btn-secondary-link" onClick={addRow}>
-              <Plus size={16} />
-              Agregar monitoreo
-            </button>
-          </div>
-
-          <div className="agro-insp-cards">
-            {formRows.map((row, idx) => (
-              <article key={row.localId} className="agro-insp-card">
-                <header>
-                  <strong>Monitoreo {idx + 1}</strong>
-                  <button
-                    type="button"
-                    className="alicon-icon-btn"
-                    title="Quitar"
-                    onClick={() => removeRow(row.localId)}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </header>
-                <div className="agro-insp-grid">
-                  <label>
-                    Planta / Sede
-                    <select
-                      value={row.plantaSede}
-                      onChange={(e) =>
-                        patchRow(row.localId, { plantaSede: e.target.value })
-                      }
-                    >
-                      {ALICON_MONITOREO_SEDES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                      {row.plantaSede &&
-                      !(ALICON_MONITOREO_SEDES as readonly string[]).includes(
-                        row.plantaSede,
-                      ) ? (
-                        <option value={row.plantaSede}>{row.plantaSede}</option>
-                      ) : null}
-                    </select>
-                  </label>
-                  <label>
-                    Tipo
-                    <select
-                      value={row.tipoMonitoreo}
-                      onChange={(e) =>
-                        patchRow(row.localId, {
-                          tipoMonitoreo: e.target.value,
-                        })
-                      }
-                    >
-                      {ALICON_TIPOS_MONITOREO.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Parámetro
-                    <select
-                      value={row.parametro}
-                      onChange={(e) =>
-                        patchRow(row.localId, { parametro: e.target.value })
-                      }
-                    >
-                      {ALICON_MONITOREO_PARAMETROS.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                      {row.parametro &&
-                      !(
-                        ALICON_MONITOREO_PARAMETROS as readonly string[]
-                      ).includes(row.parametro) ? (
-                        <option value={row.parametro}>{row.parametro}</option>
-                      ) : null}
-                    </select>
-                  </label>
-                  <label>
-                    Puntos
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={row.puntos}
-                      onChange={(e) =>
-                        patchRow(row.localId, { puntos: e.target.value })
-                      }
-                      placeholder="1"
-                    />
-                  </label>
-                  <label>
-                    Fecha inicio
-                    <input
-                      type="date"
-                      value={row.fechaInicio}
-                      onChange={(e) =>
-                        patchRow(row.localId, { fechaInicio: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label>
-                    Fecha fin
-                    <input
-                      type="date"
-                      value={row.fechaFin}
-                      onChange={(e) =>
-                        patchRow(row.localId, { fechaFin: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label>
-                    Comparación
-                    <select
-                      value={row.comparacion}
-                      onChange={(e) =>
-                        patchRow(row.localId, { comparacion: e.target.value })
-                      }
-                    >
-                      {ALICON_MONITOREO_COMPARACIONES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                      {row.comparacion &&
-                      !(
-                        ALICON_MONITOREO_COMPARACIONES as readonly string[]
-                      ).includes(row.comparacion) ? (
-                        <option value={row.comparacion}>
-                          {row.comparacion}
-                        </option>
-                      ) : null}
-                    </select>
-                  </label>
-                  <label>
-                    Motivo
-                    <select
-                      value={row.motivo}
-                      onChange={(e) =>
-                        patchRow(row.localId, { motivo: e.target.value })
-                      }
-                    >
-                      {ALICON_MONITOREO_MOTIVOS.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                      {row.motivo &&
-                      !(ALICON_MONITOREO_MOTIVOS as readonly string[]).includes(
-                        row.motivo,
-                      ) ? (
-                        <option value={row.motivo}>{row.motivo}</option>
-                      ) : null}
-                    </select>
-                  </label>
-                  <label>
-                    Estado
-                    <select
-                      value={row.estado}
-                      onChange={(e) =>
-                        patchRow(row.localId, { estado: e.target.value })
-                      }
-                    >
-                      {ALICON_MONITOREO_ESTADOS.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="agro-insp-span2">
-                    Referencia
-                    <input
-                      type="text"
-                      value={row.referencia}
-                      onChange={(e) =>
-                        patchRow(row.localId, { referencia: e.target.value })
-                      }
-                      placeholder="Salida PTAR Alicon…"
-                    />
-                  </label>
-                  <label className="agro-insp-span-all">
-                    Comentarios
-                    <textarea
-                      rows={2}
-                      value={row.comentarios}
-                      onChange={(e) =>
-                        patchRow(row.localId, {
-                          comentarios: e.target.value,
-                        })
-                      }
-                      placeholder="Observaciones del monitoreo…"
-                    />
-                  </label>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      </form>
-
       <section className="entry-section agro-records-section">
         <div className="entry-section-head">
-          <h2>Datos registrados</h2>
+          <h2>Datos registrados · laboratorio</h2>
           <p>
-            {filteredRecords.length} de {records.length} monitoreos Planta
-            Alicón · fuente Ejecuciones Moni.
+            {filteredLab.length} de {labRecords.length} parámetros · agua,
+            material particulado y ruido (informes PDF).
           </p>
         </div>
 
         <div
           className="agro-table-filters"
           role="search"
-          aria-label="Filtros de monitoreos"
+          aria-label="Filtros de resultados de laboratorio"
         >
           <label>
             Año
@@ -629,7 +434,7 @@ export function AliconMonitoreosPage() {
               onChange={(e) => setFilterSede(e.target.value)}
             >
               <option value={FILTER_ALL}>Todas</option>
-              {ALICON_MONITOREO_SEDES.map((s) => (
+              {labSedespuntos.sedes.map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
@@ -637,15 +442,29 @@ export function AliconMonitoreosPage() {
             </select>
           </label>
           <label>
-            Estado
+            Medio
             <select
-              value={filterEstado}
-              onChange={(e) => setFilterEstado(e.target.value)}
+              value={filterMedio}
+              onChange={(e) => setFilterMedio(e.target.value)}
             >
               <option value={FILTER_ALL}>Todos</option>
-              {ALICON_MONITOREO_ESTADOS.map((n) => (
-                <option key={n} value={n}>
-                  {n}
+              {LAB_MEDIOS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Cumple
+            <select
+              value={filterCumple}
+              onChange={(e) => setFilterCumple(e.target.value)}
+            >
+              <option value={FILTER_ALL}>Todos</option>
+              {CUMPLE_OPCIONES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
                 </option>
               ))}
             </select>
@@ -656,39 +475,53 @@ export function AliconMonitoreosPage() {
           <table className="alicon-data-table agro-records-table">
             <thead>
               <tr>
-                <th>Inicio</th>
-                <th>Fin</th>
+                <th>Fecha</th>
                 <th>Mes</th>
                 <th>Sede</th>
-                <th>Tipo</th>
+                <th>Punto</th>
+                <th>Medio</th>
                 <th>Parámetro</th>
-                <th>Puntos</th>
-                <th>Estado</th>
-                <th>Referencia</th>
-                <th>Comentarios</th>
+                <th>Resultado</th>
+                <th>Límite</th>
+                <th>Cumple</th>
+                <th>Fuente</th>
               </tr>
             </thead>
             <tbody>
-              {filteredRecords.length === 0 ? (
+              {filteredLab.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="alicon-empty">
-                    No hay registros con esos filtros.
+                    Aún no hay resultados de laboratorio. Sube un PDF (agua,
+                    aire o ruido) y pulsa «Guardar todo el informe».
                   </td>
                 </tr>
               ) : (
-                filteredRecords.map((row) => (
+                filteredLab.map((row) => (
                   <tr key={row.id}>
-                    <td>{row.fechaInicio}</td>
-                    <td>{row.fechaFin ?? '—'}</td>
-                    <td>{monthFromFecha(row.fechaInicio) ?? '—'}</td>
+                    <td>{row.fecha}</td>
+                    <td>{labMonthFromFecha(row.fecha) ?? '—'}</td>
                     <td>{row.plantaSede}</td>
-                    <td>{row.tipoMonitoreo || '—'}</td>
-                    <td>{row.parametro || '—'}</td>
-                    <td>{formatNum(row.puntos, 0)}</td>
-                    <td>{row.estado || '—'}</td>
-                    <td>{row.referencia || '—'}</td>
+                    <td>{row.puntoMuestreo}</td>
+                    <td>{medioOf(row)}</td>
+                    <td>{row.parametro}</td>
+                    <td>
+                      {formatLabNum(row.resultado)}
+                      {row.unidad ? ` ${row.unidad}` : ''}
+                    </td>
+                    <td>{row.limitePermisible || '—'}</td>
+                    <td>
+                      <span
+                        className={
+                          row.cumple.toLowerCase() === 'no'
+                            ? 'agro-badge-warn'
+                            : 'agro-badge-ok'
+                        }
+                      >
+                        {row.cumple || '—'}
+                      </span>
+                    </td>
                     <td className="agro-obs-cell">
-                      {row.comentarios || '—'}
+                      {row.fuenteInforme || row.laboratorio || '—'}
                     </td>
                   </tr>
                 ))
@@ -696,6 +529,318 @@ export function AliconMonitoreosPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="entry-section alicon-schedule-section">
+        <div className="entry-section-head alicon-sheet-head">
+          <div>
+            <h2>
+              <Thermometer
+                size={18}
+                style={{ marginRight: 8, verticalAlign: -3 }}
+              />
+              Cronograma de ejecuciones
+            </h2>
+            <p>
+              Programación operativa (Interno/Externo, ARO/ARE). No sustituye
+              los resultados de laboratorio de arriba.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn-secondary-link"
+            onClick={() => setShowSchedule((v) => !v)}
+          >
+            {showSchedule ? 'Ocultar cronograma' : 'Mostrar / editar cronograma'}
+          </button>
+        </div>
+
+        {showSchedule ? (
+          <>
+            <div className="entry-summary hc-summary">
+              <div>
+                <span>Periodo</span>
+                <strong>
+                  {month} {year}
+                </strong>
+              </div>
+              <div>
+                <span>Programados en el mes</span>
+                <strong>{programadosMes}</strong>
+              </div>
+              <div>
+                <span>Filas del mes</span>
+                <strong>{formRows.length}</strong>
+              </div>
+            </div>
+
+            <form className="entry-form" onSubmit={handleSubmit}>
+              <div className="hc-month-bar">
+                <div className="agro-agua-period">
+                  <label htmlFor="alicon-moni-year">Año</label>
+                  <select
+                    id="alicon-moni-year"
+                    value={year}
+                    onChange={(e) => setYear(Number(e.target.value))}
+                  >
+                    {years.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="hc-month-label">Mes (fecha inicio)</span>
+                  <strong>{month}</strong>
+                </div>
+                <MonthRail
+                  month={month}
+                  onChange={setMonth}
+                  filled={filledMonths}
+                />
+              </div>
+
+              <div className="entry-section-head alicon-sheet-head">
+                <div>
+                  <h3>Monitoreos del mes</h3>
+                </div>
+                <div className="lab-import-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary-link"
+                    onClick={addRow}
+                  >
+                    <Plus size={16} />
+                    Agregar
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <Loader2 className="hc-spin" size={16} />
+                    ) : (
+                      <Save size={16} />
+                    )}
+                    {saving ? 'Guardando…' : 'Guardar cronograma'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="agro-insp-cards">
+                {formRows.map((row, idx) => (
+                  <article key={row.localId} className="agro-insp-card">
+                    <header>
+                      <strong>Monitoreo {idx + 1}</strong>
+                      <button
+                        type="button"
+                        className="alicon-icon-btn"
+                        title="Quitar"
+                        onClick={() => removeRow(row.localId)}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </header>
+                    <div className="agro-insp-grid">
+                      <label>
+                        Planta / Sede
+                        <select
+                          value={row.plantaSede}
+                          onChange={(e) =>
+                            patchRow(row.localId, {
+                              plantaSede: e.target.value,
+                            })
+                          }
+                        >
+                          {ALICON_MONITOREO_SEDES.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Tipo
+                        <select
+                          value={row.tipoMonitoreo}
+                          onChange={(e) =>
+                            patchRow(row.localId, {
+                              tipoMonitoreo: e.target.value,
+                            })
+                          }
+                        >
+                          {ALICON_TIPOS_MONITOREO.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Parámetro
+                        <select
+                          value={row.parametro}
+                          onChange={(e) =>
+                            patchRow(row.localId, {
+                              parametro: e.target.value,
+                            })
+                          }
+                        >
+                          {ALICON_MONITOREO_PARAMETROS.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Puntos
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={row.puntos}
+                          onChange={(e) =>
+                            patchRow(row.localId, { puntos: e.target.value })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Fecha inicio
+                        <input
+                          type="date"
+                          value={row.fechaInicio}
+                          onChange={(e) =>
+                            patchRow(row.localId, {
+                              fechaInicio: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Fecha fin
+                        <input
+                          type="date"
+                          value={row.fechaFin}
+                          onChange={(e) =>
+                            patchRow(row.localId, { fechaFin: e.target.value })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Comparación
+                        <select
+                          value={row.comparacion}
+                          onChange={(e) =>
+                            patchRow(row.localId, {
+                              comparacion: e.target.value,
+                            })
+                          }
+                        >
+                          {ALICON_MONITOREO_COMPARACIONES.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Motivo
+                        <select
+                          value={row.motivo}
+                          onChange={(e) =>
+                            patchRow(row.localId, { motivo: e.target.value })
+                          }
+                        >
+                          {ALICON_MONITOREO_MOTIVOS.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Estado
+                        <select
+                          value={row.estado}
+                          onChange={(e) =>
+                            patchRow(row.localId, { estado: e.target.value })
+                          }
+                        >
+                          {ALICON_MONITOREO_ESTADOS.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="agro-insp-span2">
+                        Referencia
+                        <input
+                          type="text"
+                          value={row.referencia}
+                          onChange={(e) =>
+                            patchRow(row.localId, {
+                              referencia: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="agro-insp-span-all">
+                        Comentarios
+                        <textarea
+                          rows={2}
+                          value={row.comentarios}
+                          onChange={(e) =>
+                            patchRow(row.localId, {
+                              comentarios: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </form>
+
+            <div className="alicon-table-wrap" style={{ marginTop: 16 }}>
+              <table className="alicon-data-table agro-records-table">
+                <thead>
+                  <tr>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <th>Sede</th>
+                    <th>Tipo</th>
+                    <th>Parámetro</th>
+                    <th>Estado</th>
+                    <th>Referencia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scheduleRecords.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="alicon-empty">
+                        Sin ejecuciones programadas.
+                      </td>
+                    </tr>
+                  ) : (
+                    scheduleRecords.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.fechaInicio}</td>
+                        <td>{row.fechaFin ?? '—'}</td>
+                        <td>{row.plantaSede}</td>
+                        <td>{row.tipoMonitoreo || '—'}</td>
+                        <td>{row.parametro || '—'}</td>
+                        <td>{row.estado || '—'}</td>
+                        <td>{row.referencia || '—'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : null}
       </section>
     </div>
   )

@@ -300,7 +300,7 @@ export function AgroMonitoreosPage() {
         month={month}
         expectedUnidad="Agroprogreso"
         reportHref="/operaciones/monitoreo-ambiental"
-        hint="Opción A: sube un PDF de Agroprogreso y pulsa «Guardar todo el informe». Opción B: llena el formulario de agua y usa «Guardar muestreo». PDFs de Alicón (aire/ruido) también se pueden guardar aquí, pero se ven en el reporte Alicón."
+        hint="Sube PDFs de Agroprogreso (agua) y pulsa «Guardar todo el informe». Los de Alicón (agua potable, aire, ruido) cárgalos en Entrada · Planta Alicón para que aparezcan en su tabla y reporte."
         onApply={({ header: h, rows, year: y, month: m }) => {
           setYear(y)
           setMonth(m)
@@ -560,7 +560,7 @@ export function AgroMonitoreosPage() {
           <h2>Datos registrados</h2>
           <p>
             {filteredRecords.length} de {records.length} parámetros · fuente
-            Monitoreos ambientales.
+            laboratorio / captura (agua y control).
           </p>
         </div>
 
@@ -635,6 +635,7 @@ export function AgroMonitoreosPage() {
                 <th>Mes</th>
                 <th>Sede</th>
                 <th>Punto</th>
+                <th>Medio</th>
                 <th>Parámetro</th>
                 <th>Resultado</th>
                 <th>Límite</th>
@@ -644,7 +645,7 @@ export function AgroMonitoreosPage() {
             <tbody>
               {filteredRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="alicon-empty">
+                  <td colSpan={9} className="alicon-empty">
                     No hay registros con esos filtros.
                   </td>
                 </tr>
@@ -655,6 +656,7 @@ export function AgroMonitoreosPage() {
                     <td>{monthFromFecha(row.fecha) ?? '—'}</td>
                     <td>{row.plantaSede}</td>
                     <td>{row.puntoMuestreo}</td>
+                    <td>{row.medio || row.tipoAgua || '—'}</td>
                     <td>{row.parametro}</td>
                     <td>{formatNum(row.resultado)}</td>
                     <td>{row.limitePermisible || '—'}</td>

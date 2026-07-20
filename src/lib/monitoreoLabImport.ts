@@ -70,9 +70,16 @@ async function callExtractApi(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text, fileName }),
   })
-  const payload = (await res.json()) as {
-    data?: ExtractedMonitoreo
-    error?: string
+  const raw = await res.text()
+  let payload: { data?: ExtractedMonitoreo; error?: string } = {}
+  try {
+    payload = raw ? (JSON.parse(raw) as typeof payload) : {}
+  } catch {
+    throw new Error(
+      res.status >= 500
+        ? 'El servidor falló al extraer el informe (posible timeout o clave de IA). Intenta de nuevo.'
+        : `Respuesta inválida del servidor (HTTP ${res.status})`,
+    )
   }
   if (!res.ok || !payload.data) {
     throw new Error(payload.error || `Error HTTP ${res.status}`)

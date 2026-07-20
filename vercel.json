@@ -1,4 +1,12 @@
 {
+  "functions": {
+    "api/extract-monitoreo.ts": {
+      "maxDuration": 60
+    },
+    "api/chat.ts": {
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]

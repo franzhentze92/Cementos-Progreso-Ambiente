@@ -238,6 +238,14 @@ function normalizeInforme(raw: unknown): ExtractedMonitoreoInforme {
   }
 }
 
+/** Recorta texto largo: inicio + final (tablas de resultados suelen ir al final). */
+function clipLabText(text: string, maxChars = 48_000): string {
+  if (text.length <= maxChars) return text
+  const head = Math.floor(maxChars * 0.45)
+  const tail = maxChars - head - 40
+  return `${text.slice(0, head)}\n\n[…texto omitido…]\n\n${text.slice(-tail)}`
+}
+
 export async function extractMonitoreoFromText(input: {
   text: string
   fileName?: string
@@ -253,37 +261,49 @@ export async function extractMonitoreoFromText(input: {
     }
   }
 
+  const clipped = clipLabText(text)
   const userContent =
     `Archivo: ${input.fileName ?? 'informe.pdf'}\n\n` +
-    `Texto del informe:\n"""\n${text.slice(0, 120_000)}\n"""`
+    `Texto del informe:\n"""\n${clipped}\n"""`
 
-  const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${input.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      temperature: 0.05,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: SYSTEM },
-        { role: 'user', content: userContent },
-      ],
-    }),
-  })
-
-  if (!openaiRes.ok) {
-    console.error(
-      'OpenAI extract error',
-      openaiRes.status,
-      await openaiRes.text(),
-    )
+  let openaiRes: Response
+  try {
+    openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${input.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0.05,
+        response_format: { type: 'json_object' },
+        max_tokens: 4096,
+        messages: [
+          { role: 'system', content: SYSTEM },
+          { role: 'user', content: userContent },
+        ],
+      }),
+    })
+  } catch (err) {
+    console.error('OpenAI extract network error', err)
     return {
       ok: false,
       status: 502,
-      error: 'Error al consultar el modelo de IA',
+      error: 'No se pudo contactar al modelo de IA. Intenta de nuevo.',
+    }
+  }
+
+  if (!openaiRes.ok) {
+    const errText = await openaiRes.text().catch(() => '')
+    console.error('OpenAI extract error', openaiRes.status, errText)
+    return {
+      ok: false,
+      status: 502,
+      error:
+        openaiRes.status === 429
+          ? 'El servicio de IA está saturado. Espera un momento e intenta de nuevo.'
+          : 'Error al consultar el modelo de IA',
     }
   }
 

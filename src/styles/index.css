@@ -5925,6 +5925,19 @@ img {
   color: #8a2b2b;
 }
 
+.hc-banner-warn {
+  border: 1px solid #e8d4a8;
+  background: #fffaf0;
+  color: #7a5a12;
+  font-weight: 500;
+  align-items: flex-start;
+}
+
+.hc-banner-warn a {
+  color: #5c440e;
+  font-weight: 700;
+}
+
 .hc-banner-ok {
   border: 1px solid #b7d5b3;
   background: #f1f9ef;

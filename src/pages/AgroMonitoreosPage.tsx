@@ -298,7 +298,9 @@ export function AgroMonitoreosPage() {
       <MonitoreoLabImport
         year={year}
         month={month}
-        hint="Opción A: sube el PDF del laboratorio (IA extrae y guarda). Opción B: llena el formulario de abajo y guarda el muestreo. Los gráficos están en el reporte de operaciones."
+        expectedUnidad="Agroprogreso"
+        reportHref="/operaciones/monitoreo-ambiental"
+        hint="Opción A: sube un PDF de Agroprogreso y pulsa «Guardar todo el informe». Opción B: llena el formulario de agua y usa «Guardar muestreo». PDFs de Alicón (aire/ruido) también se pueden guardar aquí, pero se ven en el reporte Alicón."
         onApply={({ header: h, rows, year: y, month: m }) => {
           setYear(y)
           setMonth(m)
@@ -307,9 +309,11 @@ export function AgroMonitoreosPage() {
           setSaveOk(false)
           setSaveError(null)
         }}
-        onSaved={() => {
-          void reload()
-          setSaveOk(true)
+        onSaved={(result) => {
+          if (result.unidadNegocio === 'Agroprogreso') {
+            void reload()
+            setSaveOk(true)
+          }
         }}
       />
 

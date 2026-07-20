@@ -311,7 +311,9 @@ export function AliconMonitoreosPage() {
       <MonitoreoLabImport
         year={year}
         month={month}
-        hint="Opción A: sube el PDF del laboratorio (agua, aire, ruido). La IA extrae y guarda todos los parámetros. Opción B: captura el cronograma de ejecuciones en el formulario de abajo."
+        expectedUnidad="Alicón"
+        reportHref="/operaciones/planta-alicon/monitoreo-ambiental"
+        hint="Opción A: sube el PDF del laboratorio (agua, aire, ruido) y pulsa «Guardar todo el informe». Opción B: captura el cronograma de ejecuciones en el formulario de abajo con «Guardar mes»."
         onSaved={(result) => {
           setLabSaveOk(
             `Informe guardado: ${result.savedRows} parámetros en ${result.puntos} punto(s).`,

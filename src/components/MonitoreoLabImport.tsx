@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
+  AlertTriangle,
   CheckCircle2,
   Database,
   FileUp,
@@ -18,6 +20,10 @@ import {
 type Props = {
   year: number
   month: MonitoringMonth
+  /** Unidad esperada en esta pantalla (Agroprogreso | Alicón). */
+  expectedUnidad?: 'Agroprogreso' | 'Alicón'
+  /** Dónde ver los resultados tras guardar. */
+  reportHref?: string
   /** Agro: aplica el primer muestreo al formulario. */
   onApply?: (payload: {
     header: AgroMonitoreoHeader
@@ -26,7 +32,12 @@ type Props = {
     month: MonitoringMonth
   }) => void
   /** Tras guardar todos los puntos en Supabase. */
-  onSaved?: (result: { savedRows: number; puntos: number }) => void
+  onSaved?: (result: {
+    savedRows: number
+    puntos: number
+    metaColumns: boolean
+    unidadNegocio: string
+  }) => void
   /** Texto de ayuda contextual. */
   hint?: string
 }
@@ -34,6 +45,8 @@ type Props = {
 export function MonitoreoLabImport({
   year,
   month,
+  expectedUnidad,
+  reportHref,
   onApply,
   onSaved,
   hint,
@@ -66,15 +79,23 @@ export function MonitoreoLabImport({
     }
   }
 
+  const unidadPdf = preview?.data.unidadNegocio ?? ''
+  const mismatch =
+    Boolean(expectedUnidad && preview && unidadPdf && unidadPdf !== expectedUnidad)
+  const canApplyToForm =
+    Boolean(onApply) && (!expectedUnidad || unidadPdf === expectedUnidad)
+
   function applyPreview() {
-    if (!preview || !onApply) return
+    if (!preview || !canApplyToForm || !onApply) return
     onApply({
       header: preview.header,
       rows: preview.rows,
       year: preview.year ?? year,
       month: preview.month ?? month,
     })
-    setSaveMsg('Parámetros aplicados al formulario. Revisa y guarda el muestreo.')
+    setSaveMsg(
+      'Primer punto copiado al formulario de agua. Para guardar el PDF completo (todos los puntos) usa «Guardar todo el informe».',
+    )
   }
 
   async function saveAll() {
@@ -84,12 +105,15 @@ export function MonitoreoLabImport({
     setSaveMsg(null)
     try {
       const result = await saveImportedLabInforme(preview)
+      const unidad = preview.data.unidadNegocio || 'Alicón'
+      const where =
+        unidad === 'Alicón'
+          ? 'Reporte Alicón → Resultados de laboratorio'
+          : 'esta tabla / reporte Agroprogreso'
       setSaveMsg(
-        result.metaColumns
-          ? `Guardado: ${result.savedRows} parámetros en ${result.puntos} punto(s) · laboratorio, fuente y medio en columnas propias.`
-          : `Guardado: ${result.savedRows} parámetros en ${result.puntos} punto(s). Metadatos (laboratorio/fuente/medio) en observaciones hasta aplicar la migración SQL.`,
+        `Informe guardado: ${result.savedRows} parámetros en ${result.puntos} punto(s) (${unidad}). Revisa en ${where}.`,
       )
-      onSaved?.(result)
+      onSaved?.({ ...result, unidadNegocio: unidad })
       setPreview(null)
     } catch (err) {
       setError(
@@ -114,7 +138,7 @@ export function MonitoreoLabImport({
           </h2>
           <p>
             {hint ??
-              'Sube el PDF del laboratorio (agua, aire, ruido). La IA extrae todos los puntos y parámetros; puedes guardarlos organizados o aplicar el primer muestreo al formulario.'}
+              'Sube el PDF del laboratorio (agua, aire, ruido). La IA extrae todos los puntos; confirma con «Guardar todo el informe» (no uses el botón verde «Guardar muestreo» de arriba para el PDF).'}
           </p>
         </div>
         <button
@@ -148,7 +172,12 @@ export function MonitoreoLabImport({
       {saveMsg ? (
         <div className="hc-banner hc-banner-ok" role="status">
           <CheckCircle2 size={18} />
-          {saveMsg}
+          <span>
+            {saveMsg}{' '}
+            {reportHref ? (
+              <Link to={reportHref}>Ver resultados →</Link>
+            ) : null}
+          </span>
         </div>
       ) : null}
 
@@ -183,10 +212,32 @@ export function MonitoreoLabImport({
             </button>
           </header>
 
+          {mismatch ? (
+            <div className="hc-banner hc-banner-warn" role="status">
+              <AlertTriangle size={18} />
+              <span>
+                Este PDF es de <strong>{unidadPdf}</strong>, pero estás en la
+                pantalla de <strong>{expectedUnidad}</strong>. Puedes guardarlo
+                igual (irá a {unidadPdf}). La tabla de abajo solo muestra{' '}
+                {expectedUnidad}; para ver aire/ruido de Alicón abre el{' '}
+                <Link to="/operaciones/planta-alicon/monitoreo-ambiental">
+                  reporte Alicón
+                </Link>{' '}
+                o entra por{' '}
+                <Link to="/entrada-datos/monitoreo-ambiental?proyecto=planta-alicon">
+                  Entrada Alicón
+                </Link>
+                .
+              </span>
+            </div>
+          ) : null}
+
           <div className="lab-import-meta">
             <div>
               <span>Sede</span>
-              <strong>{preview.data.plantaSede || preview.header.plantaSede}</strong>
+              <strong>
+                {preview.data.plantaSede || preview.header.plantaSede}
+              </strong>
             </div>
             <div>
               <span>Medio</span>
@@ -203,7 +254,10 @@ export function MonitoreoLabImport({
           </div>
 
           {muestreos.map((m, idx) => (
-            <div key={`${m.puntoMuestreo}-${idx}`} className="lab-import-muestreo">
+            <div
+              key={`${m.puntoMuestreo}-${idx}`}
+              className="lab-import-muestreo"
+            >
               <h3>
                 {m.puntoMuestreo}
                 <span>
@@ -248,18 +302,19 @@ export function MonitoreoLabImport({
 
           <footer>
             <p>
-              Se reemplazan resultados previos del mismo punto y fecha. Revisa
-              la extracción antes de confirmar.
+              Para guardar este PDF usa el botón verde de abajo. El botón
+              «Guardar muestreo» de la cabecera solo guarda el formulario de
+              agua vacío y no es el informe.
             </p>
             <div className="lab-import-actions">
-              {onApply ? (
+              {canApplyToForm ? (
                 <button
                   type="button"
                   className="btn-secondary-link"
                   onClick={applyPreview}
                 >
                   <CheckCircle2 size={16} />
-                  Aplicar 1.er punto al formulario
+                  Copiar 1.er punto al formulario
                 </button>
               ) : null}
               <button
@@ -273,7 +328,7 @@ export function MonitoreoLabImport({
                 ) : (
                   <Database size={16} />
                 )}
-                {saving ? 'Guardando…' : 'Guardar todo en el sistema'}
+                {saving ? 'Guardando…' : 'Guardar todo el informe'}
               </button>
             </div>
           </footer>

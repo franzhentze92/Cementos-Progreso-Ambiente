@@ -8,6 +8,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 const LARGE_MB = 15
 const LARGE_MAX_PAGES = 40
 const MAX_CHARS = 28_000
+const LAB_MAX_PAGES = 60
+const LAB_MAX_CHARS = 110_000
 
 export type PdfExtractResult = {
   text: string
@@ -16,6 +18,11 @@ export type PdfExtractResult = {
   summary: string
   truncated: boolean
   note: string | null
+}
+
+export type PdfExtractOptions = {
+  /** Informes de laboratorio: más páginas y caracteres. */
+  mode?: 'default' | 'lab'
 }
 
 function cleanText(raw: string) {
@@ -29,17 +36,24 @@ function cleanText(raw: string) {
 }
 
 /** Extrae texto de un PDF en el navegador (pdf.js). */
-export async function extractPdfText(file: File): Promise<PdfExtractResult> {
+export async function extractPdfText(
+  file: File,
+  options: PdfExtractOptions = {},
+): Promise<PdfExtractResult> {
+  const lab = options.mode === 'lab'
   const sizeMb = file.size / (1024 * 1024)
   const buffer = await file.arrayBuffer()
   const pdf = await pdfjs.getDocument({ data: buffer }).promise
   const totalPages = pdf.numPages
+  const pageCap = lab ? LAB_MAX_PAGES : LARGE_MAX_PAGES
   const maxPages =
-    sizeMb >= LARGE_MB ? Math.min(totalPages, LARGE_MAX_PAGES) : totalPages
+    lab || sizeMb < LARGE_MB
+      ? Math.min(totalPages, pageCap)
+      : Math.min(totalPages, LARGE_MAX_PAGES)
 
-  let truncated = sizeMb >= LARGE_MB && totalPages > LARGE_MAX_PAGES
+  let truncated = totalPages > maxPages
   let note: string | null = truncated
-    ? `PDF grande (${sizeMb.toFixed(1)} MB): se extrajeron solo las primeras ${LARGE_MAX_PAGES} páginas.`
+    ? `PDF de ${totalPages} páginas: se extrajeron ${maxPages} para el análisis.`
     : null
 
   const parts: string[] = []
@@ -49,7 +63,7 @@ export async function extractPdfText(file: File): Promise<PdfExtractResult> {
     const pageText = content.items
       .map((item) => ('str' in item ? item.str : ''))
       .join(' ')
-    parts.push(pageText)
+    parts.push(`--- Página ${i} ---\n${pageText}`)
   }
 
   let text = cleanText(parts.join('\n\n'))
@@ -60,10 +74,15 @@ export async function extractPdfText(file: File): Promise<PdfExtractResult> {
       'Poco o ningún texto embebido (posible PDF escaneado). Se necesita OCR manual o re-exportar con texto seleccionable.'
   }
 
-  if (text.length > MAX_CHARS) {
+  const charCap = lab ? LAB_MAX_CHARS : MAX_CHARS
+  if (text.length > charCap) {
+    // Prioriza inicio (portada/metodología) + final (anexos de resultados)
+    const head = Math.floor(charCap * 0.45)
+    const tail = charCap - head - 80
     text =
-      text.slice(0, MAX_CHARS) +
-      `\n\n[… texto truncado a ${MAX_CHARS} caracteres para el copiloto …]`
+      text.slice(0, head) +
+      `\n\n[… truncado; se conservan portada y anexos de resultados …]\n\n` +
+      text.slice(-tail)
     truncated = true
   }
 

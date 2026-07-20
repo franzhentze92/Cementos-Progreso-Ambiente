@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ClipboardList,
   Droplets,
+  Filter,
   Gauge,
   GraduationCap,
   HardHat,
@@ -66,6 +67,7 @@ function iconFor(id: string) {
 }
 
 export function ResumenOperacionesPage() {
+  const [operation, setOperation] = useState<string | 'all'>('all')
   const [summary, setSummary] = useState<OperacionesSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -76,7 +78,7 @@ export function ResumenOperacionesPage() {
       setLoading(true)
       setError(null)
       try {
-        const data = await loadOperacionesSummary()
+        const data = await loadOperacionesSummary(operation)
         if (!cancelled) setSummary(data)
       } catch (err) {
         if (!cancelled) {
@@ -93,9 +95,9 @@ export function ResumenOperacionesPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [operation])
 
-  if (loading) {
+  if (loading && !summary) {
     return (
       <div className="dash-page hc-loading">
         <Loader2 className="hc-spin" size={28} />
@@ -114,6 +116,9 @@ export function ResumenOperacionesPage() {
     )
   }
 
+  const opLabel =
+    operation === 'all' ? 'Todas las operaciones' : operation
+
   return (
     <div className="dash-page">
       <div className="page-header dash-header">
@@ -121,14 +126,37 @@ export function ResumenOperacionesPage() {
           <p className="carbon-kicker">Operaciones · Vista general</p>
           <h1>Resumen de operaciones</h1>
           <p>
-            Indicadores vivos de lo que se ejecuta, registra o monitorea en
-            campo y planta
-            {summary.periodHints[0] ? ` · ${summary.periodHints[0]}` : ''}.
+            Indicadores vivos de campo y planta
+            {summary.periodHints[0] ? ` · ${summary.periodHints[0]}` : ''}
+            {' · '}
+            {opLabel}.
           </p>
         </div>
         <div className="dash-header-actions">
+          <label className="ops-filter">
+            <Filter size={14} />
+            <span>Operación</span>
+            <select
+              value={operation}
+              onChange={(e) =>
+                setOperation(e.target.value as string | 'all')
+              }
+              aria-label="Filtrar por operación"
+            >
+              <option value="all">Todas las operaciones</option>
+              {summary.operations.map((op) => (
+                <option key={op} value={op}>
+                  {op}
+                </option>
+              ))}
+            </select>
+          </label>
           <span className="dash-live-badge">
-            <Leaf size={14} />
+            {loading ? (
+              <Loader2 className="hc-spin" size={14} />
+            ) : (
+              <Leaf size={14} />
+            )}
             {summary.modulesLoaded} módulos cargados
           </span>
           {summary.modulesFailed.length > 0 && (
@@ -143,94 +171,13 @@ export function ResumenOperacionesPage() {
         </div>
       </div>
 
-      <SectionKpiGrid kpis={summary.kpis} iconFor={iconFor} />
-
-      <div className="dash-main-grid">
-        <section className="dash-panel dash-chart-panel">
-          <div className="dash-panel-head">
-            <h2>Desempeño operativo</h2>
-            <p>Monitoreos, NDA, inspecciones y Casco Verde (0–100)</p>
-          </div>
-          {summary.complianceBars.length > 0 ? (
-            <div className="dash-chart">
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={summary.complianceBars}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e5e8" />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fill: '#5e5f61', fontSize: 12 }}
-                  />
-                  <YAxis
-                    domain={[0, 100]}
-                    tick={{ fill: '#5e5f61', fontSize: 12 }}
-                  />
-                  <Tooltip contentStyle={dashTooltip} />
-                  <Bar dataKey="value" name="Valor" radius={[8, 8, 0, 0]}>
-                    {summary.complianceBars.map((entry) => (
-                      <Cell key={entry.name} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <EmptyPanel
-              text="Sin scores operativos aún"
-              to="/operaciones/monitoreo-ambiental"
-            />
-          )}
-        </section>
-
-        <section className="dash-panel">
-          <div className="dash-panel-head">
-            <h2>Incidentes ambientales</h2>
-            <p>Abiertos vs cerrados · Agro + Alicón</p>
-          </div>
-          {summary.incidentShare.length > 0 ? (
-            <div className="dash-donuts dash-donuts-single">
-              <div className="dash-donut">
-                <ResponsiveContainer width="100%" height={170}>
-                  <PieChart>
-                    <Pie
-                      data={summary.incidentShare}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={48}
-                      outerRadius={68}
-                      paddingAngle={3}
-                    >
-                      {summary.incidentShare.map((entry) => (
-                        <Cell key={entry.name} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={dashTooltip} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <strong>
-                  {fmt(
-                    summary.incidentShare.reduce((a, x) => a + x.value, 0),
-                  )}
-                </strong>
-                <span>Total</span>
-              </div>
-              <ul className="dash-legend-list">
-                {summary.incidentShare.map((s) => (
-                  <li key={s.name}>
-                    <i style={{ background: s.fill }} />
-                    <span>{s.name}</span>
-                    <strong>{fmt(s.value)}</strong>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <EmptyPanel
-              text="Sin incidentes registrados"
-              to="/operaciones/incidentes-ambientales"
-            />
-          )}
-        </section>
-      </div>
+      <section className="ops-kpi-block">
+        <div className="ops-kpi-block-head">
+          <h2>Tarjetas operativas</h2>
+          <p>Consumo de agua, residuos y compostaje</p>
+        </div>
+        <SectionKpiGrid kpis={summary.kpisOperativas} iconFor={iconFor} />
+      </section>
 
       <div className="dash-secondary-grid dash-tertiary-grid">
         <section className="dash-panel">
@@ -380,6 +327,104 @@ export function ResumenOperacionesPage() {
         </section>
       </div>
 
+      <section className="ops-kpi-block">
+        <div className="ops-kpi-block-head">
+          <h2>Tarjetas de desempeño</h2>
+          <p>
+            Monitoreos, inspecciones, incidentes, NDA, Casco Verde y
+            capacitaciones
+          </p>
+        </div>
+        <SectionKpiGrid kpis={summary.kpisDesempeno} iconFor={iconFor} />
+      </section>
+
+      <div className="dash-main-grid">
+        <section className="dash-panel dash-chart-panel">
+          <div className="dash-panel-head">
+            <h2>Desempeño operativo</h2>
+            <p>Monitoreos, NDA, inspecciones y Casco Verde (0–100)</p>
+          </div>
+          {summary.complianceBars.length > 0 ? (
+            <div className="dash-chart">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={summary.complianceBars}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e5e8" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: '#5e5f61', fontSize: 12 }}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    tick={{ fill: '#5e5f61', fontSize: 12 }}
+                  />
+                  <Tooltip contentStyle={dashTooltip} />
+                  <Bar dataKey="value" name="Valor" radius={[8, 8, 0, 0]}>
+                    {summary.complianceBars.map((entry) => (
+                      <Cell key={entry.name} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyPanel
+              text="Sin scores operativos aún"
+              to="/operaciones/monitoreo-ambiental"
+            />
+          )}
+        </section>
+
+        <section className="dash-panel">
+          <div className="dash-panel-head">
+            <h2>Incidentes ambientales</h2>
+            <p>Abiertos vs cerrados</p>
+          </div>
+          {summary.incidentShare.length > 0 ? (
+            <div className="dash-donuts dash-donuts-single">
+              <div className="dash-donut">
+                <ResponsiveContainer width="100%" height={170}>
+                  <PieChart>
+                    <Pie
+                      data={summary.incidentShare}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={48}
+                      outerRadius={68}
+                      paddingAngle={3}
+                    >
+                      {summary.incidentShare.map((entry) => (
+                        <Cell key={entry.name} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={dashTooltip} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <strong>
+                  {fmt(
+                    summary.incidentShare.reduce((a, x) => a + x.value, 0),
+                  )}
+                </strong>
+                <span>Total</span>
+              </div>
+              <ul className="dash-legend-list">
+                {summary.incidentShare.map((s) => (
+                  <li key={s.name}>
+                    <i style={{ background: s.fill }} />
+                    <span>{s.name}</span>
+                    <strong>{fmt(s.value)}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <EmptyPanel
+              text="Sin incidentes registrados"
+              to="/operaciones/incidentes-ambientales"
+            />
+          )}
+        </section>
+      </div>
+
       <div className="dash-secondary-grid">
         <section className="dash-panel">
           <div className="dash-panel-head">
@@ -430,9 +475,9 @@ export function ResumenOperacionesPage() {
 
         <section className="dash-panel">
           <div className="dash-panel-head">
-            <h2>NDA Casco Verde</h2>
+            <h2>Inspecciones casco verde</h2>
             <p>
-              Nota promedio mensual
+              Nota promedio mensual · NDA General
               {summary.cascoAvg != null ? ` · ${fmt(summary.cascoAvg, 1)}` : ''}
             </p>
           </div>
@@ -461,8 +506,8 @@ export function ResumenOperacionesPage() {
             </div>
           ) : (
             <EmptyPanel
-              text="Sin NDA Casco Verde"
-              to="/operaciones/nda-casco-verde"
+              text="Sin inspecciones casco verde"
+              to="/operaciones/nda-casco-verde?proyecto=agroprogreso"
             />
           )}
         </section>

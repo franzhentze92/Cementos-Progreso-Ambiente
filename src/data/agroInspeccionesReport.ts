@@ -10,6 +10,9 @@ import {
   type AgroInspeccionRecord,
 } from './agroInspecciones'
 
+/** Meta corporativa: inspecciones ambientales a realizar por año. */
+export const INSPECCIONES_META_ANUAL = 52
+
 export type InsightLevel = 'Crítico' | 'Atención' | 'Positivo'
 
 export type AgroInspeccionReport = {
@@ -21,6 +24,13 @@ export type AgroInspeccionReport = {
     withScore: number
     withHallazgos: number
     accionInmediata: number
+  }
+  /** Avance contra la meta anual de inspecciones. */
+  goal: {
+    metaAnual: number
+    year: number
+    realizadas: number
+    pctAvance: number
   }
   kpis: Array<{
     id: string
@@ -72,6 +82,16 @@ export function availableYears(records: AgroInspeccionRecord[]): number[] {
   return [...new Set(records.map((r) => r.anio))].sort((a, b) => b - a)
 }
 
+function resolveGoalYear(
+  selectedYear: number | 'all',
+  years: number[],
+): number {
+  if (selectedYear !== 'all') return selectedYear
+  const current = new Date().getFullYear()
+  if (years.includes(current)) return current
+  return years[0] ?? current
+}
+
 export function buildAgroInspeccionReport(
   records: AgroInspeccionRecord[],
   selectedYear: number | 'all',
@@ -88,6 +108,22 @@ export function buildAgroInspeccionReport(
         ? `${Math.min(...years)}–${Math.max(...years)}`
         : 'Sin datos'
       : String(selectedYear)
+
+  const goalYear = resolveGoalYear(selectedYear, years)
+  const realizadas =
+    selectedYear === 'all'
+      ? records.filter((r) => r.anio === goalYear).length
+      : scoped.length
+  const pctAvance =
+    INSPECCIONES_META_ANUAL > 0
+      ? Math.round((realizadas / INSPECCIONES_META_ANUAL) * 1000) / 10
+      : 0
+  const goal = {
+    metaAnual: INSPECCIONES_META_ANUAL,
+    year: goalYear,
+    realizadas,
+    pctAvance,
+  }
 
   const withScore = scoped.filter(
     (r) => r.resultadoGeneral != null && !Number.isNaN(r.resultadoGeneral),
@@ -109,6 +145,12 @@ export function buildAgroInspeccionReport(
   ).length
 
   const kpis = [
+    {
+      id: 'meta',
+      label: 'Meta anual',
+      value: `${realizadas} / ${INSPECCIONES_META_ANUAL}`,
+      hint: `Avance ${formatNum(pctAvance, 1)}% · año ${goalYear}`,
+    },
     {
       id: 'count',
       label: 'Inspecciones',
@@ -136,6 +178,30 @@ export function buildAgroInspeccionReport(
   ]
 
   const insights: AgroInspeccionReport['insights'] = []
+  const faltantes = Math.max(0, INSPECCIONES_META_ANUAL - realizadas)
+  if (pctAvance >= 100) {
+    insights.push({
+      id: 'meta-ok',
+      level: 'Positivo',
+      title: 'Meta anual cumplida',
+      text: `${realizadas} de ${INSPECCIONES_META_ANUAL} inspecciones en ${goalYear} (${formatNum(pctAvance, 1)}%).`,
+    })
+  } else if (realizadas === 0) {
+    insights.push({
+      id: 'meta-empty',
+      level: 'Atención',
+      title: 'Sin avance de meta',
+      text: `Meta ${INSPECCIONES_META_ANUAL} inspecciones anuales · faltan ${faltantes} en ${goalYear}.`,
+    })
+  } else {
+    insights.push({
+      id: 'meta-avance',
+      level: pctAvance < 25 ? 'Atención' : 'Positivo',
+      title: 'Avance de meta anual',
+      text: `Se deben realizar ${INSPECCIONES_META_ANUAL} inspecciones anuales; llevamos ${realizadas} (${formatNum(pctAvance, 1)}%). Faltan ${faltantes}.`,
+    })
+  }
+
   if (!scoped.length) {
     insights.push({
       id: 'empty',
@@ -265,6 +331,7 @@ export function buildAgroInspeccionReport(
       withHallazgos,
       accionInmediata,
     },
+    goal,
     kpis,
     insights,
     monthlyAvg,

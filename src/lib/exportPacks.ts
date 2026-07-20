@@ -174,7 +174,7 @@ export const EXPORT_PACKS: ExportPackDef[] = [
   },
   {
     id: 'monitoreo',
-    title: 'Monitoreo ambiental',
+    title: 'Monitoreos de cumplimiento / control',
     description:
       'Campañas de muestreo Agro: parámetros, cumplimiento de límites y puntos.',
     formats: ['pdf', 'csv'],
@@ -224,8 +224,9 @@ export const EXPORT_PACKS: ExportPackDef[] = [
   },
   {
     id: 'ndaCascoVerde',
-    title: 'NDA Casco Verde',
-    description: 'Notas de inspección Casco Verde, hallazgos críticos y sedes.',
+    title: 'Inspecciones casco verde',
+    description:
+      'Notas de inspección Casco Verde (desde NDA General), hallazgos y sedes.',
     formats: ['pdf', 'csv'],
     audience: 'Ambiente / SSO',
     theme: 'capa',
@@ -248,12 +249,12 @@ export const EXPORT_PACKS: ExportPackDef[] = [
     audience: 'Ambiente / RRHH',
     theme: 'metas',
   },
-  // —— Cumplimiento ——
+  // —— Cumplimiento Legal ——
   {
     id: 'resumenCumplimiento',
     title: 'Resumen de cumplimiento',
     description:
-      'KPIs cruzados de obligaciones, CAPA, licencias, trámites y compromisos.',
+      'Cumplimiento Legal: compromisos ambientales, licencias al día, CAPA y trámites.',
     formats: ['pdf', 'csv'],
     audience: 'Gerencia / Auditoría',
     theme: 'cumplimiento',
@@ -1622,7 +1623,7 @@ async function exportMonitoreo(format: 'pdf' | 'csv') {
   const year = preferredYear(monitoreoYears(rows))
   const report = buildAgroMonitoreosReport(rows, year)
   downloadReportPdf({
-    title: 'Monitoreo ambiental',
+    title: 'Monitoreos de cumplimiento / control',
     subtitle: `${report.meta.periodLabel} · ${todayLabel()}`,
     footer: 'Cementos Progreso Ambiente · Monitoreo',
     filename: stampFilename('monitoreo_ambiental', 'pdf'),
@@ -1694,10 +1695,16 @@ async function exportInspecciones(format: 'pdf' | 'csv') {
     footer: 'Cementos Progreso Ambiente · Inspecciones',
     filename: stampFilename('inspecciones_ambientales', 'pdf'),
     theme: 'capa',
-    kpis: report.kpis.slice(0, 4).map((k) => ({
-      label: k.label,
-      value: k.value,
-    })),
+    kpis: [
+      {
+        label: 'Meta anual',
+        value: `${report.goal.realizadas}/${report.goal.metaAnual} (${report.goal.pctAvance}%)`,
+      },
+      ...report.kpis.slice(1, 4).map((k) => ({
+        label: k.label,
+        value: k.value,
+      })),
+    ],
     sections: [
       {
         heading: 'Alertas',
@@ -1806,8 +1813,8 @@ async function exportNdaCascoVerde(format: 'pdf' | 'csv') {
   ].sort((a, b) => b - a)
   const report = buildAgroNdaCascoVerdeReport(rows, preferredYear(years))
   downloadReportPdf({
-    title: 'NDA Casco Verde',
-    subtitle: `${report.meta.periodLabel} · ${todayLabel()}`,
+    title: 'Inspecciones casco verde',
+    subtitle: `NDA General · ${report.meta.periodLabel} · ${todayLabel()}`,
     footer: 'Cementos Progreso Ambiente · Casco Verde',
     filename: stampFilename('nda_casco_verde', 'pdf'),
     theme: 'capa',
@@ -1958,27 +1965,49 @@ async function exportCapacitaciones(format: 'pdf' | 'csv') {
 
 async function exportResumenCumplimiento(format: 'pdf' | 'csv') {
   const summary = await loadCumplimientoSectionSummary()
+  const allKpis = [
+    ...summary.kpisCompromisos.map((k) => ({ ...k, grupo: 'Compromisos' })),
+    ...summary.kpisLicencias.map((k) => ({ ...k, grupo: 'Licencias' })),
+    ...summary.kpis.map((k) => ({ ...k, grupo: 'Otros' })),
+  ]
   if (format === 'csv') {
     downloadCsv(
       stampFilename('resumen_cumplimiento_kpis', 'csv'),
-      ['KPI', 'Valor', 'Hint'],
-      summary.kpis.map((k) => [k.label, k.value, k.hint]),
+      ['Grupo', 'KPI', 'Valor', 'Hint'],
+      allKpis.map((k) => [k.grupo, k.label, k.value, k.hint]),
     )
     return
   }
   downloadReportPdf({
     title: 'Resumen de cumplimiento',
     subtitle: `${summary.modulesLoaded} módulos · ${todayLabel()}`,
-    footer: 'Cementos Progreso Ambiente · Cumplimiento',
+    footer: 'Cementos Progreso Ambiente · Cumplimiento Legal',
     filename: stampFilename('resumen_cumplimiento', 'pdf'),
     theme: 'cumplimiento',
-    kpis: summary.kpis.slice(0, 4).map((k) => ({
+    kpis: [
+      ...summary.kpisCompromisos.slice(0, 2),
+      ...summary.kpisLicencias.slice(0, 2),
+    ].map((k) => ({
       label: k.label,
-      value: k.value,
+      value: k.unit ? `${k.value} ${k.unit}` : k.value,
     })),
     sections: [
       {
-        heading: 'Indicadores',
+        heading: 'Compromisos ambientales',
+        lines: summary.kpisCompromisos.map(
+          (k) =>
+            `${k.label}: ${k.value}${k.unit ? ` ${k.unit}` : ''} — ${k.hint}`,
+        ),
+      },
+      {
+        heading: 'Licencias ambientales',
+        lines: summary.kpisLicencias.map(
+          (k) =>
+            `${k.label}: ${k.value}${k.unit ? ` ${k.unit}` : ''} — ${k.hint}`,
+        ),
+      },
+      {
+        heading: 'Obligaciones, CAPA y trámites',
         lines: summary.kpis.map((k) => `${k.label}: ${k.value} — ${k.hint}`),
       },
       {

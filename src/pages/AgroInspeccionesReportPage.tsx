@@ -134,7 +134,8 @@ export function AgroInspeccionesReportPage({
     )
   }
 
-  const { meta, kpis, insights, totals } = report
+  const { meta, goal, kpis, insights, totals } = report
+  const goalBarPct = Math.min(100, goal.pctAvance)
 
   return (
     <div className="carbon-page agro-inspecciones-report">
@@ -153,8 +154,14 @@ export function AgroInspeccionesReportPage({
         </div>
         <div className="carbon-header-meta">
           <div>
-            <span>Inspecciones</span>
-            <strong>{meta.totalRows}</strong>
+            <span>Meta anual {goal.year}</span>
+            <strong>
+              {goal.realizadas}/{goal.metaAnual}
+            </strong>
+          </div>
+          <div>
+            <span>Avance meta</span>
+            <strong>{formatNum(goal.pctAvance, 1)}%</strong>
           </div>
           <div>
             <span>Con acción inmediata</span>
@@ -183,12 +190,57 @@ export function AgroInspeccionesReportPage({
         </div>
       </div>
 
-      <div className="carbon-kpi-grid">
+      <section className="insp-goal-panel" aria-label="Meta anual de inspecciones">
+        <div className="insp-goal-panel-head">
+          <div>
+            <h2>Meta anual de inspecciones</h2>
+            <p>
+              Se deben realizar {goal.metaAnual} inspecciones anuales; llevamos{' '}
+              {goal.realizadas} en {goal.year}.
+            </p>
+          </div>
+          <strong className="insp-goal-pct">
+            {formatNum(goal.pctAvance, 1)}%
+          </strong>
+        </div>
+        <div className="carbon-progress">
+          <div className="carbon-progress-meta">
+            <span>
+              {goal.realizadas} de {goal.metaAnual} inspecciones
+            </span>
+            <span>
+              Faltan {Math.max(0, goal.metaAnual - goal.realizadas)}
+            </span>
+          </div>
+          <div
+            className="carbon-progress-bar"
+            role="progressbar"
+            aria-valuenow={goalBarPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Avance de meta anual: ${formatNum(goal.pctAvance, 1)}%`}
+          >
+            <i style={{ width: `${goalBarPct}%` }} />
+          </div>
+        </div>
+      </section>
+
+      <div className="carbon-kpi-grid agro-insp-kpi-grid">
         {kpis.map((kpi) => (
-          <article key={kpi.id} className="carbon-kpi">
+          <article
+            key={kpi.id}
+            className={`carbon-kpi${kpi.id === 'meta' ? ' carbon-kpi-meta' : ''}`}
+          >
             <span>{kpi.label}</span>
             <strong>{kpi.value}</strong>
             <p>{kpi.hint}</p>
+            {kpi.id === 'meta' ? (
+              <div className="carbon-progress">
+                <div className="carbon-progress-bar">
+                  <i style={{ width: `${goalBarPct}%` }} />
+                </div>
+              </div>
+            ) : null}
           </article>
         ))}
       </div>

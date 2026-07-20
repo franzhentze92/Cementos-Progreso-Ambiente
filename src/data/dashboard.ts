@@ -76,6 +76,13 @@ export type DashboardSummary = {
       byFinca: AgroCompostajeReport['byFinca']
     } | null
   }
+  nda: {
+    periodLabel: string
+    avgNda: number | null
+    avgIda: number | null
+    avgCasco: number | null
+    bySede: AgroNdaGeneralReport['bySede']
+  } | null
   compliance: {
     incidentes: {
       total: number
@@ -367,12 +374,21 @@ export function buildDashboardSummary(input: BuildInput): DashboardSummary {
   }
 
   const ndaAvg = input.nda?.totals.avgNda ?? null
+  const nda = input.nda
+    ? {
+        periodLabel: input.nda.meta.periodLabel,
+        avgNda: input.nda.totals.avgNda,
+        avgIda: input.nda.totals.avgIda,
+        avgCasco: input.nda.totals.avgCasco,
+        bySede: input.nda.bySede,
+      }
+    : null
   if (input.nda) {
     for (const ins of input.nda.insights.slice(0, 1)) {
       insights.push({
         ...ins,
         source: 'NDA',
-        href: '/operaciones/agroprogreso/nda-general',
+        href: '/operaciones/nda-general',
       })
     }
   }
@@ -383,7 +399,7 @@ export function buildDashboardSummary(input: BuildInput): DashboardSummary {
       insights.push({
         ...ins,
         source: 'Licencias',
-        href: '/operaciones/agroprogreso/licencias-ambientales',
+        href: '/operaciones/licencias-ambientales',
       })
     }
   }
@@ -488,40 +504,45 @@ export function buildDashboardSummary(input: BuildInput): DashboardSummary {
   }
   insights.sort((a, b) => levelRank[a.level] - levelRank[b.level])
 
+  // KPIs de visión general (inicio): lo más importante al frente
   const kpis: DashKpi[] = []
 
-  if (alicon) {
-    kpis.push({
-      id: 'prod',
-      label: 'Producción Alicon',
-      value: fmt(alicon.totals.totalCement, 0),
-      unit: 'ton',
-      hint: alicon.periodLabel,
-      tone: 'default',
-      href: '/operaciones/planta-alicon/huella-de-carbono',
-    })
-    kpis.push({
-      id: 'clinker',
-      label: 'Factor clinker',
-      value:
-        alicon.totals.avgFactorPlanta != null
-          ? fmt(alicon.totals.avgFactorPlanta, 1)
-          : '—',
-      unit: '%',
-      hint: 'Promedio planta',
-      tone: 'lime',
-      href: '/operaciones/planta-alicon/huella-de-carbono',
-    })
-  } else {
-    kpis.push({
-      id: 'prod',
-      label: 'Producción Alicon',
-      value: '—',
-      unit: '',
-      hint: 'Sin campaña cargada',
-      tone: 'default',
-    })
-  }
+  kpis.push({
+    id: 'nda',
+    label: 'NDA promedio',
+    value: ndaAvg != null ? fmt(ndaAvg, 1) : '—',
+    unit: '',
+    hint: nda?.periodLabel ?? 'Notas de desempeño',
+    tone: ndaAvg == null ? 'default' : ndaAvg >= 80 ? 'default' : 'warn',
+    href: '/operaciones/nda-general',
+  })
+
+  kpis.push({
+    id: 'cumple',
+    label: 'Cumplimiento / control',
+    value: monitoreosCumplePct != null ? fmt(monitoreosCumplePct, 0) : '—',
+    unit: monitoreosCumplePct != null ? '%' : '',
+    hint: input.monitoreos?.meta.periodLabel ?? 'Cumplimiento / control',
+    tone:
+      monitoreosCumplePct == null
+        ? 'default'
+        : monitoreosCumplePct >= 90
+          ? 'lime'
+          : 'warn',
+    href: '/operaciones/monitoreo-ambiental',
+  })
+
+  kpis.push({
+    id: 'lic',
+    label: 'Licencias vigentes',
+    value: fmt(lic?.meta.vigentes ?? 0),
+    unit: '',
+    hint: lic
+      ? `${fmt(lic.meta.totalRows)} en catálogo`
+      : 'Sin catálogo cargado',
+    tone: 'dark',
+    href: '/operaciones/licencias-ambientales',
+  })
 
   kpis.push({
     id: 'incidentes',
@@ -530,124 +551,14 @@ export function buildDashboardSummary(input: BuildInput): DashboardSummary {
     unit: '',
     hint:
       incidentesTotal > 0
-        ? `${fmt(incidentesTotal)} registrados · Agro + Alicon`
+        ? `${fmt(incidentesTotal)} registrados`
         : 'Sin registros',
-    tone: incidentesAbiertos > 0 ? 'warn' : 'dark',
-    href: '/operaciones/agroprogreso/incidentes-ambientales',
+    tone: incidentesAbiertos > 0 ? 'warn' : 'default',
+    href: '/operaciones/incidentes-ambientales',
   })
 
-  if (monitoreosCumplePct != null) {
-    kpis.push({
-      id: 'cumple',
-      label: 'Cumplimiento monitoreos',
-      value: fmt(monitoreosCumplePct, 0),
-      unit: '%',
-      hint: input.monitoreos?.meta.periodLabel ?? 'Agroprogreso',
-      tone: monitoreosCumplePct >= 90 ? 'default' : 'warn',
-      href: '/operaciones/agroprogreso/monitoreo-ambiental',
-    })
-  } else if (agro.agua) {
-    kpis.push({
-      id: 'agua',
-      label: 'Consumo agua Agro',
-      value: fmt(agro.agua.totalM3, 0),
-      unit: 'm³',
-      hint: agro.agua.periodLabel,
-      tone: 'default',
-      href: '/operaciones/agroprogreso/consumo-de-agua',
-    })
-  } else {
-    kpis.push({
-      id: 'sites',
-      label: 'Sitios operativos',
-      value: fmt(sites.operative),
-      unit: '',
-      hint: `${sites.countriesCount} países · inventario`,
-      tone: 'dark',
-      href: '/mapa',
-    })
-  }
-
-  // Completar a 4–6 KPIs secundarios útiles
-  const extraKpis: DashKpi[] = []
-
-  if (alicon && alicon.totals.totalElec > 0) {
-    extraKpis.push({
-      id: 'elec',
-      label: 'Electricidad Alicon',
-      value: fmt(alicon.totals.totalElec / 1000, 0),
-      unit: 'MWh',
-      hint:
-        alicon.totals.avgKwhPerTon != null
-          ? `${fmt(alicon.totals.avgKwhPerTon, 0)} kWh/t`
-          : alicon.periodLabel,
-      tone: 'default',
-      href: '/operaciones/planta-alicon/huella-de-carbono',
-    })
-  }
-
-  if (agro.agua && kpis.every((k) => k.id !== 'agua')) {
-    extraKpis.push({
-      id: 'agua',
-      label: 'Consumo agua Agro',
-      value: fmt(agro.agua.totalM3, 0),
-      unit: 'm³',
-      hint: agro.agua.periodLabel,
-      tone: 'default',
-      href: '/operaciones/agroprogreso/consumo-de-agua',
-    })
-  }
-
-  if (agro.residuos) {
-    extraKpis.push({
-      id: 'residuos',
-      label: 'Residuos Agro',
-      value: fmt(agro.residuos.totalLbs, 0),
-      unit: 'lbs',
-      hint: agro.residuos.periodLabel,
-      tone: 'lime',
-      href: '/operaciones/agroprogreso/gestion-de-residuos',
-    })
-  }
-
-  if (agro.compostaje && agro.compostaje.total > 0) {
-    extraKpis.push({
-      id: 'compost',
-      label: 'Compostaje',
-      value: fmt(agro.compostaje.total, 1),
-      unit: 't',
-      hint: agro.compostaje.periodLabel,
-      tone: 'default',
-      href: '/operaciones/agroprogreso/compostaje',
-    })
-  }
-
-  if (ndaAvg != null) {
-    extraKpis.push({
-      id: 'nda',
-      label: 'NDA promedio',
-      value: fmt(ndaAvg, 1),
-      unit: '',
-      hint: input.nda?.meta.periodLabel ?? 'Agroprogreso',
-      tone: ndaAvg >= 80 ? 'default' : 'warn',
-      href: '/operaciones/agroprogreso/nda-general',
-    })
-  }
-
-  if (lic) {
-    extraKpis.push({
-      id: 'lic',
-      label: 'Licencias vigentes',
-      value: fmt(lic.meta.vigentes),
-      unit: '',
-      hint: `${fmt(lic.meta.totalRows)} en catálogo`,
-      tone: 'dark',
-      href: '/operaciones/agroprogreso/licencias-ambientales',
-    })
-  }
-
   if (input.cumplimiento) {
-    extraKpis.push({
+    kpis.push({
       id: 'obl-venc',
       label: 'Obligaciones vencidas',
       value: fmt(input.cumplimiento.meta.vencidos),
@@ -663,14 +574,14 @@ export function buildDashboardSummary(input: BuildInput): DashboardSummary {
   }
 
   if (input.capa) {
-    extraKpis.push({
+    kpis.push({
       id: 'capa-open',
       label: 'CAPA abiertas',
       value: fmt(input.capa.meta.abiertas),
       unit: '',
       hint:
         input.capa.meta.vencidas > 0
-          ? `${fmt(input.capa.meta.vencidas)} compromiso vencido`
+          ? `${fmt(input.capa.meta.vencidas)} vencidas`
           : `${fmt(input.capa.meta.pctCierre, 1)}% cierre`,
       tone:
         input.capa.meta.vencidas > 0 || input.capa.meta.abiertas > 0
@@ -680,88 +591,7 @@ export function buildDashboardSummary(input: BuildInput): DashboardSummary {
     })
   }
 
-  if (input.metas) {
-    const riesgo = input.metas.meta.enRiesgo + input.metas.meta.noCumplidas
-    extraKpis.push({
-      id: 'metas-risk',
-      label: 'Metas en riesgo',
-      value: fmt(riesgo),
-      unit: '',
-      hint:
-        input.metas.meta.avgProgress != null
-          ? `avance prom. ${fmt(input.metas.meta.avgProgress, 1)}%`
-          : `${fmt(input.metas.meta.total)} metas`,
-      tone: riesgo > 0 ? 'warn' : 'default',
-      href: '/metas',
-    })
-  }
-
-  if (input.umbrales) {
-    extraKpis.push({
-      id: 'umb-excede',
-      label: 'Excedencias monitoreo',
-      value: fmt(input.umbrales.meta.excede),
-      unit: '',
-      hint:
-        input.umbrales.meta.cumplePct != null
-          ? `${fmt(input.umbrales.meta.cumplePct, 1)}% cumple auto`
-          : `${fmt(input.umbrales.meta.activos)} umbrales activos`,
-      tone: input.umbrales.meta.excede > 0 ? 'warn' : 'default',
-      href: '/umbrales',
-    })
-  }
-
-  if (input.intensidad?.baseline.intensidadKgT != null) {
-    extraKpis.push({
-      id: 'int-kg',
-      label: 'Intensidad CO₂e',
-      value: fmt(input.intensidad.baseline.intensidadKgT, 1),
-      unit: 'kg/t',
-      hint: `${input.intensidad.scenarios.length} escenarios`,
-      tone: 'dark',
-      href: '/intensidad',
-    })
-  }
-
-  if (input.circularidad?.meta.tasaValorizacionPct != null) {
-    extraKpis.push({
-      id: 'cir-pct',
-      label: 'Valorización',
-      value: fmt(input.circularidad.meta.tasaValorizacionPct, 1),
-      unit: '%',
-      hint: `${fmt(input.circularidad.meta.totalFlujos)} flujos`,
-      tone:
-        input.circularidad.meta.tasaValorizacionPct < 50 ? 'warn' : 'default',
-      href: '/circularidad',
-    })
-  }
-
-  if (input.analista && input.analista.kpis.criticos > 0) {
-    extraKpis.push({
-      id: 'analista-crit',
-      label: 'Señales críticas',
-      value: fmt(input.analista.kpis.criticos),
-      unit: '',
-      hint: 'Analista semanal',
-      tone: 'warn',
-      href: '/analista',
-    })
-  }
-
-  if (inspAvg != null) {
-    extraKpis.push({
-      id: 'insp',
-      label: 'Nota inspecciones',
-      value: fmt(inspAvg, 1),
-      unit: '',
-      hint: `${fmt(inspTotal)} ejecuciones`,
-      tone: inspAvg >= 80 ? 'default' : 'warn',
-      href: '/operaciones/agroprogreso/inspeccion-ambiental',
-    })
-  }
-
-  // Mantener 4 principales + hasta 4 extra en la misma grilla
-  const allKpis = [...kpis, ...extraKpis].slice(0, 8)
+  const allKpis = kpis.slice(0, 6)
 
   const modulesLoaded = [
     input.carbon,
@@ -791,6 +621,7 @@ export function buildDashboardSummary(input: BuildInput): DashboardSummary {
     kpis: allKpis,
     alicon,
     agro,
+    nda,
     compliance: {
       incidentes: {
         total: incidentesTotal,

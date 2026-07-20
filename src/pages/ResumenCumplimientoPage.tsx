@@ -41,8 +41,16 @@ function iconFor(id: string) {
     case 'capa':
       return ClipboardCheck
     case 'comp':
+    case 'comp-abiertos':
+    case 'comp-vencidos':
+    case 'comp-alerta':
+    case 'comp-avance':
       return Handshake
     case 'lic':
+    case 'lic-vigentes':
+    case 'lic-vencer':
+    case 'lic-proceso':
+    case 'lic-sedes':
       return FileBadge
     case 'tram':
       return FolderKanban
@@ -106,11 +114,11 @@ export function ResumenCumplimientoPage() {
     <div className="dash-page">
       <div className="page-header dash-header">
         <div>
-          <p className="carbon-kicker">Cumplimiento · Vista general</p>
+          <p className="carbon-kicker">Cumplimiento Legal · Vista general</p>
           <h1>Resumen de cumplimiento</h1>
           <p>
-            Obligaciones, CAPAs, compromisos, licencias y trámites con datos
-            vivos.
+            Seguimiento a compromisos ambientales y licencias al día, con
+            CAPAs, trámites y obligaciones vivas.
           </p>
         </div>
         <div className="dash-header-actions">
@@ -133,7 +141,29 @@ export function ResumenCumplimientoPage() {
         </div>
       </div>
 
-      <SectionKpiGrid kpis={summary.kpis} iconFor={iconFor} />
+      <section className="ops-kpi-block">
+        <div className="ops-kpi-block-head">
+          <h2>Compromisos ambientales</h2>
+          <p>Avance, vencimientos y alertas del portafolio de compromisos</p>
+        </div>
+        <SectionKpiGrid kpis={summary.kpisCompromisos} iconFor={iconFor} />
+      </section>
+
+      <section className="ops-kpi-block">
+        <div className="ops-kpi-block-head">
+          <h2>Licencias ambientales</h2>
+          <p>Vigencia, renovaciones próximas y cobertura por sede</p>
+        </div>
+        <SectionKpiGrid kpis={summary.kpisLicencias} iconFor={iconFor} />
+      </section>
+
+      <section className="ops-kpi-block">
+        <div className="ops-kpi-block-head">
+          <h2>Obligaciones, CAPA y trámites</h2>
+          <p>Indicadores complementarios de cumplimiento legal</p>
+        </div>
+        <SectionKpiGrid kpis={summary.kpis} iconFor={iconFor} />
+      </section>
 
       <div className="dash-main-grid">
         <section className="dash-panel dash-chart-panel">

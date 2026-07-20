@@ -71,7 +71,7 @@ export const STRUCTURE_GROUPS: StructureGroupMeta[] = [
   },
   {
     id: 'cumplimiento',
-    label: 'Cumplimiento',
+    label: 'Cumplimiento Legal',
     color: '#3b82f6',
     startDeg: 25,
     endDeg: 70,
@@ -171,6 +171,17 @@ const PLATFORM_MODULES: Omit<StructureModuleNode, 'scopes' | 'scoped'>[] = [
     group: 'cumplimiento',
     path: '/compromisos-ambientales/lista',
     tables: ['compromisos_ambientales'],
+  },
+  {
+    id: 'auditorias',
+    label: 'Auditorías',
+    group: 'cumplimiento',
+    path: '/auditorias',
+    tables: [
+      'auditorias_compromisos',
+      'compromisos_ambientales',
+      'compromisos_evidencias',
+    ],
   },
   {
     id: 'capa',

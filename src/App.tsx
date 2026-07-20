@@ -24,6 +24,7 @@ import { CumplimientoPage } from './pages/CumplimientoPage'
 import { ResumenCumplimientoPage } from './pages/ResumenCumplimientoPage'
 import { ResumenOperacionesPage } from './pages/ResumenOperacionesPage'
 import { CalendarioLegalPage } from './pages/CalendarioLegalPage'
+import { AuditoriasPage } from './pages/AuditoriasPage'
 import { IndicadoresAmbientalesPage } from './pages/IndicadoresAmbientalesPage'
 import { CentroDocumentalPage } from './pages/CentroDocumentalPage'
 import { AdministracionHubPage } from './pages/AdministracionHubPage'
@@ -77,6 +78,7 @@ export default function App() {
                 path="/calendario-legal"
                 element={<CalendarioLegalPage />}
               />
+              <Route path="/auditorias" element={<AuditoriasPage />} />
               <Route path="/indicadores" element={<IndicadoresAmbientalesPage />} />
               <Route
                 path="/centro-documental"

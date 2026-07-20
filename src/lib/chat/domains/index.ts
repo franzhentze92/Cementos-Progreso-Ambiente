@@ -13,6 +13,7 @@ import { loadAgroTramitesDomain } from './agroTramites'
 import { loadAliconDesempenoDomain } from './aliconDesempeno'
 import { loadCarbonDomain } from './carbon'
 import { loadCumplimientoDomain } from './cumplimiento'
+import { loadCompromisosDomain } from './compromisos'
 import { loadCapaDomain } from './capa'
 import { loadMetasDomain } from './metas'
 import { loadUmbralesDomain } from './umbrales'
@@ -41,6 +42,7 @@ export const CHAT_DOMAIN_LOADERS: Record<ChatDomainId, ChatDomainLoader> = {
   agroTramites: loadAgroTramitesDomain,
   agroNda: loadAgroNdaDomain,
   cumplimiento: loadCumplimientoDomain,
+  compromisos: loadCompromisosDomain,
   capa: loadCapaDomain,
   metas: loadMetasDomain,
   umbrales: loadUmbralesDomain,
@@ -67,6 +69,7 @@ export const DEFAULT_CHAT_DOMAINS: ChatDomainId[] = [
   'agroTramites',
   'agroNda',
   'cumplimiento',
+  'compromisos',
   'capa',
   'metas',
   'umbrales',

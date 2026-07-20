@@ -13,6 +13,7 @@ export type ChatDomainId =
   | 'agroTramites'
   | 'agroNda'
   | 'cumplimiento'
+  | 'compromisos'
   | 'capa'
   | 'metas'
   | 'umbrales'

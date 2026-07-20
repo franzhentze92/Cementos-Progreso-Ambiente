@@ -37,7 +37,7 @@ export function MonitoreoAmbientalReportPage({
       <div className="module-aggregate-banner">
         <strong>{scopesLabel(scopes)}</strong>
         <span>
-          Agroprogreso (laboratorio) y Planta Alicón (ejecuciones) usan
+          Cumplimiento / control: Agroprogreso (laboratorio) y Alicón (ejecuciones) usan
           formatos distintos; se muestran por separado.
         </span>
       </div>

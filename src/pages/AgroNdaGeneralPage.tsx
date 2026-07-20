@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import {
   CheckCircle2,
   Gauge,
+  HardHat,
   Loader2,
   Save,
   Sprout,
@@ -221,7 +222,14 @@ export function AgroNdaGeneralPage() {
         </div>
         <div className="hc-header-actions">
           <Link
-            to="/operaciones/agroprogreso/nda-general"
+            to="/entrada-datos/nda-casco-verde?proyecto=agroprogreso"
+            className="btn-secondary-link"
+          >
+            <HardHat size={16} />
+            Inspecciones casco verde
+          </Link>
+          <Link
+            to="/operaciones/nda-general?proyecto=agroprogreso"
             className="btn-secondary-link"
           >
             Ver reporte →

@@ -17,7 +17,6 @@ import {
   FolderOpen,
   Gauge,
   GraduationCap,
-  HardHat,
   Handshake,
   History,
   KeyRound,
@@ -30,6 +29,7 @@ import {
   Radio,
   Recycle,
   Scale,
+  SearchCheck,
   Settings2,
   ShieldAlert,
   Sprout,
@@ -69,6 +69,7 @@ export type NavNode = NavLeaf | NavBranch
 export type NavSection = {
   id: string
   label: string
+  icon: LucideIcon
   matchPrefixes: string[]
   items: NavNode[]
 }
@@ -106,7 +107,6 @@ const ENTRADA_MODULE_ORDER = [
   'compostaje',
   'capacitaciones',
   'licencias-ambientales',
-  'nda-casco-verde',
   'nda-general',
   'gestion-de-tramites',
   'huella-de-carbono',
@@ -121,7 +121,6 @@ const ENTRADA_ICONS: Record<string, LucideIcon> = {
   capacitaciones: GraduationCap,
   'licencias-ambientales': FileBadge,
   compostaje: Recycle,
-  'nda-casco-verde': HardHat,
   'nda-general': Gauge,
   'gestion-de-tramites': FolderKanban,
   'huella-de-carbono': Leaf,
@@ -131,6 +130,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: 'inicio',
     label: 'Inicio',
+    icon: LayoutDashboard,
     matchPrefixes: [
       '/dashboard',
       '/mapa',
@@ -169,6 +169,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: 'operaciones',
     label: 'Operaciones',
+    icon: Activity,
     matchPrefixes: [
       '/resumen-operaciones',
       '/operaciones/monitoreo-ambiental',
@@ -177,8 +178,8 @@ export const NAV_SECTIONS: NavSection[] = [
       '/operaciones/gestion-de-residuos',
       '/operaciones/consumo-de-agua',
       '/operaciones/compostaje',
-      '/operaciones/nda-casco-verde',
       '/operaciones/nda-general',
+      '/operaciones/nda-casco-verde',
       '/operaciones/capacitaciones',
     ],
     items: [
@@ -188,25 +189,30 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Resumen de operaciones',
         icon: Sprout,
       },
-      opLeaf('monitoreo-ambiental', undefined, Thermometer),
+      opLeaf(
+        'monitoreo-ambiental',
+        'Monitoreos de cumplimiento / control',
+        Thermometer,
+      ),
       opLeaf('inspeccion-ambiental', undefined, ClipboardList),
       opLeaf('incidentes-ambientales', undefined, ShieldAlert),
       opLeaf('gestion-de-residuos', undefined, Trash2),
       opLeaf('consumo-de-agua', undefined, Droplets),
       opLeaf('compostaje', undefined, Recycle),
-      opLeaf('nda-casco-verde', undefined, HardHat),
       opLeaf('nda-general', undefined, Gauge),
       opLeaf('capacitaciones', undefined, GraduationCap),
     ],
   },
   {
     id: 'cumplimiento',
-    label: 'Cumplimiento',
+    label: 'Cumplimiento Legal',
+    icon: Scale,
     matchPrefixes: [
       '/resumen-cumplimiento',
       '/cumplimiento',
       '/capa',
       '/compromisos-ambientales',
+      '/auditorias',
       '/calendario-legal',
       '/operaciones/licencias-ambientales',
       '/operaciones/gestion-de-tramites',
@@ -259,6 +265,13 @@ export const NAV_SECTIONS: NavSection[] = [
       },
       {
         kind: 'leaf',
+        to: '/auditorias',
+        label: 'Auditorías',
+        title: 'Auditorías de compromisos ambientales',
+        icon: SearchCheck,
+      },
+      {
+        kind: 'leaf',
         to: '/capa',
         label: 'Acciones correctivas (CAPA)',
         title: 'Acciones correctivas (CAPA)',
@@ -284,6 +297,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: 'sostenibilidad',
     label: 'Sostenibilidad',
+    icon: Leaf,
     matchPrefixes: [
       '/indicadores',
       '/metas',
@@ -332,6 +346,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: 'documentos',
     label: 'Documentos y Reportes',
+    icon: Files,
     matchPrefixes: [
       '/centro-documental',
       '/expedientes',
@@ -370,6 +385,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: 'captura-datos',
     label: 'Captura de datos',
+    icon: ClipboardList,
     matchPrefixes: ['/entrada-datos'],
     items: ENTRADA_MODULE_ORDER.map((id) =>
       entradaLeaf(id, ENTRADA_ICONS[id]),
@@ -378,6 +394,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: 'administracion',
     label: 'Administración',
+    icon: Settings2,
     matchPrefixes: [
       '/administracion',
       '/usuarios',

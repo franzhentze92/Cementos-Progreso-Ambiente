@@ -34,6 +34,7 @@ import {
   currentMonitoringYear,
   selectableMonitoringYears,
 } from '../data/carbonMonitoring'
+import { MonitoreoLabImport } from '../components/MonitoreoLabImport'
 import {
   loadAliconMonitoreos,
   saveAliconMonitoreosMonth,
@@ -86,6 +87,7 @@ export function AliconMonitoreosPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveOk, setSaveOk] = useState(false)
+  const [labSaveOk, setLabSaveOk] = useState<string | null>(null)
 
   const [filterYear, setFilterYear] = useState<string>(FILTER_ALL)
   const [filterMonth, setFilterMonth] = useState<string>(FILTER_ALL)
@@ -235,7 +237,7 @@ export function AliconMonitoreosPage() {
     return (
       <div className="entry-page hc-entry hc-loading">
         <Loader2 className="hc-spin" size={28} />
-        <p>Cargando monitoreo ambiental Planta Alicón…</p>
+        <p>Cargando monitoreos de cumplimiento / control · Alicón…</p>
       </div>
     )
   }
@@ -248,11 +250,11 @@ export function AliconMonitoreosPage() {
             <Factory size={14} />
             Entrada de Datos · Planta Alicón
           </p>
-          <h1>Monitoreo ambiental</h1>
+          <h1>Monitoreos de cumplimiento / control</h1>
           <p>
-            Réplica de la hoja <strong>Ejecuciones Moni</strong> (sedes Alicon /
-            Subestación Alicon). Captura por mes de inicio: tipo, parámetro,
-            fechas y estado.
+            Captura manual del cronograma (Ejecuciones Moni) o carga del PDF de
+            laboratorio: la IA extrae parámetros y los guarda. Los resultados
+            visuales se ven en el reporte de operaciones.
           </p>
         </div>
         <div className="hc-header-actions">
@@ -260,7 +262,7 @@ export function AliconMonitoreosPage() {
             to="/operaciones/planta-alicon/monitoreo-ambiental"
             className="btn-secondary-link"
           >
-            Ver reporte →
+            Ver resultados →
           </Link>
           <button
             type="button"
@@ -296,9 +298,30 @@ export function AliconMonitoreosPage() {
         </div>
       ) : null}
 
+      {labSaveOk ? (
+        <div className="hc-banner hc-banner-ok" role="status">
+          <CheckCircle2 size={18} />
+          {labSaveOk}{' '}
+          <Link to="/operaciones/planta-alicon/monitoreo-ambiental">
+            Ver en reporte →
+          </Link>
+        </div>
+      ) : null}
+
+      <MonitoreoLabImport
+        year={year}
+        month={month}
+        hint="Opción A: sube el PDF del laboratorio (agua, aire, ruido). La IA extrae y guarda todos los parámetros. Opción B: captura el cronograma de ejecuciones en el formulario de abajo."
+        onSaved={(result) => {
+          setLabSaveOk(
+            `Informe guardado: ${result.savedRows} parámetros en ${result.puntos} punto(s).`,
+          )
+        }}
+      />
+
       <div className="entry-summary hc-summary">
         <div>
-          <span>Hoja Excel</span>
+          <span>Captura manual</span>
           <strong>Ejecuciones Moni</strong>
         </div>
         <div>

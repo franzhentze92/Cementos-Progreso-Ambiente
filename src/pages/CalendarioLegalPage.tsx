@@ -97,7 +97,7 @@ export function CalendarioLegalPage() {
         <div>
           <p className="carbon-kicker">
             <CalendarDays size={14} />
-            Cumplimiento · Calendario
+            Cumplimiento Legal · Calendario
           </p>
           <h1>Calendario legal ambiental</h1>
           <p>

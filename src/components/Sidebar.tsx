@@ -174,6 +174,7 @@ export function Sidebar({
   function renderSection(section: NavSection) {
     const sectionActive = pathMatchesPrefixes(path, section.matchPrefixes)
     const open = !!openSections[section.id]
+    const SectionIcon = section.icon
 
     return (
       <div key={section.id} className="nav-section">
@@ -181,8 +182,11 @@ export function Sidebar({
           type="button"
           className={`nav-section-btn${sectionActive ? ' active' : ''}${open ? ' expanded' : ''}`}
           onClick={() => toggleSection(section.id)}
+          title={section.label}
           aria-expanded={open}
+          aria-label={section.label}
         >
+          <SectionIcon className="nav-section-icon" size={20} />
           <span className="nav-section-label">{section.label}</span>
           <ChevronRight
             className={`nav-chevron${open ? ' open' : ''}`}

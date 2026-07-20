@@ -88,6 +88,15 @@ export function selectDomainsForQuestion(
     add('agroTramites')
   }
   if (
+    /auditor[ií]a|auditor|compromiso ambiental|compromisos ambientales|evidencia de compromiso|dictamen/.test(
+      blob,
+    )
+  ) {
+    add('compromisos')
+    add('cumplimiento')
+    add('capa')
+  }
+  if (
     /capa|correctiv|preventiv|plan de acci[oó]n|hallazgo|eficacia|verificaci[oó]n de cierre/.test(
       blob,
     )

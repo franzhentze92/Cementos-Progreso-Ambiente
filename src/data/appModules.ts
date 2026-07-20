@@ -39,7 +39,7 @@ export type AppModuleGroup = {
   description: string
 }
 
-/** Módulos operativos que en el menú viven bajo Cumplimiento. */
+/** Módulos operativos que en el menú viven bajo Cumplimiento Legal. */
 const OPS_IN_CUMPLIMIENTO = new Set([
   'licencias-ambientales',
   'gestion-de-tramites',
@@ -61,8 +61,9 @@ export const APP_MODULE_GROUPS: AppModuleGroup[] = [
   },
   {
     id: 'cumplimiento',
-    label: 'Cumplimiento',
-    description: 'Obligaciones, permisos, compromisos y corrección',
+    label: 'Cumplimiento Legal',
+    description:
+      'Cumplimiento a compromisos ambientales y licencias al día',
   },
   {
     id: 'sostenibilidad',
@@ -172,6 +173,12 @@ export const APP_MODULES: AppModuleDef[] = [
     path: '/calendario-legal',
   },
   {
+    id: 'auditorias',
+    label: 'Auditorías',
+    group: 'cumplimiento',
+    path: '/auditorias',
+  },
+  {
     id: 'indicadores',
     label: 'Indicadores ambientales',
     group: 'sostenibilidad',
@@ -275,7 +282,15 @@ export const APP_MODULES: AppModuleDef[] = [
 
 export const APP_MODULE_IDS = APP_MODULES.map((m) => m.id)
 
-export const ASSIGNABLE_MODULES = APP_MODULES.filter((m) => m.group !== 'admin')
+/** Casco Verde se asigna vía NDA General (mismo módulo funcional). */
+const HIDDEN_ASSIGNABLE = new Set([
+  'operaciones.nda-casco-verde',
+  'entrada-datos.nda-casco-verde',
+])
+
+export const ASSIGNABLE_MODULES = APP_MODULES.filter(
+  (m) => m.group !== 'admin' && !HIDDEN_ASSIGNABLE.has(m.id),
+)
 
 /**
  * Landings de sección: accesibles si el rol tiene el hub
@@ -292,6 +307,7 @@ export const SECTION_HUB_ACCESS: Record<string, string[]> = {
     'cumplimiento',
     'capa',
     'calendario-legal',
+    'auditorias',
     'compromisos-ambientales.lista',
     'compromisos-ambientales.crear',
     'compromisos-ambientales.evidencias',
@@ -301,6 +317,12 @@ export const SECTION_HUB_ACCESS: Record<string, string[]> = {
     'operaciones.gestion-de-tramites',
   ],
   'calendario-legal': ['cumplimiento', 'capa', 'resumen-cumplimiento'],
+  auditorias: [
+    'compromisos-ambientales.lista',
+    'compromisos-ambientales.evidencias',
+    'compromisos-ambientales.seguimiento',
+    'resumen-cumplimiento',
+  ],
   indicadores: [
     'metas',
     'umbrales',
@@ -453,12 +475,27 @@ export function resolvesToModuleAccess(
   if (hasModule(moduleId)) return true
   const { flatId } = expandLegacyModuleId(moduleId)
   if (flatId && hasModule(flatId)) return true
+  // Auditorías: accesible si el rol ya gestiona compromisos ambientales
+  if (moduleId === 'auditorias') {
+    return (
+      hasModule('compromisos-ambientales.lista') ||
+      hasModule('compromisos-ambientales.evidencias') ||
+      hasModule('compromisos-ambientales.seguimiento') ||
+      hasModule('resumen-cumplimiento')
+    )
+  }
   // Si preguntan por flat y el rol aún tiene legacy
   const m = moduleId.match(/^(operaciones|entrada-datos)\.(.+)$/)
   if (m && !isProjectScope(m[2])) {
-    return PROJECT_SCOPES.some((p) =>
-      hasModule(`${m[1]}.${p.id}.${m[2]}`),
-    )
+    if (
+      PROJECT_SCOPES.some((p) => hasModule(`${m[1]}.${p.id}.${m[2]}`))
+    ) {
+      return true
+    }
+    // Inspecciones casco verde forman parte de NDA General
+    if (m[2] === 'nda-casco-verde') {
+      return resolvesToModuleAccess(`${m[1]}.nda-general`, hasModule)
+    }
   }
   return false
 }

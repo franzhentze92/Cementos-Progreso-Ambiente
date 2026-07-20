@@ -5,6 +5,10 @@
 
 import { preferredYear } from '../data/dashboard'
 import {
+  OPERATIONAL_EXTRA,
+  resolveOperationalSite,
+} from '../data/siteRiskBridge'
+import {
   buildAgroAguaReport,
   availableYears as aguaYears,
 } from '../data/agroConsumoAguaReport'
@@ -93,6 +97,37 @@ function fmt(n: number | null | undefined, digits = 0): string {
   })
 }
 
+/** Etiqueta de sede/operación en registros heterogéneos. */
+function recordOperationLabel(r: {
+  plantaSede?: string
+  sede?: string
+  finca?: string
+}): string {
+  return (r.plantaSede || r.sede || r.finca || '').trim()
+}
+
+function matchesOperation(
+  label: string,
+  operation: string | 'all',
+): boolean {
+  if (!operation || operation === 'all') return true
+  if (!label.trim()) return false
+  const rec = resolveOperationalSite(label)
+  const sel = resolveOperationalSite(operation)
+  if (rec && sel) return rec.id === sel.id
+  const a = label.trim().toLowerCase()
+  const b = operation.trim().toLowerCase()
+  return a === b || a.includes(b) || b.includes(a)
+}
+
+function filterByOperation<T extends { plantaSede?: string; sede?: string; finca?: string }>(
+  rows: T[],
+  operation: string | 'all',
+): T[] {
+  if (!operation || operation === 'all') return rows
+  return rows.filter((r) => matchesOperation(recordOperationLabel(r), operation))
+}
+
 export type SectionKpi = {
   id: string
   label: string
@@ -101,12 +136,18 @@ export type SectionKpi = {
   hint: string
   tone: 'default' | 'lime' | 'dark' | 'warn'
   href: string
+  /** operativas = agua/residuos/compostaje; desempeño = el resto */
+  group?: 'operativa' | 'desempeno'
 }
 
 export type OperacionesSummary = {
   modulesLoaded: number
   modulesFailed: string[]
+  operations: string[]
+  selectedOperation: string | 'all'
   kpis: SectionKpi[]
+  kpisOperativas: SectionKpi[]
+  kpisDesempeno: SectionKpi[]
   complianceBars: Array<{ name: string; value: number; fill: string }>
   incidentShare: Array<{ name: string; value: number; fill: string }>
   aguaSedeShare: Array<{ name: string; value: number; fill: string }>
@@ -129,7 +170,9 @@ export type OperacionesSummary = {
   periodHints: string[]
 }
 
-export async function loadOperacionesSummary(): Promise<OperacionesSummary> {
+export async function loadOperacionesSummary(
+  operation: string | 'all' = 'all',
+): Promise<OperacionesSummary> {
   const failed: string[] = []
   const [
     aguaRes,
@@ -159,38 +202,46 @@ export async function loadOperacionesSummary(): Promise<OperacionesSummary> {
     settled('Capacitaciones', () => loadAgroCapacitaciones()),
   ])
 
+  const aguaRows = aguaRes.ok
+    ? filterByOperation(aguaRes.value, operation)
+    : (failed.push(aguaRes.label), [])
   const agua = aguaRes.ok
-    ? buildAgroAguaReport(
-        aguaRes.value,
-        preferredYear(aguaYears(aguaRes.value)),
-      )
-    : (failed.push(aguaRes.label), null)
+    ? buildAgroAguaReport(aguaRows, preferredYear(aguaYears(aguaRows)))
+    : null
 
+  const residuosRows = residuosRes.ok
+    ? filterByOperation(residuosRes.value, operation)
+    : (failed.push(residuosRes.label), [])
   const residuos = residuosRes.ok
     ? buildAgroResiduosReport(
-        residuosRes.value,
-        preferredYear(residuosYears(residuosRes.value)),
+        residuosRows,
+        preferredYear(residuosYears(residuosRows)),
       )
-    : (failed.push(residuosRes.label), null)
+    : null
 
+  const compostajeRows = compostajeRes.ok
+    ? filterByOperation(compostajeRes.value, operation)
+    : (failed.push(compostajeRes.label), [])
   const compostaje = compostajeRes.ok
     ? (() => {
         const years = [
-          ...new Set(
-            compostajeRes.value.map((r) => yearFromCompostaje(r.fecha)),
-          ),
+          ...new Set(compostajeRows.map((r) => yearFromCompostaje(r.fecha))),
         ].sort((a, b) => b - a)
-        return buildAgroCompostajeReport(
-          compostajeRes.value,
-          preferredYear(years),
-        )
+        return buildAgroCompostajeReport(compostajeRows, preferredYear(years))
       })()
-    : (failed.push(compostajeRes.label), null)
+    : null
 
-  const mergeInc = [
-    ...(incAgroRes.ok ? [incAgroRes.value] : (failed.push(incAgroRes.label), [])),
-    ...(incAliRes.ok ? [incAliRes.value] : (failed.push(incAliRes.label), [])),
-  ].flat()
+  const mergeInc = filterByOperation(
+    [
+      ...(incAgroRes.ok
+        ? [incAgroRes.value]
+        : (failed.push(incAgroRes.label), [])),
+      ...(incAliRes.ok
+        ? [incAliRes.value]
+        : (failed.push(incAliRes.label), [])),
+    ].flat(),
+    operation,
+  )
   const incidentes =
     mergeInc.length > 0
       ? buildAgroIncidentesReport(
@@ -199,17 +250,20 @@ export async function loadOperacionesSummary(): Promise<OperacionesSummary> {
         )
       : null
 
-  const mergeInsp = [
-    ...(inspAgroRes.ok
-      ? [inspAgroRes.value]
-      : (failed.push(inspAgroRes.label), [])),
-    ...(inspAliRes.ok
-      ? [inspAliRes.value]
-      : (failed.push(inspAliRes.label), [])),
-    ...(inspBarRes.ok
-      ? [inspBarRes.value]
-      : (failed.push(inspBarRes.label), [])),
-  ].flat()
+  const mergeInsp = filterByOperation(
+    [
+      ...(inspAgroRes.ok
+        ? [inspAgroRes.value]
+        : (failed.push(inspAgroRes.label), [])),
+      ...(inspAliRes.ok
+        ? [inspAliRes.value]
+        : (failed.push(inspAliRes.label), [])),
+      ...(inspBarRes.ok
+        ? [inspBarRes.value]
+        : (failed.push(inspBarRes.label), [])),
+    ].flat(),
+    operation,
+  )
   const inspecciones =
     mergeInsp.length > 0
       ? buildAgroInspeccionReport(
@@ -218,40 +272,52 @@ export async function loadOperacionesSummary(): Promise<OperacionesSummary> {
         )
       : null
 
+  const monRows = monRes.ok
+    ? filterByOperation(monRes.value, operation)
+    : (failed.push(monRes.label), [])
   const monitoreos = monRes.ok
     ? buildAgroMonitoreosReport(
-        monRes.value,
-        preferredYear(monitoreosYears(monRes.value)),
+        monRows,
+        preferredYear(monitoreosYears(monRows)),
       )
-    : (failed.push(monRes.label), null)
+    : null
 
+  const ndaRows = ndaRes.ok
+    ? filterByOperation(ndaRes.value, operation)
+    : (failed.push(ndaRes.label), [])
   const nda = ndaRes.ok
     ? (() => {
         const years = [
-          ...new Set(ndaRes.value.map((r) => yearFromNda(r.fecha))),
+          ...new Set(ndaRows.map((r) => yearFromNda(r.fecha))),
         ].sort((a, b) => b - a)
-        return buildAgroNdaGeneralReport(ndaRes.value, preferredYear(years))
+        return buildAgroNdaGeneralReport(ndaRows, preferredYear(years))
       })()
-    : (failed.push(ndaRes.label), null)
+    : null
 
+  const cascoRows = cascoRes.ok
+    ? filterByOperation(cascoRes.value, operation)
+    : (failed.push(cascoRes.label), [])
   const casco = cascoRes.ok
     ? (() => {
         const years = [
-          ...new Set(cascoRes.value.map((r) => yearFromCasco(r.fecha))),
+          ...new Set(cascoRows.map((r) => yearFromCasco(r.fecha))),
         ].sort((a, b) => b - a)
-        return buildAgroNdaCascoVerdeReport(
-          cascoRes.value,
-          preferredYear(years),
-        )
+        return buildAgroNdaCascoVerdeReport(cascoRows, preferredYear(years))
       })()
-    : (failed.push(cascoRes.label), null)
+    : null
 
+  const capRows = capRes.ok
+    ? filterByOperation(capRes.value, operation)
+    : (failed.push(capRes.label), [])
   const caps = capRes.ok
     ? buildAgroCapacitacionesReport(
-        capRes.value,
-        preferredYear(capYears(capRes.value)),
+        capRows,
+        preferredYear(capYears(capRows)),
       )
-    : (failed.push(capRes.label), null)
+    : null
+
+  // Catálogo de operaciones (siempre el inventario operativo conocido)
+  const operations = OPERATIONAL_EXTRA.map((o) => o.name)
 
   const periodHints = [
     monitoreos?.meta.periodLabel,
@@ -260,42 +326,7 @@ export async function loadOperacionesSummary(): Promise<OperacionesSummary> {
     compostaje?.meta.periodLabel,
   ].filter(Boolean) as string[]
 
-  const kpis: SectionKpi[] = [
-    {
-      id: 'mon',
-      label: 'Cumplimiento monitoreos',
-      value:
-        monitoreos?.totals.compliancePct != null
-          ? fmt(monitoreos.totals.compliancePct, 1)
-          : '—',
-      unit: '%',
-      hint: monitoreos?.meta.periodLabel ?? 'Monitoreo ambiental',
-      tone:
-        monitoreos?.totals.compliancePct != null &&
-        monitoreos.totals.compliancePct < 90
-          ? 'warn'
-          : 'lime',
-      href: '/operaciones/monitoreo-ambiental',
-    },
-    {
-      id: 'insp',
-      label: 'Score inspecciones',
-      value:
-        inspecciones?.totals.avgScore != null
-          ? fmt(inspecciones.totals.avgScore, 1)
-          : '—',
-      hint: `${fmt(inspecciones?.meta.totalRows ?? 0)} inspecciones · ${fmt(inspecciones?.totals.totalHallazgos ?? 0)} hallazgos`,
-      tone: 'dark',
-      href: '/operaciones/inspeccion-ambiental',
-    },
-    {
-      id: 'inc',
-      label: 'Incidentes abiertos',
-      value: fmt(incidentes?.meta.abiertos ?? 0),
-      hint: `${fmt(incidentes?.meta.totalRows ?? 0)} totales · ${fmt(incidentes?.meta.cerrados ?? 0)} cerrados`,
-      tone: (incidentes?.meta.abiertos ?? 0) > 0 ? 'warn' : 'lime',
-      href: '/operaciones/incidentes-ambientales',
-    },
+  const kpisOperativas: SectionKpi[] = [
     {
       id: 'agua',
       label: 'Consumo de agua',
@@ -304,6 +335,7 @@ export async function loadOperacionesSummary(): Promise<OperacionesSummary> {
       hint: agua?.meta.periodLabel ?? 'Sin datos',
       tone: 'default',
       href: '/operaciones/consumo-de-agua',
+      group: 'operativa',
     },
     {
       id: 'res',
@@ -313,6 +345,7 @@ export async function loadOperacionesSummary(): Promise<OperacionesSummary> {
       hint: residuos?.meta.periodLabel ?? 'Sin datos',
       tone: 'default',
       href: '/operaciones/gestion-de-residuos',
+      group: 'operativa',
     },
     {
       id: 'comp',
@@ -322,6 +355,50 @@ export async function loadOperacionesSummary(): Promise<OperacionesSummary> {
       hint: compostaje?.meta.periodLabel ?? 'Sin datos',
       tone: 'lime',
       href: '/operaciones/compostaje',
+      group: 'operativa',
+    },
+  ]
+
+  const kpisDesempeno: SectionKpi[] = [
+    {
+      id: 'mon',
+      label: 'Cumplimiento / control',
+      value:
+        monitoreos?.totals.compliancePct != null
+          ? fmt(monitoreos.totals.compliancePct, 1)
+          : '—',
+      unit: '%',
+      hint: monitoreos?.meta.periodLabel ?? 'Cumplimiento / control',
+      tone:
+        monitoreos?.totals.compliancePct != null &&
+        monitoreos.totals.compliancePct < 90
+          ? 'warn'
+          : 'lime',
+      href: '/operaciones/monitoreo-ambiental',
+      group: 'desempeno',
+    },
+    {
+      id: 'insp',
+      label: 'Score inspecciones',
+      value:
+        inspecciones?.totals.avgScore != null
+          ? fmt(inspecciones.totals.avgScore, 1)
+          : '—',
+      hint: inspecciones
+        ? `Meta ${inspecciones.goal.realizadas}/${inspecciones.goal.metaAnual} (${fmt(inspecciones.goal.pctAvance, 1)}%) · ${fmt(inspecciones.totals.totalHallazgos)} hallazgos`
+        : 'Sin datos',
+      tone: 'dark',
+      href: '/operaciones/inspeccion-ambiental',
+      group: 'desempeno',
+    },
+    {
+      id: 'inc',
+      label: 'Incidentes abiertos',
+      value: fmt(incidentes?.meta.abiertos ?? 0),
+      hint: `${fmt(incidentes?.meta.totalRows ?? 0)} totales · ${fmt(incidentes?.meta.cerrados ?? 0)} cerrados`,
+      tone: (incidentes?.meta.abiertos ?? 0) > 0 ? 'warn' : 'lime',
+      href: '/operaciones/incidentes-ambientales',
+      group: 'desempeno',
     },
     {
       id: 'nda',
@@ -330,15 +407,17 @@ export async function loadOperacionesSummary(): Promise<OperacionesSummary> {
       hint: nda?.meta.periodLabel ?? 'Promedio periodo',
       tone: 'dark',
       href: '/operaciones/nda-general',
+      group: 'desempeno',
     },
     {
       id: 'casco',
-      label: 'NDA Casco Verde',
+      label: 'Inspecciones casco verde',
       value:
         casco?.totals.avgNota != null ? fmt(casco.totals.avgNota, 1) : '—',
-      hint: `${fmt(casco?.totals.totalHallazgos ?? 0)} hallazgos`,
+      hint: `${fmt(casco?.totals.totalHallazgos ?? 0)} hallazgos · desde NDA General`,
       tone: 'default',
-      href: '/operaciones/nda-casco-verde',
+      href: '/operaciones/nda-casco-verde?proyecto=agroprogreso',
+      group: 'desempeno',
     },
     {
       id: 'cap',
@@ -354,8 +433,11 @@ export async function loadOperacionesSummary(): Promise<OperacionesSummary> {
           ? 'warn'
           : 'lime',
       href: '/operaciones/capacitaciones',
+      group: 'desempeno',
     },
   ]
+
+  const kpis = [...kpisOperativas, ...kpisDesempeno]
 
   const complianceBars = [
     {
@@ -402,7 +484,11 @@ export async function loadOperacionesSummary(): Promise<OperacionesSummary> {
   return {
     modulesLoaded: Math.max(loaded, 0),
     modulesFailed: failed,
+    operations,
+    selectedOperation: operation,
     kpis,
+    kpisOperativas,
+    kpisDesempeno,
     complianceBars,
     incidentShare,
     aguaSedeShare: agua?.sedeShare ?? [],
@@ -435,7 +521,12 @@ export async function loadOperacionesSummary(): Promise<OperacionesSummary> {
 export type CumplimientoSectionSummary = {
   modulesLoaded: number
   modulesFailed: string[]
+  /** Obligaciones legales, CAPA y trámites (no compromisos ni licencias). */
   kpis: SectionKpi[]
+  /** Indicadores solo de compromisos ambientales. */
+  kpisCompromisos: SectionKpi[]
+  /** Indicadores solo de licencias ambientales. */
+  kpisLicencias: SectionKpi[]
   obligByEstado: Array<{ name: string; value: number }>
   capaByEstado: Array<{ name: string; value: number }>
   licByEstado: Array<{ name: string; value: number }>
@@ -489,16 +580,100 @@ export async function loadCumplimientoSectionSummary(): Promise<CumplimientoSect
   let compromisosTotal = 0
   let compromisosVencidos = 0
   let compromisosAbiertos = 0
+  let compromisosCriticos = 0
+  let compromisosCumplidos = 0
+  let avanceSum = 0
+  let avanceCount = 0
   if (compRes.ok) {
     compromisosTotal = compRes.value.length
     for (const c of compRes.value) {
       const risk = riskForCompromiso(c)
       if (risk === 'vencido') compromisosVencidos += 1
+      if (risk === 'critico' || risk === 'atencion') compromisosCriticos += 1
+      if (risk === 'cerrado') compromisosCumplidos += 1
       if (risk !== 'cerrado' && risk !== 'suspendido') compromisosAbiertos += 1
+      if (typeof c.porcentajeAvance === 'number') {
+        avanceSum += c.porcentajeAvance
+        avanceCount += 1
+      }
     }
   } else {
     failed.push(compRes.label)
   }
+  const avanceProm =
+    avanceCount > 0 ? Math.round(avanceSum / avanceCount) : null
+
+  const kpisCompromisos: SectionKpi[] = [
+    {
+      id: 'comp-abiertos',
+      label: 'Compromisos abiertos',
+      value: fmt(compromisosAbiertos),
+      hint: `${fmt(compromisosTotal)} totales`,
+      tone: compromisosAbiertos > 0 ? 'dark' : 'lime',
+      href: '/compromisos-ambientales/lista',
+    },
+    {
+      id: 'comp-vencidos',
+      label: 'Compromisos vencidos',
+      value: fmt(compromisosVencidos),
+      hint: 'Requieren atención inmediata',
+      tone: compromisosVencidos > 0 ? 'warn' : 'lime',
+      href: '/compromisos-ambientales/lista',
+    },
+    {
+      id: 'comp-alerta',
+      label: 'En alerta / críticos',
+      value: fmt(compromisosCriticos),
+      hint: 'Próximos a vencer según ventana de alerta',
+      tone: compromisosCriticos > 0 ? 'warn' : 'default',
+      href: '/compromisos-ambientales/seguimiento',
+    },
+    {
+      id: 'comp-avance',
+      label: 'Avance promedio',
+      value: avanceProm == null ? '—' : fmt(avanceProm),
+      unit: avanceProm == null ? undefined : '%',
+      hint: `${fmt(compromisosCumplidos)} cumplidos / cerrados`,
+      tone: 'default',
+      href: '/compromisos-ambientales/lista',
+    },
+  ]
+
+  const licPorVencer = licencias?.proximoVencer.length ?? 0
+  const kpisLicencias: SectionKpi[] = [
+    {
+      id: 'lic-vigentes',
+      label: 'Licencias vigentes',
+      value: fmt(licencias?.meta.vigentes ?? 0),
+      hint: `${fmt(licencias?.meta.totalRows ?? 0)} registradas`,
+      tone: 'lime',
+      href: '/operaciones/licencias-ambientales',
+    },
+    {
+      id: 'lic-vencer',
+      label: 'Por vencer (≤12 meses)',
+      value: fmt(licPorVencer),
+      hint: 'Vigentes con fecha de fin próxima',
+      tone: licPorVencer > 0 ? 'warn' : 'lime',
+      href: '/operaciones/licencias-ambientales',
+    },
+    {
+      id: 'lic-proceso',
+      label: 'En proceso',
+      value: fmt(licencias?.meta.enProceso ?? 0),
+      hint: `${fmt(licencias?.meta.desistidos ?? 0)} desistidas`,
+      tone: 'dark',
+      href: '/operaciones/licencias-ambientales',
+    },
+    {
+      id: 'lic-sedes',
+      label: 'Sedes con licencia',
+      value: fmt(licencias?.meta.sedes ?? 0),
+      hint: 'Cobertura por planta / sede',
+      tone: 'default',
+      href: '/operaciones/licencias-ambientales',
+    },
+  ]
 
   const kpis: SectionKpi[] = [
     {
@@ -516,22 +691,6 @@ export async function loadCumplimientoSectionSummary(): Promise<CumplimientoSect
       hint: `${fmt(capa?.meta.vencidas ?? 0)} vencidas · cierre ${capa?.meta.pctCierre != null ? `${fmt(capa.meta.pctCierre, 0)}%` : '—'}`,
       tone: (capa?.meta.vencidas ?? 0) > 0 ? 'warn' : 'dark',
       href: '/capa',
-    },
-    {
-      id: 'comp',
-      label: 'Compromisos abiertos',
-      value: fmt(compromisosAbiertos),
-      hint: `${fmt(compromisosVencidos)} vencidos · ${fmt(compromisosTotal)} totales`,
-      tone: compromisosVencidos > 0 ? 'warn' : 'default',
-      href: '/compromisos-ambientales/lista',
-    },
-    {
-      id: 'lic',
-      label: 'Licencias vigentes',
-      value: fmt(licencias?.meta.vigentes ?? 0),
-      hint: `${fmt(licencias?.proximoVencer.length ?? 0)} por vencer ≤12m`,
-      tone: 'lime',
-      href: '/operaciones/licencias-ambientales',
     },
     {
       id: 'tram',
@@ -581,6 +740,8 @@ export async function loadCumplimientoSectionSummary(): Promise<CumplimientoSect
     modulesLoaded: 5 - failed.length,
     modulesFailed: failed,
     kpis,
+    kpisCompromisos,
+    kpisLicencias,
     obligByEstado: cumplimiento?.byEstado ?? [],
     capaByEstado: capa?.byEstado ?? [],
     licByEstado: licencias?.byEstado ?? [],

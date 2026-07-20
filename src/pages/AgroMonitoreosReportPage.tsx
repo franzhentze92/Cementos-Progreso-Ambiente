@@ -149,7 +149,7 @@ export function AgroMonitoreosReportPage() {
         <div className="hc-banner hc-banner-error" role="alert">
           <strong>Error:</strong> {error ?? 'Sin datos'}
           <Link
-            to="/entrada-datos/agroprogreso/monitoreo-ambiental"
+            to="/entrada-datos/monitoreo-ambiental?proyecto=agroprogreso"
             className="btn-secondary-link"
           >
             Ir a captura →
@@ -169,10 +169,10 @@ export function AgroMonitoreosReportPage() {
             <Sprout size={14} />
             Operaciones · Agroprogreso · Analytics
           </p>
-          <h1>Monitoreo ambiental</h1>
+          <h1>Monitoreos de cumplimiento / control</h1>
           <p>
-            Laboratorio + geografía: mapa de puntos, series temporales por
-            parámetro, calidad de datos y perfil del último muestreo ·{' '}
+            Muestreos de laboratorio y control (no es el monitoreo en vivo):
+            mapa de puntos, series por parámetro y calidad de datos ·{' '}
             {meta.periodLabel} ({meta.dateSpanLabel})
           </p>
         </div>
@@ -212,6 +212,22 @@ export function AgroMonitoreosReportPage() {
             </label>
           </div>
         </div>
+      </div>
+
+      <div className="lab-import-cta content-panel">
+        <div>
+          <strong>Cargar o capturar datos</strong>
+          <p>
+            En Entrada de datos puedes subir el PDF del laboratorio o capturar
+            el muestreo de forma manual. Aquí se muestran los resultados.
+          </p>
+        </div>
+        <Link
+          to="/entrada-datos/monitoreo-ambiental?proyecto=agroprogreso"
+          className="btn-primary"
+        >
+          Ir a captura →
+        </Link>
       </div>
 
       <div className="carbon-kpi-grid">
@@ -677,7 +693,7 @@ export function AgroMonitoreosReportPage() {
             </p>
           </div>
           <Link
-            to="/entrada-datos/agroprogreso/monitoreo-ambiental"
+            to="/entrada-datos/monitoreo-ambiental?proyecto=agroprogreso"
             className="btn-secondary-link"
           >
             Ir a captura →

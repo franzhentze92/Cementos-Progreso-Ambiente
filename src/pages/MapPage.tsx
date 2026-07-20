@@ -9,7 +9,7 @@ import {
 } from 'react-leaflet'
 import L from 'leaflet'
 import { Link } from 'react-router-dom'
-import { Loader2, MapPin, Radio, Search } from 'lucide-react'
+import { CloudSun, Loader2, MapPin, Radio, Search, Wind } from 'lucide-react'
 import {
   LOCATION_COUNTRIES,
   LOCATION_TYPES,
@@ -25,7 +25,13 @@ import {
   type SiteRiskCard,
   type SiteRiskLevel,
 } from '../data/siteRiskBridge'
+import type { SiteAirQuality } from '../data/airQuality'
+import type { SiteWeather } from '../data/weather'
+import { loadAirQualityForPoints } from '../lib/airQualityApi'
 import { loadSiteRiskOverlay } from '../lib/siteRiskApi'
+import { loadWeatherForPoints } from '../lib/weatherApi'
+import { AirQualitySnippet } from '../components/AirQualitySnippet'
+import { WeatherSnippet } from '../components/WeatherSnippet'
 import 'leaflet/dist/leaflet.css'
 
 const DEFAULT_CENTER: [number, number] = [13.2, -86.5]
@@ -137,6 +143,13 @@ export function MapPage() {
   const [riskCards, setRiskCards] = useState<SiteRiskCard[]>([])
   const [riskLoading, setRiskLoading] = useState(false)
   const [riskError, setRiskError] = useState<string | null>(null)
+  const [weatherById, setWeatherById] = useState<Map<string, SiteWeather>>(
+    () => new Map(),
+  )
+  const [airById, setAirById] = useState<Map<string, SiteAirQuality>>(
+    () => new Map(),
+  )
+  const [envLoading, setEnvLoading] = useState(false)
 
   const filtered = useMemo(() => {
     return SITES.filter((site) => {
@@ -155,8 +168,8 @@ export function MapPage() {
     }
   }, [filtered, selectedId])
 
+  // Precarga el semáforo para el contador de la tarjeta y la vista operativa
   useEffect(() => {
-    if (mode !== 'operativo') return
     let cancelled = false
     setRiskLoading(true)
     setRiskError(null)
@@ -177,7 +190,45 @@ export function MapPage() {
     return () => {
       cancelled = true
     }
-  }, [mode])
+  }, [])
+
+  // Clima + calidad de aire (Open-Meteo) para sitios visibles
+  useEffect(() => {
+    const points =
+      mode === 'inventario'
+        ? filtered.map((s) => ({ id: s.id, lat: s.lat, lng: s.lng }))
+        : riskCards.map((c) => ({ id: c.id, lat: c.lat, lng: c.lng }))
+
+    if (points.length === 0) {
+      setWeatherById(new Map())
+      setAirById(new Map())
+      return
+    }
+
+    let cancelled = false
+    setEnvLoading(true)
+    void Promise.all([
+      loadWeatherForPoints(points),
+      loadAirQualityForPoints(points),
+    ])
+      .then(([weather, air]) => {
+        if (cancelled) return
+        setWeatherById(weather)
+        setAirById(air)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setWeatherById(new Map())
+          setAirById(new Map())
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setEnvLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [mode, filtered, riskCards])
 
   const riskCounts = useMemo(() => {
     const counts: Record<SiteRiskLevel, number> = {
@@ -209,37 +260,82 @@ export function MapPage() {
     setFitKey((k) => k + 1)
   }
 
+  const markerCount = mode === 'inventario' ? filtered.length : riskCards.length
+
   return (
     <div className="map-page">
       <div className="page-header">
-        <h1>Mapa</h1>
+        <p className="carbon-kicker">Geografía</p>
+        <h1>Mapa de sitios</h1>
         <p>
-          {mode === 'inventario'
-            ? `${SITES.length} ubicaciones públicas de plantas, concreto, centros y oficinas de Cementos Progreso en la región.`
-            : 'Vista operativa viva: semáforo por sitio según obligaciones, CAPA, monitoreos, incidentes y metas.'}
+          Ubicaciones de Cementos Progreso en la región. Elige una vista:
+          inventario completo o semáforo de riesgo operativo.
         </p>
       </div>
 
+      <div className="map-mode-cards" role="tablist" aria-label="Tipo de mapa">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'inventario'}
+          className={`map-mode-card${mode === 'inventario' ? ' is-active' : ''}`}
+          onClick={() => switchMode('inventario')}
+        >
+          <MapPin size={20} />
+          <div>
+            <strong>Inventario regional</strong>
+            <span>
+              Muestra todas las plantas, centros y oficinas. El color del pin
+              indica el <em>tipo de instalación</em>, no el clima.
+            </span>
+          </div>
+          <b>{SITES.length} sitios</b>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'operativo'}
+          className={`map-mode-card${mode === 'operativo' ? ' is-active' : ''}`}
+          onClick={() => switchMode('operativo')}
+        >
+          <Radio size={20} />
+          <div>
+            <strong>Semáforo operativo</strong>
+            <span>
+              Solo sitios con datos de cumplimiento, CAPA, incidentes o metas.
+              El color mide <em>riesgo operativo</em>, no clima ni AQI.
+            </span>
+          </div>
+          <b>{riskLoading ? '…' : `${riskCards.length} sitios`}</b>
+        </button>
+      </div>
+
       <div className="map-toolbar content-panel">
-        <div className="map-mode-toggle" role="tablist" aria-label="Modo de mapa">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'inventario'}
-            className={mode === 'inventario' ? 'is-active' : ''}
-            onClick={() => switchMode('inventario')}
-          >
-            Inventario regional
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'operativo'}
-            className={mode === 'operativo' ? 'is-active' : ''}
-            onClick={() => switchMode('operativo')}
-          >
-            <Radio size={14} /> Operativo vivo
-          </button>
+        <div className="map-what-box">
+          <strong>
+            {mode === 'inventario'
+              ? '¿Qué miden los pines?'
+              : '¿Qué miden los círculos?'}
+          </strong>
+          <p>
+            {mode === 'inventario' ? (
+              <>
+                Cada pin es una <b>ubicación física</b> del inventario. El color
+                = tipo (cemento, concreto, oficinas…). Clima y calidad de aire
+                son datos de contexto al seleccionar un sitio;{' '}
+                <b>no cambian el color del pin</b>.
+              </>
+            ) : (
+              <>
+                Cada círculo es un <b>sitio operativo</b> (Agro, Alicón,
+                Corporativo…). El color = semáforo de riesgo (obligaciones,
+                CAPA, monitoreos, incidentes, metas). Por eso hay{' '}
+                <b>menos puntos</b> que en el inventario: solo aparecen sitios
+                con señales en el sistema. Clima y AQI se ven en el panel, no
+                en el color del círculo.
+              </>
+            )}
+          </p>
         </div>
 
         {mode === 'inventario' ? (
@@ -300,7 +396,7 @@ export function MapPage() {
             </div>
           </div>
         ) : (
-          <div className="map-filters">
+          <div className="map-filters map-filters-ops">
             <div className="form-field map-site-field">
               <label htmlFor="filter-ops">Sitio operativo</label>
               <select
@@ -317,6 +413,7 @@ export function MapPage() {
               </select>
             </div>
             <div className="map-ops-links">
+              <span>Fuentes del semáforo:</span>
               <Link to="/cumplimiento">Cumplimiento</Link>
               <Link to="/capa">CAPA</Link>
               <Link to="/umbrales">Umbrales</Link>
@@ -325,32 +422,67 @@ export function MapPage() {
           </div>
         )}
 
-        <div className="map-legend">
-          {mode === 'inventario'
-            ? LOCATION_TYPES.map((t) => (
-                <span key={t} className="map-legend-item">
-                  <i
-                    className="map-legend-icon"
-                    style={{ background: TYPE_COLORS[t] }}
-                    dangerouslySetInnerHTML={{ __html: TYPE_SVGS[t] }}
-                  />
-                  {t}
-                </span>
-              ))
-            : (Object.keys(RISK_COLORS) as SiteRiskLevel[]).map((level) => (
-                <span key={level} className="map-legend-item">
-                  <i
-                    className="map-legend-icon"
-                    style={{ background: RISK_COLORS[level] }}
-                  />
-                  {RISK_LABELS[level]} ({riskCounts[level]})
-                </span>
-              ))}
+        <div className="map-legend-block">
+          <div className="map-legend-label">
+            Leyenda de los marcadores
+            <em>
+              {markerCount} punto{markerCount === 1 ? '' : 's'} en el mapa
+            </em>
+          </div>
+          <div className="map-legend">
+            {mode === 'inventario'
+              ? LOCATION_TYPES.map((t) => (
+                  <span key={t} className="map-legend-item">
+                    <i
+                      className="map-legend-icon"
+                      style={{ background: TYPE_COLORS[t] }}
+                      dangerouslySetInnerHTML={{ __html: TYPE_SVGS[t] }}
+                    />
+                    {t}
+                  </span>
+                ))
+              : (Object.keys(RISK_COLORS) as SiteRiskLevel[]).map((level) => (
+                  <span key={level} className="map-legend-item">
+                    <i
+                      className="map-legend-icon"
+                      style={{ background: RISK_COLORS[level] }}
+                    />
+                    {RISK_LABELS[level]} ({riskCounts[level]})
+                  </span>
+                ))}
+          </div>
+          <div className="map-context-note">
+            <CloudSun size={14} />
+            <Wind size={14} />
+            <span>
+              <b>Clima y AQI</b> no son la variable del mapa: aparecen en el
+              panel al hacer clic en un sitio
+              {envLoading
+                ? ' (cargando…)'
+                : weatherById.size > 0
+                  ? ` · disponibles para ${weatherById.size} sitios`
+                  : ''}
+              .
+            </span>
+          </div>
         </div>
       </div>
 
       <div className="map-layout">
         <div className="map-frame">
+          <div className="map-view-chip">
+            {mode === 'inventario' ? (
+              <>
+                <MapPin size={14} />
+                Vista: inventario · color = tipo de sitio
+              </>
+            ) : (
+              <>
+                <Radio size={14} />
+                Vista: semáforo operativo · color = riesgo
+              </>
+            )}
+          </div>
           {mode === 'operativo' && riskLoading && (
             <div className="map-overlay-loading">
               <Loader2 className="hc-spin" size={22} />
@@ -404,15 +536,30 @@ export function MapPage() {
                     <Popup>
                       <strong>{site.name}</strong>
                       <br />
-                      {site.type} · {site.status}
+                      Tipo: {site.type} · {site.status}
                       <br />
                       {site.address}
                       {risk && (
                         <>
                           <br />
-                          Riesgo operativo: {RISK_LABELS[risk.level]}
+                          Riesgo operativo (otra vista): {RISK_LABELS[risk.level]}
                         </>
                       )}
+                      <div className="map-popup-weather">
+                        <small>Contexto · clima / AQI</small>
+                        <WeatherSnippet
+                          weather={weatherById.get(site.id)}
+                          loading={envLoading}
+                          compact
+                        />
+                      </div>
+                      <div className="map-popup-weather">
+                        <AirQualitySnippet
+                          air={airById.get(site.id)}
+                          loading={envLoading}
+                          compact
+                        />
+                      </div>
                     </Popup>
                   </Marker>
                 )
@@ -437,9 +584,24 @@ export function MapPage() {
                   <Popup>
                     <strong>{card.name}</strong>
                     <br />
-                    {RISK_LABELS[card.level]}
+                    Semáforo: {RISK_LABELS[card.level]}
                     <br />
                     {card.headlines[0]}
+                    <div className="map-popup-weather">
+                      <small>Contexto · clima / AQI (no es el color)</small>
+                      <WeatherSnippet
+                        weather={weatherById.get(card.id)}
+                        loading={envLoading}
+                        compact
+                      />
+                    </div>
+                    <div className="map-popup-weather">
+                      <AirQualitySnippet
+                        air={airById.get(card.id)}
+                        loading={envLoading}
+                        compact
+                      />
+                    </div>
                   </Popup>
                 </CircleMarker>
               ))}
@@ -452,8 +614,27 @@ export function MapPage() {
               <>
                 <div className="map-details-header">
                   <MapPin size={20} color="#047935" />
-                  <h2>{selected.name}</h2>
+                  <div>
+                    <h2>{selected.name}</h2>
+                    <p className="map-details-sub">
+                      Ubicación del inventario · {selected.type}
+                    </p>
+                  </div>
                 </div>
+                <p className="map-section-label">
+                  Contexto ambiental (no es la variable del pin)
+                </p>
+                <div className="map-env-blocks">
+                  <WeatherSnippet
+                    weather={weatherById.get(selected.id)}
+                    loading={envLoading}
+                  />
+                  <AirQualitySnippet
+                    air={airById.get(selected.id)}
+                    loading={envLoading}
+                  />
+                </div>
+                <p className="map-section-label">Datos de la ubicación</p>
                 <div className="profile-grid">
                   <div className="profile-row">
                     <span>Tipo</span>
@@ -514,10 +695,10 @@ export function MapPage() {
               </>
             ) : (
               <>
-                <h2>Ubicaciones ({filtered.length})</h2>
-                <p style={{ marginBottom: 16 }}>
-                  Usa los dropdowns o haz clic en un marcador para centrar el mapa
-                  y ver el detalle.
+                <h2>Inventario ({filtered.length})</h2>
+                <p className="map-aside-lead">
+                  Mapa de <b>dónde están</b> las instalaciones. Haz clic en un
+                  pin para ver ficha, clima y calidad de aire del lugar.
                 </p>
                 <ul className="map-site-list">
                   {filtered.map((site) => (
@@ -553,8 +734,27 @@ export function MapPage() {
             <>
               <div className="map-details-header">
                 <MapPin size={20} color={RISK_COLORS[selectedOps.level]} />
-                <h2>{selectedOps.name}</h2>
+                <div>
+                  <h2>{selectedOps.name}</h2>
+                  <p className="map-details-sub">
+                    Sitio operativo · semáforo = riesgo de gestión
+                  </p>
+                </div>
               </div>
+              <p className="map-section-label">
+                Contexto ambiental (no es el semáforo)
+              </p>
+              <div className="map-env-blocks">
+                <WeatherSnippet
+                  weather={weatherById.get(selectedOps.id)}
+                  loading={envLoading}
+                />
+                <AirQualitySnippet
+                  air={airById.get(selectedOps.id)}
+                  loading={envLoading}
+                />
+              </div>
+              <p className="map-section-label">Riesgo operativo</p>
               <div className="profile-grid">
                 <div className="profile-row">
                   <span>Semáforo</span>
@@ -615,9 +815,11 @@ export function MapPage() {
           ) : (
             <>
               <h2>Semáforo operativo ({riskCards.length})</h2>
-              <p style={{ marginBottom: 16 }}>
-                Agrega señales de cumplimiento, CAPA, umbrales, incidentes y
-                metas por sitio Agro / Alicón.
+              <p className="map-aside-lead">
+                Estos círculos <b>no son estaciones de clima</b>. Miden riesgo
+                de gestión ambiental. Si ves pocos puntos, es normal: solo
+                entran sitios Agro / Alicón / Corporativo con datos en
+                cumplimiento, CAPA, umbrales, incidentes o metas.
               </p>
               <ul className="map-site-list">
                 {riskCards.map((card) => (

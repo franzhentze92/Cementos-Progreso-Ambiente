@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Gauge,
+  HardHat,
   Loader2,
   MapPin,
   Sprout,
@@ -131,6 +132,15 @@ export function AgroNdaGeneralReportPage() {
             Hoja AGRO NDA · índice ponderado IDA / Casco / Incidentes /
             Compromisos · {meta.periodLabel}
           </p>
+          <div className="hc-header-actions" style={{ marginTop: 12 }}>
+            <Link
+              to="/operaciones/nda-casco-verde?proyecto=agroprogreso"
+              className="btn-primary"
+            >
+              <HardHat size={16} />
+              Inspecciones casco verde
+            </Link>
+          </div>
         </div>
         <div className="carbon-header-meta">
           <div>

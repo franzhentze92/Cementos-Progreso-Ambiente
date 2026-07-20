@@ -20,11 +20,17 @@ import {
   YAxis,
 } from 'recharts'
 import { Link } from 'react-router-dom'
+import { LabMonitoreosResultsSection } from '../components/LabMonitoreosResultsSection'
 import {
   buildAliconMonitoreoReport,
   type AliconMonitoreoReport,
 } from '../data/aliconMonitoreosReport'
 import { formatNum } from '../data/aliconMonitoreos'
+import {
+  buildLabMonitoreosVisual,
+  type LabMonitoreosVisual,
+} from '../data/labMonitoreosReport'
+import { loadLabMonitoreosByUnidad } from '../lib/agroMonitoreosApi'
 import { loadAliconMonitoreos } from '../lib/aliconMonitoreosApi'
 
 const ALERT_CLASS: Record<string, string> = {
@@ -49,6 +55,7 @@ const tooltipStyle = {
 
 export function AliconMonitoreosReportPage() {
   const [report, setReport] = useState<AliconMonitoreoReport | null>(null)
+  const [labVisual, setLabVisual] = useState<LabMonitoreosVisual | null>(null)
   const [years, setYears] = useState<number[]>([])
   const [year, setYear] = useState<number | 'all'>('all')
   const [loading, setLoading] = useState(true)
@@ -61,12 +68,21 @@ export function AliconMonitoreosReportPage() {
       setLoading(true)
       setError(null)
       try {
-        const records = await loadAliconMonitoreos()
+        const [records, labRows] = await Promise.all([
+          loadAliconMonitoreos(),
+          loadLabMonitoreosByUnidad('Alicón').catch(() => []),
+        ])
         if (cancelled) return
         setRawCount(records.length)
         const built = buildAliconMonitoreoReport(records, year)
-        setYears(built.meta.years)
+        const labBuilt = buildLabMonitoreosVisual(labRows, year)
+        const yearSet = new Set([
+          ...built.meta.years,
+          ...labBuilt.meta.years,
+        ])
+        setYears([...yearSet].sort((a, b) => b - a))
         setReport(built)
+        setLabVisual(labBuilt)
       } catch (err) {
         if (cancelled) return
         setError(
@@ -89,7 +105,7 @@ export function AliconMonitoreosReportPage() {
     return (
       <div className="carbon-page hc-loading">
         <Loader2 className="hc-spin" size={28} />
-        <p>Cargando monitoreo ambiental Planta Alicón…</p>
+        <p>Cargando monitoreos de cumplimiento / control · Alicón…</p>
       </div>
     )
   }
@@ -120,10 +136,10 @@ export function AliconMonitoreosReportPage() {
             <Factory size={14} />
             Operaciones · Planta Alicón
           </p>
-          <h1>Monitoreo ambiental</h1>
+          <h1>Monitoreos de cumplimiento / control</h1>
           <p>
-            Datos reales · hoja Ejecuciones Moni (sedes Alicon) ·{' '}
-            {meta.periodLabel}
+            Resultados de laboratorio (agua, aire, ruido) y cronograma de
+            ejecuciones · {meta.periodLabel}
           </p>
         </div>
         <div className="carbon-header-meta">
@@ -162,6 +178,40 @@ export function AliconMonitoreosReportPage() {
           </div>
         </div>
       </div>
+
+      <div className="lab-import-cta content-panel">
+        <div>
+          <strong>Cargar o capturar datos</strong>
+          <p>
+            En Entrada de datos puedes subir el PDF del laboratorio o capturar
+            el cronograma de ejecuciones de forma manual.
+          </p>
+        </div>
+        <Link
+          to="/entrada-datos/monitoreo-ambiental?proyecto=planta-alicon"
+          className="btn-primary"
+        >
+          Ir a captura →
+        </Link>
+      </div>
+
+      {labVisual ? (
+        <LabMonitoreosResultsSection
+          visual={labVisual}
+          entryHref="/entrada-datos/monitoreo-ambiental?proyecto=planta-alicon"
+          title="Resultados de laboratorio"
+          subtitle="Informes IMA / laboratorio · agua, aire y ruido"
+        />
+      ) : null}
+
+      <section className="lab-results-report-split">
+        <h2 className="lab-results-report-split-title">
+          Cronograma · Ejecuciones Moni
+        </h2>
+        <p className="lab-results-report-split-sub">
+          Programación y estado de monitoreos (captura manual por mes)
+        </p>
+      </section>
 
       <div className="carbon-kpi-grid">
         {kpis.map((kpi) => (

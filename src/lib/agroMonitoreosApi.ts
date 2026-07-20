@@ -117,3 +117,103 @@ export async function saveAgroMonitoreoMuestreo(
   if (error) throw error
   return (data ?? []).map((row) => mapRow(row as DbRow))
 }
+
+export async function loadLabMonitoreosByUnidad(
+  unidadNegocio: string,
+): Promise<AgroMonitoreoRecord[]> {
+  const { data, error } = await supabase
+    .from('agro_monitoreos_ambientales')
+    .select(SELECT_COLS)
+    .eq('unidad_negocio', unidadNegocio)
+    .order('fecha', { ascending: false })
+    .order('punto_muestreo')
+    .order('parametro')
+
+  if (error) throw error
+  return (data ?? []).map((row) => mapRow(row as DbRow))
+}
+
+export type LabMuestreoSaveInput = {
+  fecha: string
+  puntoMuestreo: string
+  tipoMedio: string
+  latitud: number | null
+  longitud: number | null
+  parametros: Array<{
+    parametro: string
+    resultado: number | null
+    unidad: string
+    limitePermisible: string
+    cumple: string
+    observaciones: string
+  }>
+}
+
+/**
+ * Guarda un informe de laboratorio completo (1+ puntos de muestreo).
+ * Reemplaza por (unidad, fecha, sede, punto) cada muestreo.
+ */
+export async function saveLabMonitoreoInforme(input: {
+  unidadNegocio: string
+  plantaSede: string
+  fuenteInforme?: string
+  muestreos: LabMuestreoSaveInput[]
+}): Promise<{ savedRows: number; puntos: number }> {
+  const unidad = input.unidadNegocio.trim() || AGRO_MONITOREO_UNIDAD
+  const sede = input.plantaSede.trim() || 'Alicon'
+  let savedRows = 0
+
+  for (const m of input.muestreos) {
+    const fecha = m.fecha?.trim()
+    const punto = m.puntoMuestreo.trim()
+    if (!fecha || !punto || !m.parametros.length) continue
+
+    const { error: delError } = await supabase
+      .from('agro_monitoreos_ambientales')
+      .delete()
+      .eq('unidad_negocio', unidad)
+      .eq('fecha', fecha)
+      .eq('planta_sede', sede)
+      .eq('punto_muestreo', punto)
+
+    if (delError) throw delError
+
+    const fuente = input.fuenteInforme?.trim()
+    const payload = m.parametros
+      .filter((r) => r.parametro.trim())
+      .map((row) => {
+        const obs = [row.observaciones.trim(), fuente ? `Fuente: ${fuente}` : '']
+          .filter(Boolean)
+          .join(' · ')
+        return {
+          fecha,
+          unidad_negocio: unidad,
+          planta_sede: sede,
+          punto_muestreo: punto,
+          tipo_agua: m.tipoMedio.trim() || 'Monitoreo',
+          parametro: row.parametro.trim(),
+          resultado: row.resultado,
+          unidad: row.unidad.trim(),
+          limite_permisible: row.limitePermisible.trim() || 'No aplica',
+          cumple: row.cumple.trim() || '',
+          observaciones: obs,
+          latitud: m.latitud,
+          longitud: m.longitud,
+        }
+      })
+
+    if (!payload.length) continue
+
+    const { error } = await supabase
+      .from('agro_monitoreos_ambientales')
+      .insert(payload)
+
+    if (error) throw error
+    savedRows += payload.length
+  }
+
+  return {
+    savedRows,
+    puntos: input.muestreos.filter((m) => m.parametros.length > 0).length,
+  }
+}

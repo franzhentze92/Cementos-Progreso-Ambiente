@@ -26,6 +26,11 @@ export type OperationalModuleDef = {
   scopes: ProjectScope[]
   operaciones: boolean
   entrada: boolean
+  /**
+   * Si true, no aparece como ítem propio del menú (sigue siendo ruta válida).
+   * Ej.: NDA Casco Verde vive dentro de NDA General.
+   */
+  navHidden?: boolean
 }
 
 export const PROJECT_SCOPES: { id: ProjectScope; label: string }[] = [
@@ -106,7 +111,7 @@ export const OPERATIONAL_MODULES: OperationalModuleDef[] = [
   },
   {
     id: 'monitoreo-ambiental',
-    label: 'Monitoreo ambiental',
+    label: 'Monitoreos de cumplimiento / control',
     scopes: ['agroprogreso', 'planta-alicon'],
     operaciones: true,
     entrada: true,
@@ -134,10 +139,12 @@ export const OPERATIONAL_MODULES: OperationalModuleDef[] = [
   },
   {
     id: 'nda-casco-verde',
-    label: 'NDA Casco Verde',
+    label: 'Inspecciones casco verde',
     scopes: ['agroprogreso'],
     operaciones: true,
     entrada: true,
+    /** Acceso desde el botón en NDA General; no es ítem de menú aparte. */
+    navHidden: true,
   },
   {
     id: 'nda-general',

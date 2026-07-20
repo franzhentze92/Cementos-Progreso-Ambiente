@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
+  ArrowLeft,
   CheckCircle2,
   ExternalLink,
   HardHat,
@@ -113,7 +114,7 @@ export function AgroNdaCascoVerdeReportPage() {
         <div className="hc-banner hc-banner-error" role="alert">
           <strong>Error:</strong> {error ?? 'Sin datos'}
           <Link
-            to="/entrada-datos/agroprogreso/nda-casco-verde"
+            to="/entrada-datos/nda-casco-verde?proyecto=agroprogreso"
             className="btn-secondary-link"
           >
             Ir a captura →
@@ -131,13 +132,22 @@ export function AgroNdaCascoVerdeReportPage() {
         <div>
           <p className="carbon-kicker">
             <Sprout size={14} />
-            Operaciones · Agroprogreso · Analytics
+            Operaciones · NDA General · Agroprogreso
           </p>
-          <h1>NDA Casco Verde</h1>
+          <h1>Inspecciones casco verde</h1>
           <p>
             Hoja AGRO NDA Casco verde · notas, hallazgos y cobertura por sede ·{' '}
             {meta.periodLabel}
           </p>
+          <div className="hc-header-actions" style={{ marginTop: 12 }}>
+            <Link
+              to="/operaciones/nda-general?proyecto=agroprogreso"
+              className="btn-secondary-link"
+            >
+              <ArrowLeft size={16} />
+              Volver a NDA General
+            </Link>
+          </div>
         </div>
         <div className="carbon-header-meta">
           <div>
@@ -345,7 +355,7 @@ export function AgroNdaCascoVerdeReportPage() {
             </p>
           </div>
           <Link
-            to="/entrada-datos/agroprogreso/nda-casco-verde"
+            to="/entrada-datos/nda-casco-verde?proyecto=agroprogreso"
             className="btn-secondary-link"
           >
             Editar captura →

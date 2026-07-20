@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  ArrowLeft,
   CheckCircle2,
   ExternalLink,
   HardHat,
@@ -235,9 +236,9 @@ export function AgroNdaCascoVerdePage() {
         <div>
           <p className="carbon-kicker">
             <Sprout size={14} />
-            Entrada de Datos · Agroprogreso
+            Entrada de Datos · NDA General · Agroprogreso
           </p>
-          <h1>NDA Casco Verde</h1>
+          <h1>Inspecciones casco verde</h1>
           <p>
             Réplica de la hoja <strong>AGRO NDA Casco verde</strong>. Captura
             por mes: sede, inspector, nota, hallazgos y observaciones.
@@ -245,7 +246,14 @@ export function AgroNdaCascoVerdePage() {
         </div>
         <div className="hc-header-actions">
           <Link
-            to="/operaciones/agroprogreso/nda-casco-verde"
+            to="/entrada-datos/nda-general?proyecto=agroprogreso"
+            className="btn-secondary-link"
+          >
+            <ArrowLeft size={16} />
+            Volver a NDA General
+          </Link>
+          <Link
+            to="/operaciones/nda-casco-verde?proyecto=agroprogreso"
             className="btn-secondary-link"
           >
             Ver reporte →

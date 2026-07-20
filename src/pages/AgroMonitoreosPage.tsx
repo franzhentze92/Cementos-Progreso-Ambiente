@@ -36,6 +36,7 @@ import {
   loadAgroMonitoreos,
   saveAgroMonitoreoMuestreo,
 } from '../lib/agroMonitoreosApi'
+import { MonitoreoLabImport } from '../components/MonitoreoLabImport'
 
 function MonthRail({
   month,
@@ -106,7 +107,7 @@ export function AgroMonitoreosPage() {
       setLoadError(
         err instanceof Error
           ? err.message
-          : 'No se pudo cargar el monitoreo ambiental',
+          : 'No se pudieron cargar los monitoreos de cumplimiento / control',
       )
     } finally {
       setLoading(false)
@@ -233,7 +234,7 @@ export function AgroMonitoreosPage() {
     return (
       <div className="entry-page hc-entry hc-loading">
         <Loader2 className="hc-spin" size={28} />
-        <p>Cargando monitoreo ambiental Agroprogreso…</p>
+        <p>Cargando monitoreos de cumplimiento / control…</p>
       </div>
     )
   }
@@ -246,15 +247,16 @@ export function AgroMonitoreosPage() {
             <Sprout size={14} />
             Entrada de Datos · Agroprogreso
           </p>
-          <h1>Monitoreo ambiental</h1>
+          <h1>Monitoreos de cumplimiento / control</h1>
           <p>
-            Réplica de <strong>Monitoreos ambientales</strong>. Plantilla fija
-            de parámetros: solo captura resultados del muestreo.
+            Resultados de laboratorio y muestreos de control. Distinto del{' '}
+            <Link to="/monitoreo-en-vivo">monitoreo en vivo</Link>. Puedes
+            capturar a mano o cargar el PDF del laboratorio.
           </p>
         </div>
         <div className="hc-header-actions">
           <Link
-            to="/operaciones/agroprogreso/monitoreo-ambiental"
+            to="/operaciones/monitoreo-ambiental"
             className="btn-secondary-link"
           >
             Ver reporte →
@@ -293,10 +295,28 @@ export function AgroMonitoreosPage() {
         </div>
       ) : null}
 
+      <MonitoreoLabImport
+        year={year}
+        month={month}
+        hint="Opción A: sube el PDF del laboratorio (IA extrae y guarda). Opción B: llena el formulario de abajo y guarda el muestreo. Los gráficos están en el reporte de operaciones."
+        onApply={({ header: h, rows, year: y, month: m }) => {
+          setYear(y)
+          setMonth(m)
+          setHeader(h)
+          setParamRows(rows)
+          setSaveOk(false)
+          setSaveError(null)
+        }}
+        onSaved={() => {
+          void reload()
+          setSaveOk(true)
+        }}
+      />
+
       <div className="entry-summary hc-summary">
         <div>
-          <span>Hoja Excel</span>
-          <strong>Monitoreos ambientales</strong>
+          <span>Fuente</span>
+          <strong>Laboratorio / captura</strong>
         </div>
         <div>
           <span>Periodo</span>

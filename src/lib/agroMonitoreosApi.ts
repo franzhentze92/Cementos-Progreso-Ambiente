@@ -25,9 +25,28 @@ type DbRow = {
   observaciones: string
   latitud: number | null
   longitud: number | null
+  laboratorio?: string | null
+  fuente_informe?: string | null
+  medio?: string | null
+}
+
+let labMetaColumnsReady: boolean | null = null
+
+async function hasLabMetaColumns(): Promise<boolean> {
+  if (labMetaColumnsReady != null) return labMetaColumnsReady
+  const { error } = await supabase
+    .from('agro_monitoreos_ambientales')
+    .select('laboratorio')
+    .limit(1)
+  labMetaColumnsReady = !error
+  return labMetaColumnsReady
 }
 
 function mapRow(row: DbRow): AgroMonitoreoRecord {
+  const medio =
+    row.medio?.trim() ||
+    row.tipo_agua?.trim() ||
+    ''
   return {
     id: row.id,
     fecha: row.fecha,
@@ -43,22 +62,22 @@ function mapRow(row: DbRow): AgroMonitoreoRecord {
     observaciones: row.observaciones ?? '',
     latitud: row.latitud,
     longitud: row.longitud,
+    laboratorio: row.laboratorio ?? '',
+    fuenteInforme: row.fuente_informe ?? '',
+    medio,
   }
 }
-
-const SELECT_COLS =
-  'id, fecha, unidad_negocio, planta_sede, punto_muestreo, tipo_agua, parametro, resultado, unidad, limite_permisible, cumple, observaciones, latitud, longitud'
 
 export async function loadAgroMonitoreos(): Promise<AgroMonitoreoRecord[]> {
   const { data, error } = await supabase
     .from('agro_monitoreos_ambientales')
-    .select(SELECT_COLS)
+    .select('*')
     .eq('unidad_negocio', AGRO_MONITOREO_UNIDAD)
     .order('fecha', { ascending: false })
     .order('parametro')
 
   if (error) throw error
-  return (data ?? []).map((row) => mapRow(row as DbRow))
+  return (data ?? []).map((row) => mapRow(row as unknown as DbRow))
 }
 
 /**
@@ -75,6 +94,7 @@ export async function saveAgroMonitoreoMuestreo(
   const fecha = buildFecha(year, month, dia)
   const sede = header.plantaSede.trim()
   const punto = header.puntoMuestreo.trim()
+  const withMeta = await hasLabMetaColumns()
 
   const { error: delError } = await supabase
     .from('agro_monitoreos_ambientales')
@@ -88,34 +108,43 @@ export async function saveAgroMonitoreoMuestreo(
 
   const lat = parseNum(header.latitud)
   const lon = parseNum(header.longitud)
+  const medio = header.tipoAgua.trim()
 
   const payload = rows
     .filter((r) => r.parametro.trim())
-    .map((row) => ({
-      fecha,
-      unidad_negocio: AGRO_MONITOREO_UNIDAD,
-      planta_sede: sede,
-      punto_muestreo: punto,
-      tipo_agua: header.tipoAgua.trim(),
-      parametro: row.parametro.trim(),
-      resultado: parseNum(row.resultado),
-      unidad: row.unidad.trim(),
-      limite_permisible: row.limitePermisible.trim() || 'No aplica',
-      cumple: row.cumple.trim() || 'Si',
-      observaciones: row.observaciones.trim(),
-      latitud: lat,
-      longitud: lon,
-    }))
+    .map((row) => {
+      const base: Record<string, unknown> = {
+        fecha,
+        unidad_negocio: AGRO_MONITOREO_UNIDAD,
+        planta_sede: sede,
+        punto_muestreo: punto,
+        tipo_agua: medio,
+        parametro: row.parametro.trim(),
+        resultado: parseNum(row.resultado),
+        unidad: row.unidad.trim(),
+        limite_permisible: row.limitePermisible.trim() || 'No aplica',
+        cumple: row.cumple.trim() || 'Si',
+        observaciones: row.observaciones.trim(),
+        latitud: lat,
+        longitud: lon,
+      }
+      if (withMeta) {
+        base.laboratorio = ''
+        base.fuente_informe = ''
+        base.medio = medio
+      }
+      return base
+    })
 
   if (!payload.length) return []
 
   const { data, error } = await supabase
     .from('agro_monitoreos_ambientales')
     .insert(payload)
-    .select(SELECT_COLS)
+    .select('*')
 
   if (error) throw error
-  return (data ?? []).map((row) => mapRow(row as DbRow))
+  return (data ?? []).map((row) => mapRow(row as unknown as DbRow))
 }
 
 export async function loadLabMonitoreosByUnidad(
@@ -123,14 +152,14 @@ export async function loadLabMonitoreosByUnidad(
 ): Promise<AgroMonitoreoRecord[]> {
   const { data, error } = await supabase
     .from('agro_monitoreos_ambientales')
-    .select(SELECT_COLS)
+    .select('*')
     .eq('unidad_negocio', unidadNegocio)
     .order('fecha', { ascending: false })
     .order('punto_muestreo')
     .order('parametro')
 
   if (error) throw error
-  return (data ?? []).map((row) => mapRow(row as DbRow))
+  return (data ?? []).map((row) => mapRow(row as unknown as DbRow))
 }
 
 export type LabMuestreoSaveInput = {
@@ -157,10 +186,16 @@ export async function saveLabMonitoreoInforme(input: {
   unidadNegocio: string
   plantaSede: string
   fuenteInforme?: string
+  laboratorio?: string | null
+  medio?: string | null
   muestreos: LabMuestreoSaveInput[]
-}): Promise<{ savedRows: number; puntos: number }> {
+}): Promise<{ savedRows: number; puntos: number; metaColumns: boolean }> {
   const unidad = input.unidadNegocio.trim() || AGRO_MONITOREO_UNIDAD
   const sede = input.plantaSede.trim() || 'Alicon'
+  const fuente = input.fuenteInforme?.trim() || ''
+  const laboratorio = input.laboratorio?.trim() || ''
+  const medioInforme = input.medio?.trim() || ''
+  const withMeta = await hasLabMetaColumns()
   let savedRows = 0
 
   for (const m of input.muestreos) {
@@ -178,28 +213,38 @@ export async function saveLabMonitoreoInforme(input: {
 
     if (delError) throw delError
 
-    const fuente = input.fuenteInforme?.trim()
+    const medioFila = m.tipoMedio.trim() || medioInforme || 'Monitoreo'
+
     const payload = m.parametros
       .filter((r) => r.parametro.trim())
       .map((row) => {
-        const obs = [row.observaciones.trim(), fuente ? `Fuente: ${fuente}` : '']
-          .filter(Boolean)
-          .join(' · ')
-        return {
+        const obsParts = [row.observaciones.trim()]
+        if (!withMeta) {
+          if (laboratorio) obsParts.push(`Laboratorio: ${laboratorio}`)
+          if (fuente) obsParts.push(`Fuente: ${fuente}`)
+          if (medioInforme) obsParts.push(`Medio informe: ${medioInforme}`)
+        }
+        const base: Record<string, unknown> = {
           fecha,
           unidad_negocio: unidad,
           planta_sede: sede,
           punto_muestreo: punto,
-          tipo_agua: m.tipoMedio.trim() || 'Monitoreo',
+          tipo_agua: medioFila,
           parametro: row.parametro.trim(),
           resultado: row.resultado,
           unidad: row.unidad.trim(),
           limite_permisible: row.limitePermisible.trim() || 'No aplica',
           cumple: row.cumple.trim() || '',
-          observaciones: obs,
+          observaciones: obsParts.filter(Boolean).join(' · '),
           latitud: m.latitud,
           longitud: m.longitud,
         }
+        if (withMeta) {
+          base.laboratorio = laboratorio
+          base.fuente_informe = fuente
+          base.medio = medioFila
+        }
+        return base
       })
 
     if (!payload.length) continue
@@ -215,5 +260,6 @@ export async function saveLabMonitoreoInforme(input: {
   return {
     savedRows,
     puntos: input.muestreos.filter((m) => m.parametros.length > 0).length,
+    metaColumns: withMeta,
   }
 }

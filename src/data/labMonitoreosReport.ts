@@ -59,8 +59,12 @@ const MONTH_SHORT = [
   'Dic',
 ]
 
+function medioOf(r: AgroMonitoreoRecord) {
+  return r.medio?.trim() || r.tipoAgua?.trim() || 'Sin medio'
+}
+
 function muestreoKey(r: AgroMonitoreoRecord) {
-  return `${r.fecha}|${r.plantaSede}|${r.puntoMuestreo}|${r.tipoAgua}`
+  return `${r.fecha}|${r.plantaSede}|${r.puntoMuestreo}|${medioOf(r)}`
 }
 
 export function buildLabMonitoreosVisual(
@@ -85,7 +89,7 @@ export function buildLabMonitoreosVisual(
 
   const muestreoIds = new Set(filtered.map(muestreoKey))
   const puntos = new Set(filtered.map((r) => r.puntoMuestreo))
-  const medios = new Set(filtered.map((r) => r.tipoAgua || 'Sin medio'))
+  const medios = new Set(filtered.map((r) => medioOf(r)))
 
   let si = 0
   let no = 0
@@ -104,7 +108,7 @@ export function buildLabMonitoreosVisual(
     { value: number; si: number; no: number }
   >()
   for (const r of filtered) {
-    const name = r.tipoAgua?.trim() || 'Sin medio'
+    const name = medioOf(r)
     const cur = medioMap.get(name) ?? { value: 0, si: 0, no: 0 }
     cur.value += 1
     const c = r.cumple.trim().toLowerCase()
@@ -127,10 +131,11 @@ export function buildLabMonitoreosVisual(
     }
   >()
   for (const r of filtered) {
-    const key = `${r.puntoMuestreo}|${r.tipoAgua}`
+    const medio = medioOf(r)
+    const key = `${r.puntoMuestreo}|${medio}`
     const cur = puntoMap.get(key) ?? {
       punto: r.puntoMuestreo,
-      medio: r.tipoAgua || '—',
+      medio,
       fechaLatest: r.fecha,
       params: 0,
       noCumple: 0,

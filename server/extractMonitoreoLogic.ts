@@ -9,6 +9,8 @@ export type ExtractedMonitoreoParam = {
   resultado: number | null
   unidad: string
   limitePermisible: string
+  /** Límite de detección / precisión del método (NO es límite legal). */
+  limiteDeteccion?: string
   cumple: 'Si' | 'No' | ''
   observaciones: string
 }
@@ -71,6 +73,7 @@ Estructura:
           "resultado": number|null,
           "unidad": string,
           "limitePermisible": string,
+          "limiteDeteccion": string,
           "cumple": "Si"|"No"|"",
           "observaciones": string
         }
@@ -79,15 +82,22 @@ Estructura:
   ]
 }
 
-Reglas:
-- Un informe puede tener VARIOS puntos (ej. Patio de coque, Colindancia este, Salida Lagunas Alicon). Crea un objeto en "muestreos" por cada punto.
-- Si hay aire y ruido en el mismo PDF, separa por punto y usa tipoMedio "Material particulado" o "Ruido" según corresponda.
+REGLA CRÍTICA — límites (NO confundir):
+- "limitePermisible" = SOLO límite legal / normativo / de cumplimiento (COGUANOR, OMS, LMP, LMA, CMA, norma nacional, criterio del informe etiquetado como límite máximo/permisible/admisible).
+- "limiteDeteccion" = LD, LOD, LOQ, LQ, EMP, precisión, incertidumbre, "Error", "Indicación", sensibilidad del método. NUNCA lo pongas en limitePermisible.
+- Si la tabla tiene columnas tipo "EMP", "LD", "Error (g)" junto al resultado, eso es limiteDeteccion, no limitePermisible.
+- Si NO hay límite legal explícito: limitePermisible = "" (cadena vacía). No inventes ni copies la precisión del equipo.
+- Ejemplo incorrecto: pH=7.82 con limitePermisible "0.01" (eso es precisión/LD). Correcto: limitePermisible "" y limiteDeteccion "0.01".
+- Ejemplo correcto aire: PM2.5 resultado 13.7, limitePermisible "15" (OMS/norma), cumple según compare.
+
+Otras reglas:
+- Un informe puede tener VARIOS puntos (Salida Lagunas Alicon, Patio de coque, Colindancia este, etc.). Un objeto en "muestreos" por cada punto.
+- Si el PDF mezcla aire y ruido, separa por punto; tipoMedio "Material particulado" o "Ruido"; medio del informe "Mixto" si aplica.
 - Extrae TODOS los analitos con valor numérico (pH, metales, coliformes, PM2.5, PM10, TSP, LAeq, etc.).
-- resultado: número; si viene "<0.01" usa 0.01 y anota en observaciones "menor que LD".
-- limitePermisible: LMA/LMP/OMS/etc. cuando exista (ej. "LMP 1.1" o "OMS 15").
-- cumple: Si/No solo si se deduce; si no, "".
-- No inventes cifras. Prefiere anexos de "INFORME DE RESULTADOS" y tablas resumen.
-- Cliente Alicón / Cementos Progreso / ALICON → unidadNegocio "Alicón", plantaSede "Alicon".
+- resultado: número; si viene "<0.01" usa 0.01 y anota en observaciones "Valor reportado <0.01".
+- cumple: Si/No solo si el informe lo indica o se deduce vs limitePermisible legal; si no hay límite legal, cumple "".
+- No inventes cifras ni límites.
+- Cliente Alicón / Cementos Progreso / Puerto Barrios → unidadNegocio "Alicón", plantaSede "Alicon".
 - Agroprogreso / fincas → unidadNegocio "Agroprogreso".`
 
 function parseJsonObject(raw: string): unknown {
@@ -121,12 +131,37 @@ function asNumber(v: unknown): number | null {
   return null
 }
 
+function looksLikeDetectionLimit(
+  limite: string,
+  resultado: number | null,
+): boolean {
+  const t = limite.trim()
+  if (!t) return false
+  if (/^(lod|ld|loq|lq|emp|mdl|precisi[oó]n|incertidumbre|error)/i.test(t)) {
+    return true
+  }
+  const n = Number(t.replace(',', '.').replace(/[^\d.eE+-]/g, ''))
+  if (!Number.isFinite(n)) return false
+  if (n === 0) return true
+  if (n > 0 && n <= 0.01 && (resultado == null || resultado > 1)) return true
+  if (
+    resultado != null &&
+    Number.isFinite(resultado) &&
+    n > 0 &&
+    resultado / n >= 50 &&
+    n <= 10
+  ) {
+    return true
+  }
+  return false
+}
+
 function normalizeParam(p: unknown): ExtractedMonitoreoParam | null {
   const row = (p && typeof p === 'object' ? p : {}) as Record<string, unknown>
   const parametro = asString(row.parametro)
   if (!parametro) return null
   const cumpleRaw = asString(row.cumple)?.toLowerCase() ?? ''
-  const cumple: ExtractedMonitoreoParam['cumple'] =
+  let cumple: ExtractedMonitoreoParam['cumple'] =
     cumpleRaw === 'si' || cumpleRaw === 'sí' || cumpleRaw === 'yes'
       ? 'Si'
       : cumpleRaw === 'no'
@@ -140,11 +175,29 @@ function normalizeParam(p: unknown): ExtractedMonitoreoParam | null {
   ) {
     observaciones = `Valor reportado ${row.resultado.trim()}`
   }
+  const resultado = asNumber(row.resultado)
+  let limitePermisible = asString(row.limitePermisible) ?? ''
+  let limiteDeteccion = asString(row.limiteDeteccion) ?? ''
+  if (limitePermisible && looksLikeDetectionLimit(limitePermisible, resultado)) {
+    if (!limiteDeteccion) limiteDeteccion = limitePermisible
+    const note = `LOD/precisión reportada: ${limitePermisible} (no usar como límite legal)`
+    if (!observaciones.includes(note)) {
+      observaciones = [observaciones, note].filter(Boolean).join(' · ')
+    }
+    limitePermisible = ''
+    if (cumple) cumple = ''
+  }
+  if (limiteDeteccion && !observaciones.includes(limiteDeteccion)) {
+    observaciones = [observaciones, `LD/EMP: ${limiteDeteccion}`]
+      .filter(Boolean)
+      .join(' · ')
+  }
   return {
     parametro,
-    resultado: asNumber(row.resultado),
+    resultado,
     unidad: asString(row.unidad) ?? '',
-    limitePermisible: asString(row.limitePermisible) ?? '',
+    limitePermisible,
+    limiteDeteccion,
     cumple,
     observaciones,
   }
@@ -278,7 +331,7 @@ export async function extractMonitoreoFromText(input: {
         model: 'gpt-4o-mini',
         temperature: 0.05,
         response_format: { type: 'json_object' },
-        max_tokens: 4096,
+        max_tokens: 8000,
         messages: [
           { role: 'system', content: SYSTEM },
           { role: 'user', content: userContent },

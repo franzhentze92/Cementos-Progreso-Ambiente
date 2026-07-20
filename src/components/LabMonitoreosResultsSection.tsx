@@ -251,7 +251,7 @@ export function LabMonitoreosResultsSection({
                     <tr key={r.id}>
                       <td>{r.fecha}</td>
                       <td>{r.puntoMuestreo}</td>
-                      <td>{r.tipoAgua}</td>
+                      <td>{r.medio || r.tipoAgua || '—'}</td>
                       <td>{r.parametro}</td>
                       <td>
                         {formatNum(r.resultado)}

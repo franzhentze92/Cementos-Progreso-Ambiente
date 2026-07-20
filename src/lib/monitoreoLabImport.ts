@@ -5,13 +5,18 @@
 import {
   AGRO_MONITOREO_PARAMETROS,
   AGRO_MONITOREO_SEDES,
-  AGRO_TIPOS_AGUA,
   emptyParamRows,
   type AgroMonitoreoHeader,
   type AgroMonitoreoParamRow,
   type MonitoringMonth,
 } from '../data/agroMonitoreos'
 import { MONITORING_MONTHS } from '../data/carbonMonitoring'
+import {
+  matchLabMedio,
+  matchLabParametro,
+  matchLabPunto,
+  sanitizeLimitePermisible,
+} from '../data/labMonitoreosCatalog'
 import { saveLabMonitoreoInforme } from './agroMonitoreosApi'
 import { extractPdfText } from './pdfExtract'
 
@@ -20,6 +25,7 @@ export type ExtractedMonitoreoParam = {
   resultado: number | null
   unidad: string
   limitePermisible: string
+  limiteDeteccion?: string
   cumple: 'Si' | 'No' | ''
   observaciones: string
 }
@@ -61,6 +67,59 @@ export type LabImportPreview = {
   totalParametros: number
 }
 
+function normalizeExtracted(data: ExtractedMonitoreo): ExtractedMonitoreo {
+  const medio = matchLabMedio(data.medio)
+  const muestreos = (data.muestreos ?? []).map((m) => ({
+    ...m,
+    puntoMuestreo: matchLabPunto(m.puntoMuestreo),
+    tipoMedio: matchLabMedio(m.tipoMedio || medio),
+    parametros: m.parametros.map((p) => {
+      const sanitized = sanitizeLimitePermisible(
+        p.limitePermisible,
+        p.resultado,
+        p.observaciones ?? '',
+      )
+      let cumple = p.cumple
+      if (!sanitized.limite && cumple) cumple = ''
+      return {
+        ...p,
+        parametro: matchLabParametro(p.parametro),
+        limitePermisible: sanitized.limite,
+        observaciones: sanitized.observaciones,
+        cumple,
+      }
+    }),
+  }))
+
+  let unidad = data.unidadNegocio || 'Alicón'
+  if (/agro/i.test(unidad)) unidad = 'Agroprogreso'
+  if (/alic|cementos\s*progreso/i.test(unidad)) unidad = 'Alicón'
+
+  let sede = data.plantaSede || (unidad === 'Alicón' ? 'Alicon' : '')
+  if (/alic/i.test(sede)) sede = 'Alicon'
+  else {
+    const hit = AGRO_MONITOREO_SEDES.find(
+      (s) => s.toLowerCase() === sede.toLowerCase(),
+    )
+    if (hit) sede = hit
+  }
+
+  const first = muestreos[0]
+  return {
+    ...data,
+    unidadNegocio: unidad,
+    plantaSede: sede || (unidad === 'Alicón' ? 'Alicon' : sede),
+    medio,
+    muestreos,
+    fecha: first?.fecha ?? data.fecha,
+    puntoMuestreo: first?.puntoMuestreo ?? data.puntoMuestreo,
+    tipoAgua: first?.tipoMedio ?? matchLabMedio(data.tipoAgua ?? medio),
+    latitud: first?.latitud ?? data.latitud,
+    longitud: first?.longitud ?? data.longitud,
+    parametros: first?.parametros ?? data.parametros,
+  }
+}
+
 async function callExtractApi(
   text: string,
   fileName: string,
@@ -84,30 +143,7 @@ async function callExtractApi(
   if (!res.ok || !payload.data) {
     throw new Error(payload.error || `Error HTTP ${res.status}`)
   }
-  return payload.data
-}
-
-function matchSede(raw: string | null, unidad: string): string {
-  if (unidad === 'Alicón' || /alic/i.test(raw ?? '')) return 'Alicon'
-  if (!raw) return AGRO_MONITOREO_SEDES[0]
-  const hit = AGRO_MONITOREO_SEDES.find(
-    (s) => s.toLowerCase() === raw.toLowerCase(),
-  )
-  if (hit) return hit
-  const soft = AGRO_MONITOREO_SEDES.find(
-    (s) =>
-      s.toLowerCase().includes(raw.toLowerCase()) ||
-      raw.toLowerCase().includes(s.toLowerCase().replace(/^finca\s+/i, '')),
-  )
-  return soft ?? raw
-}
-
-function matchTipoMedio(raw: string | null): string {
-  if (!raw) return AGRO_TIPOS_AGUA[0]
-  const hit = AGRO_TIPOS_AGUA.find(
-    (t) => t.toLowerCase() === raw.toLowerCase(),
-  )
-  return hit ?? raw
+  return normalizeExtracted(payload.data)
 }
 
 function mapFirstMuestreoToForm(
@@ -136,12 +172,14 @@ function mapFirstMuestreoToForm(
 
   const header: AgroMonitoreoHeader = {
     dia,
-    plantaSede: matchSede(data.plantaSede, data.unidadNegocio),
+    plantaSede: data.plantaSede,
     puntoMuestreo:
       first?.puntoMuestreo?.trim() ||
       data.puntoMuestreo?.trim() ||
       'Punto de muestreo (informe)',
-    tipoAgua: matchTipoMedio(first?.tipoMedio ?? data.tipoAgua ?? data.medio),
+    tipoAgua: matchLabMedio(
+      first?.tipoMedio ?? data.tipoAgua ?? data.medio,
+    ),
     latitud:
       first?.latitud != null
         ? String(first.latitud)
@@ -248,12 +286,14 @@ export async function importMonitoreoLabPdf(
 /** Persiste todos los muestreos del informe en Supabase. */
 export async function saveImportedLabInforme(
   preview: LabImportPreview,
-): Promise<{ savedRows: number; puntos: number }> {
+): Promise<{ savedRows: number; puntos: number; metaColumns: boolean }> {
   const { data, fileName } = preview
   return saveLabMonitoreoInforme({
     unidadNegocio: data.unidadNegocio || 'Alicón',
-    plantaSede: matchSede(data.plantaSede, data.unidadNegocio),
+    plantaSede: data.plantaSede || 'Alicon',
     fuenteInforme: fileName,
+    laboratorio: data.laboratorio,
+    medio: data.medio,
     muestreos: (data.muestreos ?? []).map((m) => ({
       fecha: m.fecha || data.fecha || new Date().toISOString().slice(0, 10),
       puntoMuestreo: m.puntoMuestreo,

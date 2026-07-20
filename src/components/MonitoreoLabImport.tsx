@@ -85,7 +85,9 @@ export function MonitoreoLabImport({
     try {
       const result = await saveImportedLabInforme(preview)
       setSaveMsg(
-        `Guardado: ${result.savedRows} parámetros en ${result.puntos} punto(s) de muestreo.`,
+        result.metaColumns
+          ? `Guardado: ${result.savedRows} parámetros en ${result.puntos} punto(s) · laboratorio, fuente y medio en columnas propias.`
+          : `Guardado: ${result.savedRows} parámetros en ${result.puntos} punto(s). Metadatos (laboratorio/fuente/medio) en observaciones hasta aplicar la migración SQL.`,
       )
       onSaved?.(result)
       setPreview(null)

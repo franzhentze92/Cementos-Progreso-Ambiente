@@ -20,6 +20,7 @@ export const AGRO_TIPOS_AGUA = [
   'Agua ordinaria',
   'Agua residual',
   'Agua superficial',
+  'Agua potable',
 ] as const
 
 export const CUMPLE_OPCIONES = ['Si', 'No'] as const
@@ -59,6 +60,9 @@ export type AgroMonitoreoRecord = {
   observaciones: string
   latitud: number | null
   longitud: number | null
+  laboratorio: string
+  fuenteInforme: string
+  medio: string
 }
 
 export type AgroMonitoreoParamRow = {

@@ -19,6 +19,10 @@ import {
   sanitizeLimitePermisible,
 } from '../data/labMonitoreosCatalog'
 import { saveLabMonitoreoInforme } from './agroMonitoreosApi'
+import {
+  mergeLabParams,
+  parseLabResultsTable,
+} from './labPdfHeuristics'
 import { extractPdfText } from './pdfExtract'
 
 export type ExtractedMonitoreoParam = {
@@ -173,6 +177,80 @@ async function callExtractApi(
   return normalizeExtracted(payload.data)
 }
 
+/** Completa analitos que la IA omitió parseando la tabla tabular del PDF. */
+function enrichWithTableHeuristics(
+  data: ExtractedMonitoreo,
+  pdfText: string,
+): ExtractedMonitoreo {
+  const parsed = parseLabResultsTable(pdfText)
+  if (!parsed.length) return data
+
+  const heuristic = parsed.map((h) => ({
+    parametro: matchLabParametro(h.parametro) || h.parametro,
+    resultado: h.resultado,
+    unidad: h.unidad,
+    limitePermisible: h.limitePermisible,
+    cumple: '' as const,
+    observaciones: h.observaciones,
+  }))
+
+  const puntos = new Map<string, ExtractedMuestreo>()
+  for (const m of data.muestreos) {
+    const key = m.puntoMuestreo
+    const prev = puntos.get(key)
+    if (!prev) {
+      puntos.set(key, { ...m, parametros: [...m.parametros] })
+    } else {
+      prev.parametros.push(...m.parametros)
+      puntos.set(key, prev)
+    }
+  }
+
+  let targetKey =
+    [...puntos.keys()].find((p) => /laguna|salida|agua/i.test(p)) ??
+    [...puntos.keys()][0]
+
+  if (!targetKey) {
+    targetKey = matchLabPunto(
+      /laguna|alicon/i.test(pdfText)
+        ? 'Salida Lagunas Alicon'
+        : 'Punto de muestreo',
+    )
+    puntos.set(targetKey, {
+      fecha: data.fecha,
+      puntoMuestreo: targetKey,
+      tipoMedio: 'Agua potable',
+      latitud: data.latitud,
+      longitud: data.longitud,
+      parametros: [],
+    })
+  }
+
+  const target = puntos.get(targetKey)!
+  const before = target.parametros.length
+  target.parametros = mergeLabParams(target.parametros, heuristic)
+  if (
+    target.parametros.length > before ||
+    /agua|potable/i.test(pdfText.slice(0, 2000))
+  ) {
+    if (!/agua/i.test(target.tipoMedio)) target.tipoMedio = 'Agua potable'
+  }
+  puntos.set(targetKey, target)
+
+  const noteExtra =
+    target.parametros.length > before
+      ? `Tabla del PDF: +${target.parametros.length - before} parámetros completados.`
+      : null
+
+  const normalized = normalizeExtracted({
+    ...data,
+    medio: /agua/i.test(data.medio) ? data.medio : 'Agua potable',
+    muestreos: [...puntos.values()],
+    notas: [data.notas, noteExtra].filter(Boolean).join(' · ') || data.notas,
+  })
+  return normalized
+}
+
 function mapFirstMuestreoToForm(
   data: ExtractedMonitoreo,
   yearFallback: number,
@@ -282,7 +360,10 @@ export async function importMonitoreoLabPdf(
   monthFallback: MonitoringMonth,
 ): Promise<LabImportPreview> {
   const pdf = await extractPdfText(file, { mode: 'lab' })
-  const data = await callExtractApi(pdf.text, file.name)
+  const data = enrichWithTableHeuristics(
+    await callExtractApi(pdf.text, file.name),
+    pdf.text,
+  )
   if (!data.muestreos?.length && data.parametros?.length) {
     data.muestreos = [
       {

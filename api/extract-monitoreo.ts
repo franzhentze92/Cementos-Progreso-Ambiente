@@ -89,8 +89,9 @@ REGLA CRÍTICA — límites (NO confundir):
 Otras reglas:
 - Un informe puede tener VARIOS puntos (Salida Lagunas Alicon, Patio de coque, Colindancia este, etc.). Un objeto en "muestreos" por cada punto.
 - Si el PDF mezcla aire y ruido, crea muestreos SEPARADOS por tipoMedio aunque sea el mismo punto geográfico: uno "Material particulado" (PM2.5, PM10, TSP) y otro "Ruido" (LAeq, LAmax…). Nunca pongas LAeq bajo Material particulado.
-- Extrae TODOS los analitos con valor numérico (pH, metales, coliformes, PM2.5, PM10, TSP, LAeq, etc.).
-- resultado: número; si viene "<0.01" usa 0.01 y anota en observaciones "Valor reportado <0.01".
+- Extrae TODOS los analitos de la tabla INFORME DE RESULTADOS / Analito (metales, microbio, fisicoquímicos). No te detengas en 10–15: incluye la lista completa (pH, turbiedad, conductividad, sólidos, cloruro, dureza, sulfato, Al, Ba, Ca, Zn, Cu, Mg, Mn, Fe, B, Cd, Cr, Pb, As, CN, F, Hg, Se, NO3, NO2, coliformes, E. coli, recuento aerobio, etc.).
+- resultado: número; si viene "<0.01" o ">23" usa el número y anota el texto original en observaciones.
+- Para tablas con columnas LMA/LMP/LD: limitePermisible = LMP (o LMA si no hay LMP); limiteDeteccion = LD.
 - cumple: Si/No solo si el informe lo indica o se deduce vs limitePermisible legal; si no hay límite legal, cumple "".
 - No inventes cifras ni límites.
 - Cliente Alicón / Cementos Progreso / Puerto Barrios → unidadNegocio "Alicón", plantaSede "Alicon".
@@ -310,7 +311,21 @@ function normalizeInforme(raw: unknown): ExtractedMonitoreoInforme {
   }
 }
 
-function clipLabText(text: string, maxChars = 40_000): string {
+function clipLabText(text: string, maxChars = 55_000): string {
+  // Prioriza bloque de resultados (Analito / INFORME DE RESULTADOS)
+  const markers = [/Analito\s+Unidad/i, /INFORME DE RESULTADOS/i, /LMA\s+LMP/i]
+  let best = -1
+  for (const re of markers) {
+    const i = text.search(re)
+    if (i >= 0 && (best < 0 || i < best)) best = i
+  }
+  if (best >= 0) {
+    const resultsBlock = text.slice(best, best + 14_000)
+    const head = text.slice(0, Math.min(12_000, best))
+    const combined = `${head}\n\n[…]\n\n${resultsBlock}\n\n[…]\n\n${text.slice(-8_000)}`
+    if (combined.length <= maxChars) return combined
+    return combined.slice(0, maxChars)
+  }
   if (text.length <= maxChars) return text
   const head = Math.floor(maxChars * 0.45)
   const tail = maxChars - head - 40

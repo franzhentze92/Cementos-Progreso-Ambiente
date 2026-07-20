@@ -95,43 +95,71 @@ export function inferLabMedioFromParametro(
     .normalize('NFD')
     .replace(/\p{M}/gu, '')
     .toLowerCase()
+    .replace(/\s+/g, ' ')
     .trim()
 
+  // Ruido primero
   if (
-    /^(laeq|lamax|lamin|la\s|noise|ruido|presion sonora|presión sonora|dba|db\b)/i.test(
-      key,
-    ) ||
-    LAB_PARAMETROS_RUIDO.some((p) => key.includes(p.toLowerCase()))
+    /^(laeq|lamax|lamin)\b/.test(key) ||
+    /\b(ruido|presion sonora|nivel sonoro)\b/.test(key) ||
+    LAB_PARAMETROS_RUIDO.some((p) => key === p.toLowerCase())
   ) {
     return 'Ruido'
   }
 
-  if (
-    /^(pm2|pm10|pm2\.5|pm2,5|tsp|pts|so2|no2|\bco\b|\bo3\b|material particulado)/i.test(
+  // Agua ANTES que aire: evita que "CO" de Coliformes/Cobre/Conductividad
+  // se clasifique como Material particulado.
+  const waterHit =
+    /^(ph|potencial de hidrogeno|turbidez|turbiedad|conductividad|cloro|coliform|escherichia|color|olor|solidos|dureza|sulfato|cloruro|aluminio|bario|calcio|cinc|zinc|cobre|magnesio|manganeso|hierro|boro|cadmio|cromo|plomo|arsenico|cianuro|fluoruro|fluoruros|mercurio|selenio|nitrato|nitritos|nitrito|nitratos|recuento aerobio|dbo|dqo|grasas|caudal|fosforo|nitrogeno)/.test(
       key,
     ) ||
-    LAB_PARAMETROS_AIRE.some((p) => key.includes(p.toLowerCase()))
+    LAB_PARAMETROS_AGUA.some((p) => {
+      const pk = p.toLowerCase()
+      return key === pk || key.startsWith(`${pk} `) || key.includes(pk)
+    })
+
+  if (waterHit) {
+    const fb = matchLabMedio(fallbackMedio)
+    if (fb.startsWith('Agua') || fb === 'Agua ordinaria') return fb
+    // Si el informe es agua (aunque fallback diga Mixto/Monitoreo)
+    if (/agua|potable|residual|superficial|ordinaria/i.test(fallbackMedio)) {
+      return matchLabMedio(fallbackMedio)
+    }
+    return 'Agua potable'
+  }
+
+  // Aire: match exacto o prefijo, nunca substring corto (CO)
+  const airExact = new Set(
+    LAB_PARAMETROS_AIRE.map((p) => p.toLowerCase()).concat([
+      'pm2,5',
+      'pm25',
+      'pts',
+      'monoxido de carbono',
+      'dioxido de azufre',
+      'dioxido de nitrogeno',
+      'ozono',
+    ]),
+  )
+  if (
+    airExact.has(key) ||
+    /^(pm2\.?5|pm10|pm2,5|tsp|so2|no2|o3)$/.test(key) ||
+    key === 'co' ||
+    key.startsWith('pm2') ||
+    key.startsWith('pm10') ||
+    key.startsWith('material particulado')
   ) {
     return 'Material particulado'
   }
 
-  if (
-    /agua|ph|turbid|conductiv|cloro|coliform|dbo|dqo|hierro|mangan|solidos|caudal|nitr|fosf|fósf|grasa|color/i.test(
-      key,
-    ) ||
-    LAB_PARAMETROS_AGUA.some((p) => key === p.toLowerCase() || key.includes(p.toLowerCase()))
-  ) {
-    const fb = matchLabMedio(fallbackMedio)
-    if (fb.startsWith('Agua') || fb === 'Agua ordinaria') return fb
-    return 'Agua potable'
-  }
-
   const fb = matchLabMedio(fallbackMedio)
-  return fb === 'Mixto' || fb === 'Monitoreo' ? fallbackMedio || 'Monitoreo' : fb
+  if (fb === 'Mixto') return 'Monitoreo'
+  return fb || fallbackMedio || 'Monitoreo'
 }
 
 const PARAM_ALIASES: Record<string, string> = {
   'ph': 'pH',
+  'potencial de hidrogeno': 'pH',
+  'potencial de hidrógeno': 'pH',
   'turbiedad': 'Turbidez',
   'turbidez': 'Turbidez',
   'conductividad': 'Conductividad eléctrica',
@@ -141,18 +169,31 @@ const PARAM_ALIASES: Record<string, string> = {
   'cloro residual (in situ)': 'Cloro residual',
   'solidos disueltos totales': 'Sólidos disueltos totales',
   'sólidos disueltos totales': 'Sólidos disueltos totales',
+  'solidos totales disueltos': 'Sólidos disueltos totales',
+  'sólidos totales disueltos': 'Sólidos disueltos totales',
   'sdt': 'Sólidos disueltos totales',
   'solidos suspendidos': 'Sólidos suspendidos',
   'sólidos suspendidos': 'Sólidos suspendidos',
   'sst': 'Sólidos suspendidos',
   'coliformes totales': 'Coliformes totales',
   'coliformes fecales': 'Coliformes fecales',
+  'escherichia coli': 'Escherichia coli',
+  'e. coli': 'Escherichia coli',
+  'color aparente': 'Color aparente',
+  'color': 'Color verdadero',
+  'fluoruro': 'Fluoruros',
+  'fluoruros': 'Fluoruros',
+  'nitrato': 'Nitratos',
+  'nitratos': 'Nitratos',
+  'nitrito': 'Nitritos',
+  'nitritos': 'Nitritos',
+  'cinc': 'Zinc',
+  'zinc': 'Zinc',
   'hierro': 'Hierro',
   'manganeso': 'Manganeso',
   'bario': 'Bario',
   'boro': 'Boro',
-  'cinc': 'Zinc',
-  'zinc': 'Zinc',
+  'recuento aerobio total': 'Recuento aerobio total',
   'pm2.5': 'PM2.5',
   'pm2,5': 'PM2.5',
   'pm25': 'PM2.5',

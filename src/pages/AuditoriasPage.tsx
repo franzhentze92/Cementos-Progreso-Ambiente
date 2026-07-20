@@ -293,7 +293,7 @@ export function AuditoriasPage() {
     try {
       const saved = await persistDictamen({
         dictamenMd: report,
-        mensajes,
+        mensajes: messages,
         fuente: source ?? 'local',
         id: activeId,
       })

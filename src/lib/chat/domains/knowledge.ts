@@ -18,7 +18,16 @@ type KnowledgeDoc = {
   text: string
 }
 
-const MAX_KNOWLEDGE_CHARS = 70_000
+/**
+ * Capacidad total del dominio documental en el prompt.
+ * Cabe el reglamento más grande (~140k) + un manual relacionado + margen.
+ * El API acepta hasta ~350k de contexto combinado.
+ */
+const MAX_KNOWLEDGE_CHARS = 320_000
+/** Mínimo de score para incluir un doc cuando hay pregunta (además del top-1). */
+const MIN_RELEVANCE_SCORE = 120
+/** Máximo de documentos completos por pregunta. */
+const MAX_DOCS_PER_QUESTION = 3
 
 function scoreDoc(doc: KnowledgeDoc, question: string): number {
   const q = question.toLowerCase()
@@ -72,28 +81,56 @@ function scoreDoc(doc: KnowledgeDoc, question: string): number {
   return score
 }
 
+function docBody(doc: KnowledgeDoc): string {
+  return (doc.text?.trim() || doc.note || doc.summary || '').trim()
+}
+
+/**
+ * Con pregunta: incluye documentos relevantes COMPLETOS (sin cortar texto).
+ * Sin pregunta (preload): solo índice + resúmenes, para no inflar el prompt.
+ */
 function pickDocs(
   docs: KnowledgeDoc[],
   question = '',
 ): { included: KnowledgeDoc[]; omitted: string[] } {
-  const ranked = [...docs].sort(
-    (a, b) => scoreDoc(b, question) - scoreDoc(a, question),
-  )
+  const q = question.trim()
+
+  if (!q) {
+    return { included: [], omitted: [] }
+  }
+
+  const ranked = [...docs]
+    .map((doc) => ({ doc, score: scoreDoc(doc, q) }))
+    .sort((a, b) => b.score - a.score)
 
   const included: KnowledgeDoc[] = []
   const omitted: string[] = []
   let used = 0
 
-  for (const doc of ranked) {
-    const body = (doc.text?.trim() || doc.note || doc.summary || '').slice(
-      0,
-      question ? 35_000 : 18_000,
-    )
+  for (let i = 0; i < ranked.length; i++) {
+    const { doc, score } = ranked[i]
+    const body = docBody(doc)
+    if (!body) {
+      omitted.push(doc.title)
+      continue
+    }
+
+    // Siempre el más relevante; el resto solo si supera el umbral.
+    if (i > 0 && score < MIN_RELEVANCE_SCORE) {
+      omitted.push(doc.title)
+      continue
+    }
+    if (included.length >= MAX_DOCS_PER_QUESTION) {
+      omitted.push(doc.title)
+      continue
+    }
+
     const cost = body.length + doc.title.length + 80
     if (used + cost > MAX_KNOWLEDGE_CHARS && included.length > 0) {
       omitted.push(doc.title)
       continue
     }
+
     included.push({ ...doc, text: body })
     used += cost
   }
@@ -121,7 +158,7 @@ async function buildContext(question = ''): Promise<{
   const index = docs
     .map(
       (d) =>
-        `- [${d.category}] ${d.title} (${d.charCount} chars${d.note ? '; nota: documento con texto limitado' : ''})`,
+        `- [${d.category}] ${d.title} (${d.charCount} chars${d.note ? '; nota: documento con texto limitado' : ''}${d.truncated ? '; páginas limitadas por tamaño de archivo' : ''})`,
     )
     .join('\n')
 
@@ -133,6 +170,7 @@ async function buildContext(question = ''): Promise<{
         `Categoría: ${d.category}`,
         `Fuente: ${d.sourcePath}`,
         d.note ? `Nota: ${d.note}` : null,
+        `Caracteres: ${d.charCount} (texto completo)`,
         '',
         body,
       ]
@@ -141,22 +179,26 @@ async function buildContext(question = ''): Promise<{
     })
     .join('\n\n-----\n\n')
 
+  const preloadNote = !question.trim()
+    ? '\n(Sin pregunta aún: solo índice. El texto completo se inyecta al responder según relevancia.)\n'
+    : ''
+
   const context = `
 DOMINIO: Documentos de contexto del departamento de ambiente
 Fuente: Biblioteca (catálogo Contexto Chatbot + documentos subidos)
 Documentos activos en copiloto: ${docs.length} (${withText} con texto útil)
-Incluidos en este prompt: ${included.map((d) => d.title).join('; ') || 'ninguno'}
-${omitted.length ? `Omitidos por límite de tamaño: ${omitted.join('; ')}` : ''}
-
+Incluidos en este prompt (completos): ${included.map((d) => d.title).join('; ') || 'ninguno'}
+${omitted.length ? `No incluidos en este turno: ${omitted.join('; ')}` : ''}
+${preloadNote}
 ÍNDICE COMPLETO
 ${index || '- Sin documentos activos. Sube PDFs en Biblioteca o ejecuta npm run chat:extract-knowledge'}
 
-CONTENIDO DOCUMENTAL (priorizado según la pregunta)
-${bodies || '- Sin contenido. Sube PDFs con texto seleccionable en Biblioteca.'}
+CONTENIDO DOCUMENTAL (texto completo de los documentos priorizados)
+${bodies || '- Sin contenido documental en este turno. Si la pregunta es sobre un reglamento del índice, reformula mencionando el número de acuerdo.'}
 
 REGLAS
 - Usa estos documentos para preguntas de legislación, permisos, reglamentos, expedientes e instrumentos.
-- Si el texto está incompleto (PDF escaneado), dilo y cita el título del documento.
+- El texto incluido está completo (sin truncar por caracteres). Si un PDF es escaneado y no tiene texto, dilo y cita el título.
 - No inventes artículos ni números de acuerdo si no aparecen en el texto.
 `.trim()
 

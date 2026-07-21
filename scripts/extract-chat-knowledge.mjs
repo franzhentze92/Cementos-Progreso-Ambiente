@@ -15,11 +15,9 @@ const ROOT = path.resolve(__dirname, '..')
 const SOURCE_DIR = path.join(ROOT, 'Contexto Chatbot')
 const OUT_DIR = path.join(ROOT, 'src', 'lib', 'chat', 'knowledge')
 
-/** PDFs > este tamaño (MB): solo primeras N páginas para no saturar memoria. */
+/** PDFs > este tamaño (MB): solo primeras N páginas para no saturar memoria (escaneados grandes). */
 const LARGE_MB = 15
 const LARGE_MAX_PAGES = 40
-/** Límite de caracteres guardados por documento (el chat ya recorta al enviar). */
-const MAX_CHARS_PER_DOC = 28_000
 
 function slugify(name) {
   return name
@@ -97,13 +95,6 @@ async function extractOne(file) {
     note =
       (note ? note + ' ' : '') +
       'Poco o ningún texto embebido (posible PDF escaneado). Se necesita OCR manual o re-exportar con texto seleccionable.'
-  }
-
-  if (text.length > MAX_CHARS_PER_DOC) {
-    text =
-      text.slice(0, MAX_CHARS_PER_DOC) +
-      `\n\n[… texto truncado a ${MAX_CHARS_PER_DOC} caracteres para el copiloto …]`
-    truncated = true
   }
 
   const id = slugify(file.name)

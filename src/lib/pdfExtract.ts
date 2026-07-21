@@ -7,9 +7,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 const LARGE_MB = 15
 const LARGE_MAX_PAGES = 40
-const MAX_CHARS = 28_000
+/** Informes de lab: tope de páginas; el texto útil no se corta por caracteres. */
 const LAB_MAX_PAGES = 60
-const LAB_MAX_CHARS = 120_000
 
 export type PdfExtractResult = {
   text: string
@@ -68,15 +67,18 @@ export async function extractPdfText(
   const buffer = await file.arrayBuffer()
   const pdf = await pdfjs.getDocument({ data: buffer }).promise
   const totalPages = pdf.numPages
-  const pageCap = lab ? LAB_MAX_PAGES : LARGE_MAX_PAGES
-  const maxPages =
-    lab || sizeMb < LARGE_MB
-      ? Math.min(totalPages, pageCap)
-      : Math.min(totalPages, LARGE_MAX_PAGES)
+
+  // Texto completo salvo PDFs enormes (>15 MB, casi siempre escaneados) o modo lab.
+  let maxPages = totalPages
+  if (lab) {
+    maxPages = Math.min(totalPages, LAB_MAX_PAGES)
+  } else if (sizeMb >= LARGE_MB) {
+    maxPages = Math.min(totalPages, LARGE_MAX_PAGES)
+  }
 
   let truncated = totalPages > maxPages
   let note: string | null = truncated
-    ? `PDF de ${totalPages} páginas: se extrajeron ${maxPages} para el análisis.`
+    ? `PDF de ${totalPages} páginas: se extrajeron ${maxPages} (archivo grande o modo laboratorio).`
     : null
 
   const parts: string[] = []
@@ -106,26 +108,6 @@ export async function extractPdfText(
     note =
       (note ? `${note} ` : '') +
       'Poco o ningún texto embebido (posible PDF escaneado). Se necesita OCR manual o re-exportar con texto seleccionable.'
-  }
-
-  const charCap = lab ? LAB_MAX_CHARS : MAX_CHARS
-  if (text.length > charCap) {
-    // Prioriza páginas de resultados (Analito / INFORME DE RESULTADOS)
-    const marker = text.search(/Analito\s*\|\s*Unidad|INFORME DE RESULTADOS/i)
-    if (marker >= 0) {
-      const block = text.slice(Math.max(0, marker - 500), marker + 20_000)
-      const head = text.slice(0, 8_000)
-      text = `${head}\n\n[…]\n\n${block}\n\n[…]\n\n${text.slice(-6_000)}`
-      if (text.length > charCap) text = text.slice(0, charCap)
-    } else {
-      const head = Math.floor(charCap * 0.45)
-      const tail = charCap - head - 80
-      text =
-        text.slice(0, head) +
-        `\n\n[… truncado; se conservan portada y anexos de resultados …]\n\n` +
-        text.slice(-tail)
-    }
-    truncated = true
   }
 
   const summary =

@@ -366,6 +366,242 @@ CAPÍTULO III
 
 MANTENIMIENTO Y MANEJO
 ARTICULO 25. AUTORIZACIÓN PARA MANTENIMIENTO.
-Los propietarios de equipo sos
+Los propietarios de equipo sospechoso y equipo cuya concentración de PCB sea mayor o igual a 50 ppm que
+necesiten mantenimiento, podrán realizarlo por cuenta propia o mediante la contratación de un tercero, para ambos
+casos se debe contar previamente con el instrumento ambiental respectivo aprobado por el MARN, emitir el informe
+respectivo, presentarlo ante el MARN y actualizar la información que corresponda en el Sistema de Información de
+PCB, dentro de los 30 días siguientes de haberlo realizado.
+ARTICULO 26. CONTAMINACIÓN EN LAS ACTIVIDADES DE MANTENIMIENTO DE EQUIPOS ELÉCTRICOS Y
+ACEITES DIELÉCTRICOS. Los propietarios de equipo susceptible y aceite dieléctrico, deben prevenir y evitar la
+contaminación cruzada de sus equipos con fluidos que contengan o puedan contener PCB, dado que todos los
+equipos son pasibles de contener PCB o estar contaminados con ellos, el manejo de estos debe ser considerado
+como si estuviera contaminado, hasta que sea realizado el proceso de identificación de PCB. Para tal fin,
+previamente a la realización del mantenimiento de equipos, el propietario debe verificar que la maquinaria o
+dispositivos y aceites a utilizar no estén contaminados con PCB, siguiendo para el efecto las directrices establecidas
+en los manuales, guías o instructivos que determine el MARN.
+ARTICULO 27. DEL PROCESO DE MANTENIMIENTOS REALIZADO POR TERCEROS. Las personas
+individuales, jurídicas, públicas o privadas que realicen mantenimiento a equipos susceptibles de contener PCB
+que no sean de su propiedad, deben prevenir y evitar la contaminación cruzada de los equipos con fluidos que
+contengan o puedan contener PCB, dado que todos los equipos son pasibles del contener PCB o estar
+contaminados con ellos, el manejo de estos debe ser considerado como si estuviera contaminado, hasta que sea
+realizado el proceso de identificación de PCB. Previo a la realización del mantenimiento de equipos, el prestador del
+servicio debe verificar que la maquinaria o dispositivos y aceites a utilizar no estén contaminados con PCB,
+siguiendo para el efecto las directrices establecidas en los manuales, guías o instructivos que determine el
+MARN. Toda empresa que preste servicio de mantenimiento debe de contar con su instrumento ambiental aprobado
+y vigente.
+CAPÍTULO IV ALMACENAMIENTO TEMPORAL
+ARTICULO 28. ALMACENAMIENTO DE EQUIPO Y DESECHOS CONTAMINADOS. Los propietarios de equipos
+contaminados con PCB, pueden realizar el almacenamiento previo a la disposición final y en forma temporal en
+sus instalaciones hasta por un período máximo de 36 meses, en cualquiera de los casos debe contar previamente
+con el instrumento ambiental respectivo aprobado por el MARN, debiendo emitir el informe respectivo, presentarlo
+ante el MARN y actualizar la información que corresponda en el Sistema de Información de PCB.
+La temporalidad de almacenamiento podrá prorrogarse a solicitud del interesado siempre que este no supere lo
+establecido en el plazo para disposición final. Durante el tiempo de almacenamiento temporal, se deberá garantizar
+las medidas para prevenir cualquier afectación al medio ambiente, y dar cumplimiento a toda la normativa ambiental
+vigente.
+ARTICULO 29. ASPECTOS TÉCNICOS PARA EL ALMACENAMIENTO TEMPORAL DE EQUIPO EN DESUSO Y
+DESECHOS CONTAMINADOS CON PCB EN INSTALACIONES DEL PROPIETARIO. Los propietarios que
+realicen almacenamiento temporal de equipos en desuso y desechos contaminados con PCB en sus instalaciones,
+deben cumplir con los requisitos que para el efecto disponga el MARN sin perjuicio de los demás requerimientos que
+establezcan otras instituciones de gobierno con competencia para el efecto.
+ARTICULO 30. RESPONSABILIDAD DEL PROPIETARIO. El propietario es el responsable de revisar, como
+mínimo una vez al año, el estado exterior de los transformadores y otros desechos peligrosos en el área de
 
-[… texto truncado a 28000 caracteres para el copiloto …]
+almacenamiento, contar con el instrumento ambiental respectivo aprobado por el MARN, así como emitir el informe
+que corresponde, presentarlo ante el MARN y actualizar la información que corresponda en el Sistema de
+Información de PCB, dentro de los 30 días siguientes de haberlo realizado.
+El propietario adoptará las medidas de prevención necesarias para evitar todo riesgo de incendio, ocurrencia de
+derrames y acciones de vandalismo, almacenándolos alejados de cualquier producto inflamable, siguiendo las
+directrices de incompatibilidad química de las sustancias y aquellas que establezca el MARN.
+CAPÍTULO V TRANSPORTE
+ARTICULO 31. DEL TRANSPORTE DE PCB. Para el movimiento externo o interno desde los recintos o
+bodegas de almacenamiento temporal, el propietario deberá solicitar previamente la autorización al MARN, y no
+podrá efectuar el movimiento hasta que no se reciba por parte del MARN la autorización para realizar dicho
+movimiento o transporte de PCB, la cual incluirá la fecha esperada del movimiento, origen y destino. El MARN debe
+resolver la solicitud en los 3 días hábiles siguientes a la recepción de la misma.
+En el transporte interno como externo se deberá cumplir además con las exigencias o protocolos aplicables al
+transporte terrestre, fluvial, marítimo y aéreo de mercancías peligrosas, establecidas por las autoridades de
+transporte competente, así como con toda la demás legislación nacional vigente.
+ARTICULO 32. TRANSPORTE DE EQUIPO Y DESECHOS CONTAMINADOS CON PCB. El transporte de equipos
+y desechos contaminados con PCB debe cumplir con las disposiciones que para el efecto establezca el MARN
+respecto a marcado de los envíos, rótulos de los vehículos, presentación de la documentación y demás requisitos
+para su autorización, actualizarse en el Sistema de Información de PCB, y cumplir con los procedimientos
+establecidos en virtud del Convenio de Basilea sobre el control de los movimientos trasfronterizos de los desechos
+peligrosos y su eliminación y otras legislaciones vigentes.
+ARTICULO 33. FORMULARIO DE MOVIMIENTO TRANSFRONTERIZO DE DESECHOS PELIGROSOS. El
+transporte de equipos o desechos contaminados con PCB, fuera de los límites del territorio nacional debe cumplir
+con las disposiciones establecidas en el Convenio de Basilea Sobre el Control de los Movimientos Transfronterizos
+de los Desechos Peligrosos y su Eliminación, presentando el formulario de movimiento trasfronterizo de desechos
+aprobado por las autoridades correspondientes.
+ARTICULO 34. OBLIGACIÓN DEL PROPIETARIO. Para el transporte interno, el propietario tiene las siguientes
+obligaciones:
+a) Verificar que el transportista esté debidamente autorizado para el efecto, contando con instrumento ambiental
+aprobado, y que disponga de los medios adecuados para realizar el transporte.
+b) Tener el consentimiento de la parte interesada en el lugar de destino hacia donde se pretende realizar el traslado.
+CAPÍTULO VI DISPOSICIÓN FINAL DE PCB
+ARTICULO 35. DISPOSICIÓN FINAL DE EQUIPO Y DESECHOS CONTAMINADOS ALMACENADOS
+TEMPORALMENTE. Los propietarios de equipos y desechos contaminados con PCB que se encuentren
+almacenados de forma temporal en sus instalaciones, deben disponer de los mismos de forma ambientalmente
+racional antes del año 2028. Si del examen que para el efecto realice la Conferencia de las Partes del Convenio
+de Estocolmo en la adopción de medidas del periodo propuesto para la disposición final, se determina ampliación de
+los plazos establecidos, se atenderá a lo dispuesto para ello.
+Como resultado de la disposición final, debe emitir el informe respectivo, presentarlo ante el MARN y
+actualizar la información que corresponda en el Sistema de Información de PCB, dentro de los 30 días siguientes de
+haberlo realizado.
+
+Respecto a la metodología de descontaminación del aceite con igual o más de 50 ppm, deberán verificar la
+concentración final de PCB con métodos cromatográficos acreditados.
+ARTICULO 36. INSTALACIONES DE TRATAMIENTO Y DISPOSICIÓN DE PCB. Para los efectos de tratamiento y
+disposición de PCB a nivel nacional, toda persona individual o jurídica, pública o privada que realice tratamiento de
+disposición de PCB debe contar previamente con el instrumento ambiental respectivo aprobado por el MARN, y
+utilizar tecnologías adecuadas para la eliminación segura de los PCB.
+ARTICULO 37. RESPONSABILIDAD DEL PROPIETARIO. El propietario que realice operaciones de
+descontaminación, eliminación o exportación, es responsable legalmente de dicha operación, aún y cuando la
+realice por parte de terceros u otros entes autorizados para el efecto. El propietario debe registrar la operación
+según los lineamientos establecidos por el MARN, a fin de ser dados de baja en el Sistema de Información de
+PCB. Una vez realizado el proceso de descontaminación, los equipos podrán seguir siendo utilizados, debiendo para
+el efecto reclasificar, marchamar, etiquetar y actualizar la información en el Sistema un mes después de realizado el
+proceso. Para el caso de eliminación o destrucción, solicitar dar de baja y cancelación del registro en el inventario
+de equipos y desechos con PCB.
+ARTICULO 38. PLAZO PARA DISPOSICIÓN FINAL. El propietario debe realizar la gestión final de equipo y
+desechos contaminados que contenga concentración mayor o igual a 50 ppm de PCB y volúmenes superiores a
+0.05 litros y finalizarla en su totalidad antes del año 2028.
+ARTICULO 39. CASOS ESPECIALES. Las dependencias y entidades públicas, propietarias de equipo y desechos
+contaminados con PCB, deben cumplir lo que para el efecto establezcan las leyes, normas o reglamentos
+específicos para dar de baja todo aquel equipo y desechos contaminados con PCB, debiendo implementar toda la
+gestión integral de PCB establecida en este reglamento.
+TÍTULO IV
+ACCIDENTES Y RIESGOS AL AMBIENTE
+ARTICULO 40. ACCIDENTES Y DERRAMES. Cuando por cualquier causa se produzca un accidente o derrame
+sea leve o grave, de aceites dieléctricos, productos o desechos que contienen PCB, sin perjuicio de la
+responsabilidad penal correspondiente, el propietario es responsable de contar con personal capacitado, equipo e
+insumos para implementar y aplicar las medidas de emergencia y mitigación aprobadas en su instrumento
+ambiental, guías, manuales o directrices emitidas por el MARN, así como aquellas otras regulaciones que para el
+efecto se encuentren vigentes en el país.
+ARTICULO 41. INFORMACIÓN EN CASO DE ACCIDENTE. En caso de accidente y emergencias el propietario
+debe informar por escrito al MARN del suceso, indicando medidas tomadas, y acciones a realizar a futuro, dentro de
+los 3 días hábiles siguientes al día en que se originó el derrame o accidente y actualizar la información que
+corresponda en el Sistema de Información de PCB.
+ARTICULO 42. INVESTIGACIÓN DEL ACCIDENTE. En los casos de accidente, el propietario debe iniciar una
+investigación de las causas del accidente inmediatamente después de conocido el mismo, realizando el informe
+respectivo que incluya el proceso de investigación y las conclusiones, el cual deberá ser presentado ante el MARN
+en un plazo no mayor a dos meses posteriores al evento, el MARN realizará la verificación de las acciones
+presentadas en el informe, sin perjuicio de las responsabilidades administrativas, civiles y penales que pudieran
+corresponder.
+Para el efecto dé inspección y seguimiento el MARN podrá nombrar a un equipo técnico quien emitirá un informe de
+resultados.
+ARTICULO 43. DE LAS PRIORIDADES EN LA IDENTIFICACIÓN, MANEJO, RETIRO DE USO Y DISPOSICIÓN
+FINAL COMO MEDIDA DE REDUCCIÓN DEL RIESGO. El propietario priorizará la identificación, manejo, retiro de
+uso y disposición final de equipos contaminados con PCB situados en zonas de mayor riesgo para las personas,
+atendiendo en su orden a:
+
+a) Plantas de tratamiento de agua para consumo humano.
+b) Plazas de mercado.
+c) Industrias alimenticias.
+d) Restaurantes y zonas de comida en centros comerciales.
+e) Industrias farmacéuticas.
+f) Hospitales.
+g) Instituciones educativas.
+h) Zonas de alto riesgo de inundación o deslave. i) Establecimientos públicos.
+ARTICULO 44. MEDIDAS DE SEGURIDAD. El propietario debe de cumplir con todas las medidas de salud y
+seguridad que sean requeridas durante la gestión de equipos y desechos que contengan PCB, sin perjuicio de lo
+establecido en las leyes específicas sobre la materia y demás normas aplicables para el efecto.
+TÍTULO V
+SITIOS CONTAMINADOS
+ARTICULO 45. IDENTIFICACIÓN, CARACTERIZACIÓN Y REGISTRO. El propietario debe identificar y caracterizar
+los lugares donde se encuentra en uso, existió, se derramó o se llevó a cabo la disposición de equipos, aceites
+dieléctricos y desechos contaminados con PCB, procediendo a evaluar las condiciones en que se encuentren, de
+conformidad con las disposiciones que para el efecto establezca el MARN, y registrar dichas situaciones en el
+Sistema de Información de PCB.
+ARTICULO 46. DE LA RESPONSABILIDAD EN SITIOS CONTAMINADOS. El propietario de transformadores,
+capacitores, equipos y desechos que contienen o estén contaminados con PCB, debe realizar la ejecución de obras
+destinadas a la prevención, conservación, protección del medio ambiente, así como evitar la generación de sitios
+contaminados, rehabilitar y remediar lugares donde existió, derramó, almacenó, llevó a cabo la descontaminación,
+disposición final, se encuentra en uso equipos, aceites dieléctricos y desechos.
+ARTICULO 47. GESTIÓN. El propietario debe realizar la gestión para la identificación y caracterización de sitios
+contaminados con PCB, contemplando medidas para el tratamiento adecuado y bajo estándares de seguridad
+idóneos que permitan su gestión ambiental, como resultado debe emitir el informe respectivo, presentarlo ante el
+MARN y actualizar la información que corresponda en el Sistema de Información de PCB, dentro de los 30 días
+siguientes de haberlo realizado.
+El MARN verificara las acciones presentadas en los planes de gestión para la identificación y caracterización de
+sitios contaminados con PCB propuestas por el propietario.
+ARTICULO 48. REHABILITACIÓN Y REMEDIACIÓN. Es responsabilidad del propietario disponer las condiciones y
+métodos más adecuados para rehabilitar y remediar sitios contaminados con PCB, y lograr la remediación de
+aquellos que se generen y representen un riesgo para la población y los ecosistemas, de conformidad con las
+disposiciones que para el efecto establezca el MARN.
+El propietario debe elaborar programas de rehabilitación y remediación con base en la caracterización de sitios
+contaminados, para lo cual deben considerarse las investigaciones históricas.
+El MARN verificara las acciones presentadas en el programa de rehabilitación y remediación propuestas por el
+propietario.
+En caso de incumplimiento a lo establecido en este artículo, se sancionará de conformidad con lo establecido en el
+artículo 54 de este reglamento.
+ARTICULO 49. ESPECIFICACIONES AMBIENTALES PARA LA REMEDIACIÓN. Para la remediación se debe
+atender las siguientes condiciones:
+a) Todo aquel sitio que durante la caracterización haya presentado concentraciones por arriba de los límites
+máximos permisibles de emisiones, debe ser remediado.
+
+b) Todo aquel sitio cuya concentración durante la caracterización sea igual o menor a los límites máximos
+permisibles de contaminación establecidos en este reglamento, no será necesaria la remediación.
+c) La remediación del sitio se efectuará hasta alcanzar los límites máximos permisibles establecidos en este
+reglamento.
+d) No se deben generar mayores alteraciones ambientales que las producidas por el suceso que provocó la
+contaminación.
+El MARN verificará que la información presentada por el propietario en el programa de remediación, cumpla con las
+indicaciones de este artículo.
+TÍTULO VI INFORMACIÓN
+ARTICULO 50. FORMACIÓN EN GENERAL. El MARN, en coordinación con las autoridades educativas, velará por
+la sociabilización del presente reglamento y la identificación de los peligros y prevención por el uso de PCB
+de conformidad con lo establecido en la Ley de Educación Ambiental y demás normas aplicables para el efecto.
+TÍTULO VII PROHIBICIONES
+ARTICULO 51. PROHIBICIONES GENERALES. Para efectos de este reglamento, sin perjuicio de la
+responsabilidad penal correspondiente, se contemplan las siguientes prohibiciones generales:
+a) Queda prohibida la producción de PCB en el territorio nacional.
+b) A Partir del año 2025 queda prohibido en el territorio nacional el uso de equipos, recipientes y sustancias
+c) En todas las instalaciones eléctricas nuevas y en modificaciones a las existentes, se prohíbe el uso de equipo
+contaminado con PCB.
+d) Queda prohibida la mezcla o dilución de aceites dieléctricos con PCB, en cualquier medio.
+e) Se prohíbe completar el nivel de los equipos que no contienen PCB utilizando aceites contaminados con PCB.
+f) Se prohíbe la quema directa y el vertido de PCB en las diferentes matrices ambientales.
+g) Se prohíbe mezclar desechos contaminados con PCB con otros residuos, desechos o cualquier otra sustancia.
+h) Se prohíbe el trasvase de aceite dieléctrico contaminado con PCB y el traslado de equipos o desechos
+contaminados con PCB, excepto con el propósito de un movimiento técnico seguro.
+i) Se prohíbe la reutilización y reciclado de equipos y aceites dieléctricos contaminados con PCB.
+ARTICULO 52. PROHIBICIÓN PARA IMPORTACIÓN DE PCB. Se prohíbe la importación de equipos, aceites
+dieléctricos y residuos o desechos que contengan más de 5 ppm de PCB para su uso. Se exceptúan los casos de
+reactivos, estándares de uso en laboratorios para métodos de detección de PCB, investigación y muestras para
+análisis.
+ARTICULO 53. PROHIBICIÓN PARA EXPORTACIÓN DE PCB. Se prohíbe la exportación de aceite dieléctrico,
+equipo y desechos que contengan PCB, con fines distintos de la gestión ambientalmente racional de desechos,
+atendiendo lo que para el efecto establece el Convenio de Basilea sobre el movimiento transfronterizo de desechos
+peligrosos. Se exceptúan los casos de reactivos, estándares de uso en laboratorios para métodos de detección de
+PCB, investigación y muestras para análisis.
+TÍTULO VIII INFRACCIONES Y SANCIONES
+ARTICULO 54. INFRACCIONES Y SANCIONES. El incumplimiento, por acción u omisión, a cualquiera de las
+disposiciones dispuestas en el presente Reglamento, será considerado como infracción y se sancionará como
+incumplimiento a los compromisos ambientales, de acuerdo a la categoría que le corresponda al proyecto, obra,
+industria o actividad infractora, de conformidad con las leyes, reglamentos y demás disposiciones aplicables
+vigentes en el país, sin perjuicio de la responsabilidad administrativa, civil y penal.
+TÍTULO IX
+DISPOSICIONES TRANSITORIAS
+
+ARTICULO 55. RETIRAR DE USO Los propietarios deben identificar, etiquetar y retirar de uso todos los equipos y
+desechos contaminados con PCB con concentración mayor o igual a 50 ppm de PCB y volúmenes superiores a
+0.05 litros, antes del año 2025.
+ARTICULO 56. NORMAS OPERATIVAS, MANUALES, GUÍAS, PROTOCOLOS O INSTRUCTIVOS. El MARN
+elaborará las normas operativas, los manuales, guías, protocolos o instructivos para la gestión integral de PCB y
+equipo que lo contienen, así como todas aquellas otras disposiciones que permitan establecer las especificaciones
+técnicas para su implementación, los cuales deben estar disponibles a más tardar a los 6 meses de que entre en
+vigencia el presente reglamento.
+ARTICULO 57. CASOS NO PREVISTOS. Los casos no previstos derivados de la aplicación del presente
+reglamento, serán considerados y resueltos por el MARN.
+ARTICULO 58. DEL INSTRUMENTO AMBIENTAL APROBADO. Todo lo establecido en este Reglamento se
+considera un compromiso ambiental, y por consiguiente forma parte de los compromisos ambientales asumidos en
+el instrumento ambiental aprobado.
+ARTICULO 59. IMPLEMENTACIÓN DEL REGLAMENTO. Los obligados al cumplimiento de las disposiciones
+contenidas en este reglamento, deben en un plazo de 6 meses a partir de la entrada en vigencia del presente
+reglamento actualizar el instrumento ambiental aprobado para su actividad, incluyendo un Plan de Gestión
+Ambiental de PCB ante el MARN. El tiempo de revisión, ampliaciones, dictámenes y prórrogas no contará como
+parte del plazo.
+TÍTULO X DISPOSICIONES FINALES
+ARTICULO 60. VIGENCIA. El presente Acuerdo Gubernativo empieza a regir al día siguiente de su publicación
+en el Diario de CentroAmérica.

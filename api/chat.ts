@@ -194,7 +194,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       { role: 'system', content: SYSTEM_PROMPT },
       {
         role: 'system',
-        content: `Unidades/dominios activos: ${domains}\n\nCONTEXTO DE LA EMPRESA:\n${context.slice(0, 120000)}`,
+        content: `Unidades/dominios activos: ${domains}\n\nCONTEXTO DE LA EMPRESA:\n${context.slice(0, 350000)}`,
       },
       ...history.filter(
         (m) =>

@@ -134,7 +134,7 @@ export async function completeEnvironmentalChat(
     { role: 'system', content: CHAT_SYSTEM_PROMPT },
     {
       role: 'system',
-      content: `Dominios: ${domains}\n\nCONTEXTO DE LA EMPRESA:\n${context.slice(0, 120000)}`,
+      content: `Dominios: ${domains}\n\nCONTEXTO DE LA EMPRESA:\n${context.slice(0, 350000)}`,
     },
     ...history.filter(
       (m) =>
